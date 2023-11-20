@@ -13,12 +13,28 @@
 #include <stdlib.h>
 #include "GUI.h"
 #include "Debug.h"
+#include <glm/gtc/type_ptr.hpp>
 
 struct WindowInfo {
     int width;
     int height;
     const char* title;
 };
+
+void setUniformMVP(GLuint Location, glm::vec3 const& Translate, glm::vec3 const& Rotate)
+{
+    glm::mat4 Projection = glm::perspective(45.0f, 4.0f / 3.0f, 0.1f, 100.f);
+    glm::mat4 ViewTranslate = glm::translate(
+        glm::mat4(1.0f), Translate);
+    glm::mat4 ViewRotateX = glm::rotate(
+        ViewTranslate, Rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f));
+    glm::mat4 View = glm::rotate(ViewRotateX,
+        Rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 Model = glm::scale(
+        glm::mat4(1.0f), glm::vec3(0.5f));
+    glm::mat4 MVP = Projection * View * Model;
+    glUniformMatrix4fv(Location, 1, GL_FALSE, glm::value_ptr(MVP));
+}
 
 static const struct
 {
@@ -30,36 +46,19 @@ static const struct
     {  0.6f, -0.4f, 0.f, 1.f, 0.f },
     {   0.f,  0.6f, 0.f, 0.f, 1.f }
 };
-
-static const GLchar* vertex_shader_text[] ={
-"#version 450\n"
-"uniform mat4 MVP;\n"
-"in vec3 vCol;\n"
-"in vec2 vPos;\n"
-"out vec3 _color;\n"
-"void main()\n"
-"{\n"
-"    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
-"    _color = vCol;\n"
-"}\n" };
-
-static const GLchar* fragment_shader_text[] = {
-"#version 450\n"
-"in vec3 _color;\n"
-"out vec4 color;\n"
-"void main()\n"
-"{\n"
-"    color = vec4(_color, 1.0);\n"
-"}\n"
+struct {
+    float x, y, z;
+}cube[8] = {
+    -0.25f, -0.25f, -0.25f,
+    -0.25f, 0.25f, -0.25f,
+    0.25f, -0.25f, -0.25f,
+    0.25f, 0.25f, -0.25f,
+    0.25f, -0.25f, 0.25f,
+    0.25f, 0.25f, 0.25f,
+    -0.25f, -0.25f, 0.25f,
+    -0.25f, 0.25f, 0.25f,
 };
 
-static GLchar vertex_shader_test[100][256];
-static GLchar fragment_shader_test[100][256];
-
-void error_callback(int code, const char* description)
-{
-    std::cout << code << " " << description << std::endl;
-}
 
 int main(void)
 {
@@ -164,7 +163,7 @@ int main(void)
 
     
     FILE  *fs;
-    char* buffer;
+    char* v_sh_buffer;
     fopen_s(&fs, "res/vertex.glsl", "rb");
     if (fs) {
         std::cout << "=================== res/vertex.glsl opened =======================\n";
@@ -172,8 +171,8 @@ int main(void)
         int file_size = ftell(fs);
         rewind(fs);
 
-        buffer = (char*)calloc(file_size + 1, 1);
-        fread(buffer, 1, file_size, fs);
+        v_sh_buffer = (char*)calloc(file_size + 1, 1);
+        fread(v_sh_buffer, 1, file_size, fs);
         fclose(fs);
         fs = NULL;
     }
@@ -182,7 +181,7 @@ int main(void)
     }
     
 
-    char* fbuffer;
+    char* f_sh_buffer;
     fopen_s(&fs, "res/fragment.glsl", "rb");
     if (fs) {
         std::cout << "=================== res/fragment.glsl opened  =======================\n";
@@ -191,26 +190,29 @@ int main(void)
         int file_size = ftell(fs);
         rewind(fs);
 
-        fbuffer = (char*)calloc(file_size + 1, 1);
-        fread(fbuffer, 1, file_size, fs);
+        f_sh_buffer = (char*)calloc(file_size + 1, 1);
+        fread(f_sh_buffer, 1, file_size, fs);
         fclose(fs);
     }
     else {
         std::cout << "=================== Coulnt find res/fragment.glsl =======================\n";
     }
     
-    //fwrite(fragment_shader_test, 1024, 1, stdout);
+    GLuint vao;
+
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
 
     glGenBuffers(1, &vertex_buffer);
     glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, (GLchar**) &buffer, NULL);
+    glShaderSource(vertex_shader, 1, (GLchar**) &v_sh_buffer, NULL);
     glCompileShader(vertex_shader);
 
     fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, (GLchar**) &fbuffer, NULL);
+    glShaderSource(fragment_shader, 1, (GLchar**) &f_sh_buffer, NULL);
     glCompileShader(fragment_shader);
 
     program = glCreateProgram();
@@ -254,14 +256,12 @@ int main(void)
     vpos_location = glGetAttribLocation(program, "vPos");
     vcol_location = glGetAttribLocation(program, "vCol");
 
-//    std::cout << mvp_location << " " << vpos_location << " " << vcol_location << std::endl;
-
     glEnableVertexAttribArray(vpos_location);
-    glVertexAttribPointer(vpos_location, 2, GL_FLOAT, GL_FALSE,
-        sizeof(vertices[0]), (void*)0);
     glEnableVertexAttribArray(vcol_location);
-    glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE,
-        sizeof(vertices[0]), (void*)(sizeof(float) * 2));
+
+    glVertexAttribPointer(vpos_location, 2, GL_FLOAT, GL_FALSE, sizeof(vertices[0]), (void*)0);
+    glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(vertices[0]), (void*)(sizeof(float) * 2));
+
 
     glObjectLabel(GL_BUFFER, vertex_buffer, 0, "Vertex Buffer");
     glObjectLabel(GL_SHADER, vertex_shader, 0, "Vertex Shader");
@@ -269,36 +269,61 @@ int main(void)
     glObjectLabel(GL_PROGRAM, program, 0, "Volumetric lighting");
 
 
+    ConfigContext panel_config{
+        2.f, 0.f, 50, 0,0,0,0
+    };
+
     std::cout << "===================== Main loop ===================\n";
     while (!glfwWindowShouldClose(window))
     {
         float ratio;
         int width, height;
-        glm::mat4 m, p, mvp;
+        //glm::mat4 m, p, mvp;
 
         glfwGetFramebufferSize(window, &width, &height);
         ratio = width / (float)height;
-
         glViewport(0, 0, width, height);
 
         glClear(GL_COLOR_BUFFER_BIT);
         
-        /*glBegin(GL_TRIANGLES);
-        glVertex2f (-0.5, 0.5);
-        glVertex2f (0.5, 0.5);
-        glVertex2f (0, -0.5);
-        glEnd();*/
+        float r, phi, theta;
+        float eye_x, eye_y, eye_z;
+        float north_x, north_y, north_z;
+        r = 1.f;
+        phi = 3.14*panel_config.p6/180;
+        theta = 3.14*panel_config.p7/180;
 
-        m = glm::mat4(1.);
-        //glm::mat4x4_rotate_Z(m, m, (float)glfwGetTime());
-        m = glm::rotate(m, glm::radians((float)glfwGetTime()), glm::vec3(0, 0, 1));
-        //glm::mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
-        p = glm::ortho(-ratio, ratio, -1.f, 1.f, 1.f, -1.f);
+        eye_x = r*cos(phi)*cos(theta);
+        eye_y = r*sin(phi);
+        eye_z = r*cos(phi)*sin(theta);
 
-        m = m * p * mvp;// glm::mat4x4_mul(mvp, p, m);
+        north_x = eye_x;
+        north_y = eye_y;
+        north_z = eye_z+0.01;
+
+        glm::vec3 translate = glm::vec3(panel_config.p1 * 0.01, panel_config.p2 * 0.01, panel_config.p3 * 0.01);
+        glm::vec3 rotate = glm::vec3(panel_config.p4, panel_config.p5, panel_config.p6);
+
+        
 
         glUseProgram(program);
-        glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) &mvp);
+        
+        glm::mat4 LookAt = glm::lookAt(glm::vec3(eye_x, eye_y, eye_z), glm::vec3(0., 0., 0.), glm::vec3(north_x, north_y, north_z));
+        //glm::lookAt(glm::vec3(0., 0., -100.), glm::vec3(0.5, 0.5, 0.5), glm::vec3(0., 1., 0.));
+        glm::mat4 Projection = glm::perspectiveFov((float) 3.14*panel_config.fov/180, (float) width, (float) height, panel_config.near_plane, panel_config.far_plane);
+
+        glm::mat4 ViewTranslate = glm::translate(
+            glm::mat4(1.0f), translate);
+        glm::mat4 ViewRotateX = glm::rotate(
+            ViewTranslate, rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f));
+        glm::mat4 View = glm::rotate(ViewRotateX,
+            rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 Model = glm::scale(
+            glm::mat4(1.0f), glm::vec3(0.5f));
+        glm::mat4 MVP = Projection * View * Model * LookAt;
+        glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
+        
+        
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
         // ImGui
@@ -306,12 +331,9 @@ int main(void)
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-       
-
         drawLeftPanel(io);
-        drawRightPanel(io);
+        drawRightPanel(io, panel_config);
         
-
         // Rendering
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -321,8 +343,12 @@ int main(void)
     }
 
     // Cleanup
+    free(v_sh_buffer);
+    free(f_sh_buffer);
+
     GLuint buffers[] = {vertex_buffer};
     glDeleteBuffers(1, buffers);
+    glDeleteVertexArrays(1, &vao);
 
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);

@@ -157,8 +157,54 @@ void drawLeftPanel(ImGuiIO& io) {
                         ImGui::EndGroup();
                     }
                     ImGui::PopID();
+                    ImGui::TreePop();
 
                 }
+
+                if (ImGui::TreeNode("Mouse + Keyboard")) {
+                    if (ImGui::IsMousePosValid())
+                        ImGui::Text("Mouse pos: (%g, %g)", io.MousePos.x, io.MousePos.y);
+                    else
+                        ImGui::Text("Mouse pos: <INVALID>");
+                    ImGui::Text("Mouse delta: (%g, %g)", io.MouseDelta.x, io.MouseDelta.y);
+                    ImGui::Text("Mouse down:");
+                    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+                        if (ImGui::IsMouseDown(i)) { 
+                            ImGui::SameLine();
+                            ImGui::Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]);
+                        }
+                    ImGui::Text("Mouse wheel: %.1f", io.MouseWheel);
+
+                    // We iterate both legacy native range and named ImGuiKey ranges, which is a little odd but this allows displaying the data for old/new backends.
+                    // User code should never have to go through such hoops! You can generally iterate between ImGuiKey_NamedKey_BEGIN and ImGuiKey_NamedKey_END.
+#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
+                    struct funcs { static bool IsLegacyNativeDupe(ImGuiKey) { return false; } };
+                    ImGuiKey start_key = ImGuiKey_NamedKey_BEGIN;
+#else
+                    struct funcs { static bool IsLegacyNativeDupe(ImGuiKey key) { 
+                        return key < 512 && ImGui::GetIO().KeyMap[key] != -1;
+                    } }; // Hide Native<>ImGuiKey duplicates when both exists in the array
+                    ImGuiKey start_key = (ImGuiKey)0;
+#endif
+                    ImGui::Text("Keys down:");
+                    for (ImGuiKey key = start_key; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
+                    { 
+                        if (funcs::IsLegacyNativeDupe(key) || !ImGui::IsKeyDown(key)) continue;
+                    ImGui::SameLine();
+                    ImGui::Text((key < ImGuiKey_NamedKey_BEGIN) ? "\"%s\"" : "\"%s\" %d", ImGui::GetKeyName(key), key);
+                    }
+                    ImGui::Text("Keys mods: %s%s%s%s", 
+                        io.KeyCtrl ? "CTRL " : "", io.KeyShift ? "SHIFT " : "", io.KeyAlt ? "ALT " : "", io.KeySuper ? "SUPER " : "");
+                    ImGui::Text("Chars queue:");
+                    for (int i = 0; i < io.InputQueueCharacters.Size; i++) 
+                    { 
+                        ImWchar c = io.InputQueueCharacters[i];
+                        ImGui::SameLine();
+                        ImGui::Text("\'%c\' (0x%04X)", (c > ' ' && c <= 255) ? (char)c : '?', c);
+                    } // FIXME: We should convert 'c' to UTF-8 here but the functions are not public.
+                    ImGui::TreePop();
+                }
+
 
                 ImGui::EndTabItem();
             }
@@ -219,28 +265,22 @@ void drawLeftPanel(ImGuiIO& io) {
 }
 
 
-void drawRightPanel(ImGuiIO& io) {
-    static float far_plane = 0.0f;
-    static float near_plane = 0.0f;
-    static int pov = 10;
-    static int p1 = 10;
-    static int p2 = 10;
-    static int p3 = 10;
-    static int p4 = 10;
-
-
+void drawRightPanel(ImGuiIO& io, ConfigContext &config) {
     ImGui::Begin("Right Panel");
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-    ImGui::Text("Far plane:"); ImGui::SliderFloat("Fp", &far_plane, 0.0f, 1.0f);
-    ImGui::Text("Near plane:"); ImGui::SliderFloat("Np", &near_plane, 0.0f, 1.0f);
-    ImGui::Text("POV:"); ImGui::SliderInt("pov", &pov, 10, 120);
+    ImGui::Text("Far plane:"); ImGui::SliderFloat("Fp", &config.far_plane, 0.1f, 500.0f);
+    ImGui::Text("Near plane:"); ImGui::SliderFloat("Np", &config.near_plane, 0.0f, 10.0f);
+    ImGui::Text("fov:"); ImGui::SliderInt("fov", &config.fov, 10, 120);
 
     ImGui::Separator();
 
-    ImGui::SliderInt("Param1", &p1, 10, 120);
-    ImGui::SliderInt("Param2", &p2, 10, 120);
-    ImGui::SliderInt("Param3", &p3, 10, 120);
-    ImGui::SliderInt("Param4", &p4, 10, 120);
+    ImGui::SliderInt("Param1", &config.p1, -100, 100);
+    ImGui::SliderInt("Param2", &config.p2, -100, 100);
+    ImGui::SliderInt("Param3", &config.p3, -100, 100);
+    ImGui::SliderInt("Param4", &config.p4, 10, 120);
+    ImGui::SliderInt("Param5", &config.p5, 10, 120);
+    ImGui::SliderInt("Param6", &config.p6, 10, 120);
+    ImGui::SliderInt("Param7", &config.p7, 10, 120);
 
     ImGui::Separator();
     ImGui::Button("Save Image");

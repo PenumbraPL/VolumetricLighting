@@ -50,3 +50,9 @@ void callback1(GLenum source,
 void callback_list(std::vector<DEBUGPROC>& callback_list) {
 	callback_list.push_back(&callback1);
 }
+
+
+void error_callback(int code, const char* description)
+{
+	std::cout << code << " " << description << std::endl;
+}
