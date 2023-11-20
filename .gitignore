@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+/.vs/VolumetricLighting/v17
+/x64/Debug
+/.vs
+/bin

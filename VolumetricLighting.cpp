@@ -3,13 +3,16 @@
 //#define GLEW_STATIC
 
 #include <iostream>
+#include <stdio.h>
 #include "GL/glew.h"
 #include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
-#include "imgui.h"
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_opengl3.h"
-
+#include "glm/mat4x4.hpp"
+//#include "glm/matrix.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include <stdlib.h>
+#include "GUI.h"
+#include "Debug.h"
 
 struct WindowInfo {
     int width;
@@ -17,6 +20,41 @@ struct WindowInfo {
     const char* title;
 };
 
+static const struct
+{
+    float x, y;
+    float r, g, b;
+} vertices[3] =
+{
+    { -0.6f, -0.4f, 1.f, 0.f, 0.f },
+    {  0.6f, -0.4f, 0.f, 1.f, 0.f },
+    {   0.f,  0.6f, 0.f, 0.f, 1.f }
+};
+
+static const GLchar* vertex_shader_text[] ={
+"#version 450\n"
+"uniform mat4 MVP;\n"
+"in vec3 vCol;\n"
+"in vec2 vPos;\n"
+"out vec3 _color;\n"
+"void main()\n"
+"{\n"
+"    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
+"    _color = vCol;\n"
+"}\n" };
+
+static const GLchar* fragment_shader_text[] = {
+"#version 450\n"
+"in vec3 _color;\n"
+"out vec4 color;\n"
+"void main()\n"
+"{\n"
+"    color = vec4(_color, 1.0);\n"
+"}\n"
+};
+
+static GLchar vertex_shader_test[100][256];
+static GLchar fragment_shader_test[100][256];
 
 void error_callback(int code, const char* description)
 {
@@ -27,20 +65,24 @@ int main(void)
 {
     std::cout << "=========== Initialization started =========\n";
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-
     GLFWwindow* window;
     WindowInfo windowConfig = {
         1280,
         960,
         "Simple Triangles"
     };
-    
+    GLuint vertex_buffer, vertex_shader, fragment_shader, program;
+    GLint mvp_location, vpos_location, vcol_location;
+
     if (!glfwInit()) {
         std::cout << "========== [GLFW]: Initialization failed =========\n";
         return 1;
     }
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+
+
     window = glfwCreateWindow(windowConfig.width, windowConfig.height, windowConfig.title, NULL, NULL);
     if (!window)
     {
@@ -68,7 +110,12 @@ int main(void)
             std::cout << "========== [GLEW]: Version 4.5 of OpenGL is supported =========\n";
             std::cout << "========== [GLEW]: Extention GL_ARB_point_sprite is supported =========\n";
         }
-        /*
+        if(glewIsSupported("GL_VERSION_4_5  GL_KHR_debug"))
+        {
+            std::cout << "========== [GLEW]: Version 4.5 of OpenGL is supported =========\n";
+            std::cout << "========== [GLEW]: Extention GL_KHR_debug is supported =========\n";
+        }
+            /*
         GL_ARB_buffer_storage
         GL_ARB_clear_buffer_object
         GL_ARB_clear_texture
@@ -101,193 +148,169 @@ int main(void)
     glm::vec2 p3(0, -0.5);
 
     glfwSetErrorCallback(error_callback);
+    
+    int flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
+    if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
+    {
+        std::cout << "========== [GLFW]: Debug context initialize successful =========\n";
+        std::vector<DEBUGPROC> callbacks;
+        callback_list(callbacks);
+        debug_init(callbacks);
+    }
+    else {
+        std::cout << "========== [GLFW]: Debug context initialize unsuccessful =========\n";
+    }
+
+
+    
+    FILE  *fs;
+    char* buffer;
+    fopen_s(&fs, "res/vertex.glsl", "rb");
+    if (fs) {
+        std::cout << "=================== res/vertex.glsl opened =======================\n";
+        fseek(fs, 0, SEEK_END);
+        int file_size = ftell(fs);
+        rewind(fs);
+
+        buffer = (char*)calloc(file_size + 1, 1);
+        fread(buffer, 1, file_size, fs);
+        fclose(fs);
+        fs = NULL;
+    }
+    else {
+        std::cout << "=================== Coulnt find res/vertex.glsl =======================\n";
+    }
+    
+
+    char* fbuffer;
+    fopen_s(&fs, "res/fragment.glsl", "rb");
+    if (fs) {
+        std::cout << "=================== res/fragment.glsl opened  =======================\n";
+
+        fseek(fs, 0, SEEK_END);
+        int file_size = ftell(fs);
+        rewind(fs);
+
+        fbuffer = (char*)calloc(file_size + 1, 1);
+        fread(fbuffer, 1, file_size, fs);
+        fclose(fs);
+    }
+    else {
+        std::cout << "=================== Coulnt find res/fragment.glsl =======================\n";
+    }
+    
+    //fwrite(fragment_shader_test, 1024, 1, stdout);
+
+    glGenBuffers(1, &vertex_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertex_shader, 1, (GLchar**) &buffer, NULL);
+    glCompileShader(vertex_shader);
+
+    fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragment_shader, 1, (GLchar**) &fbuffer, NULL);
+    glCompileShader(fragment_shader);
+
+    program = glCreateProgram();
+    glAttachShader(program, vertex_shader);
+    glAttachShader(program, fragment_shader);
+    glLinkProgram(program);
+
+    /* ======================================================== */
+
+    GLint v_comp_status, f_comp_status, link_status;
+    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &v_comp_status);
+    if (!v_comp_status) {
+        GLint v_comp_len = 0; // niepotrzebne chyba ze z ifem
+        GLchar comp_info[1024];
+        glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &v_comp_len);
+        glGetShaderInfoLog(vertex_shader, 1024, NULL, comp_info);
+
+        fwrite(comp_info, 1024, 1, stdout);
+    }
+    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &f_comp_status);
+    if (!f_comp_status) {
+        GLint f_comp_len = 0; // niepotrzebne chyba ze z ifem
+        GLchar comp_info[1024];
+        glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &f_comp_len);
+        glGetShaderInfoLog(fragment_shader, 1024, NULL, comp_info);
+
+        fwrite(comp_info, 1024, 1, stdout);
+    }
+    glGetProgramiv(program, GL_LINK_STATUS, &link_status);
+    if (!link_status) {
+        GLchar comp_info[1024];
+        glGetProgramInfoLog(program, 1024, NULL, comp_info);
+
+        fwrite(comp_info, 1024, 1, stdout);
+    }
+
+    /* ======================================================== */
+
+
+    mvp_location = glGetUniformLocation(program, "MVP");
+    vpos_location = glGetAttribLocation(program, "vPos");
+    vcol_location = glGetAttribLocation(program, "vCol");
+
+//    std::cout << mvp_location << " " << vpos_location << " " << vcol_location << std::endl;
+
+    glEnableVertexAttribArray(vpos_location);
+    glVertexAttribPointer(vpos_location, 2, GL_FLOAT, GL_FALSE,
+        sizeof(vertices[0]), (void*)0);
+    glEnableVertexAttribArray(vcol_location);
+    glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE,
+        sizeof(vertices[0]), (void*)(sizeof(float) * 2));
+
+    glObjectLabel(GL_BUFFER, vertex_buffer, 0, "Vertex Buffer");
+    glObjectLabel(GL_SHADER, vertex_shader, 0, "Vertex Shader");
+    glObjectLabel(GL_SHADER, fragment_shader, 0, "Fragment Shader");
+    glObjectLabel(GL_PROGRAM, program, 0, "Volumetric lighting");
+
 
     std::cout << "===================== Main loop ===================\n";
     while (!glfwWindowShouldClose(window))
     {
+        float ratio;
+        int width, height;
+        glm::mat4 m, p, mvp;
+
+        glfwGetFramebufferSize(window, &width, &height);
+        ratio = width / (float)height;
+
+        glViewport(0, 0, width, height);
+
         glClear(GL_COLOR_BUFFER_BIT);
         
-        glBegin(GL_TRIANGLES);
+        /*glBegin(GL_TRIANGLES);
         glVertex2f (-0.5, 0.5);
         glVertex2f (0.5, 0.5);
         glVertex2f (0, -0.5);
-        glEnd();
+        glEnd();*/
 
+        m = glm::mat4(1.);
+        //glm::mat4x4_rotate_Z(m, m, (float)glfwGetTime());
+        m = glm::rotate(m, glm::radians((float)glfwGetTime()), glm::vec3(0, 0, 1));
+        //glm::mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
+        p = glm::ortho(-ratio, ratio, -1.f, 1.f, 1.f, -1.f);
+
+        m = m * p * mvp;// glm::mat4x4_mul(mvp, p, m);
+
+        glUseProgram(program);
+        glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) &mvp);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
 
         // ImGui
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        bool show_demo_window = false;
-        bool show_shader_dialog = false;
-        bool show_another_window = true;
-        static int e = 0;
+       
 
+        drawLeftPanel(io);
+        drawRightPanel(io);
         
-        {
-            static float f = 0.0f;
-            static int counter = 0;
-
-            ImGui::Begin("Left panel");
-            ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
-            
-            if (ImGui::BeginTabBar("LeftPanelBar", tab_bar_flags))
-            {
-            if (ImGui::BeginTabItem("Config"))
-            {
-                ImGui::Text("Option1: ");
-                ImGui::SameLine(); ImGui::Checkbox("c", &show_demo_window);
-                ImGui::Text("Option2: ");
-                ImGui::SameLine(); ImGui::SliderFloat("s", &f, 0.0f, 1.0f);
-                ImGui::Text("Option3: ");
-                ImGui::SameLine();  ImGui::Button("b");
-                ImGui::Text("Option4: ");
-                ImGui::SameLine(); ImGui::RadioButton("radio a", &e, 0);
-                ImGui::Text("Option5: ");
-                ImGui::SameLine(); ImGui::SameLine();  ImGui::RadioButton("radio b", &e, 1);
-                // Combo Boxes are also called "Dropdown" in other systems
-            // Expose flags as checkbox for the demo
-                static ImGuiComboFlags flags = 0;
-                /*
-                ImGui::CheckboxFlags("ImGuiComboFlags_PopupAlignLeft", &flags, ImGuiComboFlags_PopupAlignLeft);
-                ImGui::SameLine();
-                if (ImGui::CheckboxFlags("ImGuiComboFlags_NoArrowButton", &flags, ImGuiComboFlags_NoArrowButton))
-                    flags &= ~ImGuiComboFlags_NoPreview;     // Clear the other flag, as we cannot combine both
-                if (ImGui::CheckboxFlags("ImGuiComboFlags_NoPreview", &flags, ImGuiComboFlags_NoPreview))
-                    flags &= ~ImGuiComboFlags_NoArrowButton; // Clear the other flag, as we cannot combine both
-                    */
-                    // Using the generic BeginCombo() API, you have full control over how to display the combo contents.
-                    // (your selection data could be an index, a pointer to the object, an id for the object, a flag intrusively
-                    // stored in the object itself, etc.)
-                const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ", "KKKK", "LLLLLLL", "MMMM", "OOOOOOO" };
-                static int item_current_idx = 0;
-                const char* combo_preview_value = items[item_current_idx];
-                if (ImGui::BeginCombo("combo 1", combo_preview_value, flags))
-                {
-                    for (int n = 0; n < IM_ARRAYSIZE(items); n++)
-                    {
-                        const bool is_selected = (item_current_idx == n);
-                        if (ImGui::Selectable(items[n], is_selected))
-                            item_current_idx = n;
-                        if (is_selected)
-                            ImGui::SetItemDefaultFocus();
-                    }
-                    ImGui::EndCombo();
-                }
-                ImGui::Button("Click");
-                //ImGui::PopStyleColor(3);
-                //ImGui::PopID();
-
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("Debug"))
-            {
-                int wrap_width = 200;
-                ImDrawList* draw_list = ImGui::GetWindowDrawList();
-                for (int n = 0; n < 2; n++)
-                {
-                    ImGui::Text("Test paragraph %d:", n);
-                    ImVec2 pos = ImGui::GetCursorScreenPos();
-                    ImVec2 marker_min = ImVec2(pos.x + wrap_width, pos.y);
-                    ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
-                    ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
-                    if (n == 0)
-                        ImGui::Text("The lazy dog is a good dog. This paragraph should fit within %.0f pixels. Testing a 1 character word. The quick brown fox jumps over the lazy dog.", wrap_width);
-                    else
-                        ImGui::Text("aaaaaaaa bbbbbbbb, c cccccccc,dddddddd. d eeeeeeee   ffffffff. gggggggg!hhhhhhhh");
-
-                    // Draw actual text bounding box, following by marker of our expected limit (should not overlap!)
-                    draw_list->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
-                    draw_list->AddRectFilled(marker_min, marker_max, IM_COL32(255, 0, 255, 255));
-                    ImGui::PopTextWrapPos();
-                }
-               
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("Scene"))
-            {
-                static bool selected[3] = { false, false, false };
-                ImGui::Selectable("Scene One", &selected[0]); ImGui::SameLine(300); ImGui::Text(" 2,345 bytes");
-                ImGui::Selectable("Scene Two", &selected[1]); ImGui::SameLine(300); ImGui::Text("12,345 bytes");
-                ImGui::Selectable("Scene Three", &selected[2]); ImGui::SameLine(300); ImGui::Text(" 2,345 bytes");
-                if (&selected[0])
-                    show_shader_dialog = true;
-                else
-                    show_shader_dialog = false;
-
-                if (ImGui::TreeNode("Scene")) {
-                    ImGui::Text("This is the Cucumber tab!\nblah blah blah blah blah");
-                    ImGui::TreePop();
-                }
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("Tests"))
-            {
-                static bool selected[3] = { false, false, false };
-                ImGui::Selectable("Scene One", &selected[0]); ImGui::SameLine(300); ImGui::Text(" 2,345 bytes");
-                ImGui::Selectable("Scene Two", &selected[1]); ImGui::SameLine(300); ImGui::Text("12,345 bytes");
-                ImGui::Selectable("Scene Three", &selected[2]); ImGui::SameLine(300); ImGui::Text(" 2,345 bytes");                ImGui::EndTabItem();
-            }
-            ImGui::EndTabBar();
-            }
-
-            ImGui::End();
-        }
-        if (show_shader_dialog) {
-            ImGui::Begin("Shader", &show_shader_dialog);
-            static char text[1024 * 16] =
-                "/*\n"
-                " The Pentium F00F bug, shorthand for F0 0F C7 C8,\n"
-                " the hexadecimal encoding of one offending instruction,\n"
-                " more formally, the invalid operand with locked CMPXCHG8B\n"
-                " instruction bug, is a design flaw in the majority of\n"
-                " Intel Pentium, Pentium MMX, and Pentium OverDrive\n"
-                " processors (all in the P5 microarchitecture).\n"
-                "*/\n\n"
-                "label:\n"
-                "\tlock cmpxchg8b eax\n";
-
-            static ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput;
-            ImGui::CheckboxFlags("ImGuiInputTextFlags_ReadOnly", &flags, ImGuiInputTextFlags_ReadOnly);
-            ImGui::CheckboxFlags("ImGuiInputTextFlags_AllowTabInput", &flags, ImGuiInputTextFlags_AllowTabInput);
-            ImGui::CheckboxFlags("ImGuiInputTextFlags_CtrlEnterForNewLine", &flags, ImGuiInputTextFlags_CtrlEnterForNewLine);
-            ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16), flags);
-            ImGui::Button("Update");
-            ImGui::SameLine(); ImGui::Button("Restore");
-
-            ImGui::End();
-        }
-
-
-        {
-            float far_plane;
-            float near_plane;
-            int pov;
-            int p1;
-            int p2;
-            int p3;
-            int p4;
-
-
-            ImGui::Begin("Right Panel");
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-            ImGui::Text("Far plane:"); ImGui::SliderFloat("Fp", &far_plane, 0.0f, 1.0f);
-            ImGui::Text("Near plane:"); ImGui::SliderFloat("Np", &near_plane, 0.0f, 1.0f);
-            ImGui::Text("POV:"); ImGui::SliderInt("pov", &pov, 10, 120);
-
-            ImGui::Separator();
-
-            ImGui::SliderInt("Param1", &p1, 10, 120);
-            ImGui::SliderInt("Param2", &p2, 10, 120);
-            ImGui::SliderInt("Param3", &p3, 10, 120);
-            ImGui::SliderInt("Param4", &p4, 10, 120);
-
-            ImGui::Separator();
-            ImGui::Button("Save Image");
-            ImGui::SameLine(); ImGui::Button("Save Clip");
-            ImGui::End();
-        }
 
         // Rendering
         ImGui::Render();
@@ -298,6 +321,14 @@ int main(void)
     }
 
     // Cleanup
+    GLuint buffers[] = {vertex_buffer};
+    glDeleteBuffers(1, buffers);
+
+    glDeleteShader(vertex_shader);
+    glDeleteShader(fragment_shader);
+
+    glDeleteProgram(program);
+
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
