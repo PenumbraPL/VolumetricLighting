@@ -14,6 +14,7 @@ struct ConfigContext{
      int p5;
      int p6;
      int p7;
+     int p8;
 };
 
 void drawLeftPanel(ImGuiIO& io);

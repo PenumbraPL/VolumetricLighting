@@ -19,7 +19,70 @@ struct WindowInfo {
     int width;
     int height;
     const char* title;
+    int cursor_mode;
+} windowConfig = {
+    1280,
+    960,
+    "Simple Triangles",
+    0
 };
+
+ConfigContext panel_config{
+    2.f, 0.f, 50, 0,0,0,0, 0, 50, 50, 50
+};
+
+double xpos, ypos;
+
+static void cursor_position_callback(GLFWwindow* window, double new_xpos, double new_ypos)
+{
+    int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
+    if (state != GLFW_RELEASE)
+    {
+       // glfwGetCursorPos(window, &new_xpos, &new_ypos);
+        double nx = (2000.f / windowConfig.width) * (new_xpos - xpos);
+        double ny = (2000.f / windowConfig.height) * (new_ypos - ypos);
+        panel_config.p6 += nx;
+        panel_config.p7 += ny;
+        //glfwGetCursorPos(window, &xpos, &ypos);
+        std::cout << "diff x: " << (new_xpos - xpos) << " " << (int) nx << std::endl;
+        std::cout << "diff y: " << (new_ypos - ypos) << " " << (int) ny << std::endl;
+        std::cout << "hold left" << panel_config.p6 << " " << panel_config.p7 << "\n";
+        xpos = new_xpos;
+        ypos = new_ypos;
+    }
+}
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+        glfwGetCursorPos(window, &xpos, &ypos);
+        std::cout << "press left\n";    
+    }
+}
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
+        panel_config.p6 += 1;
+    }
+    if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
+        panel_config.p6 -= 1;
+    }
+    if (key == GLFW_KEY_UP && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
+        panel_config.p7 += 1;
+    }
+    if (key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
+        panel_config.p7 -= 1;
+    }
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+    }
+    if (key == GLFW_KEY_H && action == GLFW_PRESS) {
+        int mode[2] = { GLFW_CURSOR_DISABLED, GLFW_CURSOR_NORMAL };
+        windowConfig.cursor_mode += 1;
+        windowConfig.cursor_mode %= 2;
+        glfwSetInputMode(window, GLFW_CURSOR, mode[windowConfig.cursor_mode % (sizeof(mode)/sizeof(int))]);
+    }
+}
+
 
 void setUniformMVP(GLuint Location, glm::vec3 const& Translate, glm::vec3 const& Rotate)
 {
@@ -65,11 +128,6 @@ int main(void)
     std::cout << "=========== Initialization started =========\n";
 
     GLFWwindow* window;
-    WindowInfo windowConfig = {
-        1280,
-        960,
-        "Simple Triangles"
-    };
     GLuint vertex_buffer, vertex_shader, fragment_shader, program;
     GLint mvp_location, vpos_location, vcol_location;
 
@@ -269,9 +327,18 @@ int main(void)
     glObjectLabel(GL_PROGRAM, program, 0, "Volumetric lighting");
 
 
-    ConfigContext panel_config{
-        2.f, 0.f, 50, 0,0,0,0
-    };
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetCursorPosCallback(window, cursor_position_callback);
+
+
+
+
+
+
+
 
     std::cout << "===================== Main loop ===================\n";
     while (!glfwWindowShouldClose(window))
@@ -289,9 +356,9 @@ int main(void)
         float r, phi, theta;
         float eye_x, eye_y, eye_z;
         float north_x, north_y, north_z;
-        r = 1.f;
-        phi = 3.14*panel_config.p6/180;
-        theta = 3.14*panel_config.p7/180;
+        r = 0.1 * panel_config.p6;
+        phi = 3.14*panel_config.p7/180;
+        theta = 3.14*panel_config.p8/180;
 
         eye_x = r*cos(phi)*cos(theta);
         eye_y = r*sin(phi);
@@ -299,10 +366,10 @@ int main(void)
 
         north_x = eye_x;
         north_y = eye_y;
-        north_z = eye_z+0.01;
+        north_z = eye_z+0.001f;
 
         glm::vec3 translate = glm::vec3(panel_config.p1 * 0.01, panel_config.p2 * 0.01, panel_config.p3 * 0.01);
-        glm::vec3 rotate = glm::vec3(panel_config.p4, panel_config.p5, panel_config.p6);
+        glm::vec3 rotate = glm::vec3(3.14 * panel_config.p4/180, 3.14 * panel_config.p5 / 180, 0.f);
 
         
 
