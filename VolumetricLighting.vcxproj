@@ -113,7 +113,7 @@
       <AdditionalDependencies>opengl32.lib;glfw3.lib;
 User32.lib;
 Shell32.lib
-;Gdi32.lib;glew32s.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+;Gdi32.lib;glew32s.lib;glew32.lib;assetkit_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -122,9 +122,11 @@ Shell32.lib
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>
+      </PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)\include;$(SolutionDir)\src;$(SolutionDir)\src\imgui</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\include;$(SolutionDir)\src;$(SolutionDir)\src\imgui;$(SolutionDir)\src\stb</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,10 +134,7 @@ Shell32.lib
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;
-User32.lib;
-Shell32.lib
-;Gdi32.lib;glew32s.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glew32.lib;glfw3.lib;opengl32.lib;assetkit.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -153,7 +152,7 @@ Shell32.lib
       <AdditionalDependencies>opengl32.lib;glfw3.lib;
 User32.lib;
 Shell32.lib
-;Gdi32.lib;glew32s.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+;Gdi32.lib;glew32s.lib;glew32.lib;assetkit_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -162,9 +161,11 @@ Shell32.lib
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>
+      </PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)\include;$(SolutionDir)\src;$(SolutionDir)\src\imgui</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\include;$(SolutionDir)\src;$(SolutionDir)\src\imgui;$(SolutionDir)\src\stb</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -172,10 +173,7 @@ Shell32.lib
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;
-User32.lib;
-Shell32.lib
-;Gdi32.lib;glew32s.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glew32.lib;glfw3.lib;opengl32.lib;assetkit.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -193,6 +191,38 @@ Shell32.lib
   <ItemGroup>
     <ClInclude Include="Debug.h" />
     <ClInclude Include="GUI.h" />
+    <ClInclude Include="include\ak\animation.h" />
+    <ClInclude Include="include\ak\assetkit.h" />
+    <ClInclude Include="include\ak\bbox.h" />
+    <ClInclude Include="include\ak\cam.h" />
+    <ClInclude Include="include\ak\common.h" />
+    <ClInclude Include="include\ak\context.h" />
+    <ClInclude Include="include\ak\controller.h" />
+    <ClInclude Include="include\ak\coord-util.h" />
+    <ClInclude Include="include\ak\coord.h" />
+    <ClInclude Include="include\ak\core-types.h" />
+    <ClInclude Include="include\ak\geom.h" />
+    <ClInclude Include="include\ak\image.h" />
+    <ClInclude Include="include\ak\instance.h" />
+    <ClInclude Include="include\ak\library.h" />
+    <ClInclude Include="include\ak\light.h" />
+    <ClInclude Include="include\ak\map.h" />
+    <ClInclude Include="include\ak\material.h" />
+    <ClInclude Include="include\ak\memory.h" />
+    <ClInclude Include="include\ak\node.h" />
+    <ClInclude Include="include\ak\options.h" />
+    <ClInclude Include="include\ak\path.h" />
+    <ClInclude Include="include\ak\profile.h" />
+    <ClInclude Include="include\ak\sid.h" />
+    <ClInclude Include="include\ak\source.h" />
+    <ClInclude Include="include\ak\string.h" />
+    <ClInclude Include="include\ak\texture.h" />
+    <ClInclude Include="include\ak\transform.h" />
+    <ClInclude Include="include\ak\trash.h" />
+    <ClInclude Include="include\ak\type.h" />
+    <ClInclude Include="include\ak\url.h" />
+    <ClInclude Include="include\ak\util.h" />
+    <ClInclude Include="include\ak\version.h" />
     <ClInclude Include="src\imgui\backends\imgui_impl_glfw.h" />
     <ClInclude Include="src\imgui\backends\imgui_impl_opengl3.h" />
     <ClInclude Include="src\imgui\imconfig.h" />
@@ -201,9 +231,11 @@ Shell32.lib
     <ClInclude Include="src\imgui\imstb_rectpack.h" />
     <ClInclude Include="src\imgui\imstb_textedit.h" />
     <ClInclude Include="src\imgui\imstb_truetype.h" />
+    <ClInclude Include="src\stb\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="res\fragment.glsl" />
+    <None Include="res\sample.gltf" />
     <None Include="res\vertex.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -15,6 +15,14 @@
 #include "Debug.h"
 #include <glm/gtc/type_ptr.hpp>
 
+//#define AK_STATIC 1
+#include "ak/assetkit.h"
+
+
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb/stb_image.h"
+
 struct WindowInfo {
     int width;
     int height;
@@ -32,6 +40,29 @@ ConfigContext panel_config{
 };
 
 double xpos, ypos;
+
+void*
+imageLoadFromFile(const char* __restrict path,
+    int* __restrict width,
+    int* __restrict height,
+    int* __restrict components) {
+    return stbi_load(path, width, height, components, 0);
+}
+
+void*
+imageLoadFromMemory(const char* __restrict data,
+    size_t                  len,
+    int* __restrict width,
+    int* __restrict height,
+    int* __restrict components) {
+    return stbi_load_from_memory((stbi_uc const*)data, (int)len, width, height, components, 0);
+}
+
+void
+imageFlipVerticallyOnLoad(bool flip) {
+    stbi_set_flip_vertically_on_load(flip);
+}
+
 
 static void cursor_position_callback(GLFWwindow* window, double new_xpos, double new_ypos)
 {
@@ -183,6 +214,27 @@ int main(void)
         GL_ARB_vertex_attrib_binding
         */
     }    
+
+    ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
+
+    AkDoc* doc;
+    AkResult ret;
+
+    if ((ret = ak_load(&doc, "./res/sample.gltf", NULL)) != AK_OK) {
+        printf("Document couldn't be loaded\n");
+    }
+    else {
+        printf("sample.gltf loaded sucessful\n");
+    }
+
+    AkInstanceBase* instScene;
+    AkVisualScene* scene;
+
+    if ((instScene = doc->scene.visualScene)) {
+        scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
+        printf("Visual Scene loaded\n");
+    }
+
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
