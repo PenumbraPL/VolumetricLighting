@@ -178,6 +178,7 @@ Shell32.lib
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Debug.cpp" />
+    <ClCompile Include="Draw.cpp" />
     <ClCompile Include="GUI.cpp" />
     <ClCompile Include="src\imgui\backends\imgui_impl_glfw.cpp" />
     <ClCompile Include="src\imgui\backends\imgui_impl_opengl3.cpp" />
@@ -190,6 +191,7 @@ Shell32.lib
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Debug.h" />
+    <ClInclude Include="Draw.h" />
     <ClInclude Include="GUI.h" />
     <ClInclude Include="include\ak\animation.h" />
     <ClInclude Include="include\ak\assetkit.h" />
@@ -235,8 +237,10 @@ Shell32.lib
   </ItemGroup>
   <ItemGroup>
     <None Include="res\fragment.glsl" />
+    <None Include="res\fragment2.glsl" />
     <None Include="res\sample.gltf" />
     <None Include="res\vertex.glsl" />
+    <None Include="res\vertex2.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

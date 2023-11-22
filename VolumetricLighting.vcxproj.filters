@@ -19,6 +19,9 @@
     <Filter Include="Header Files\ImGUI">
       <UniqueIdentifier>{600c8152-3c81-4d69-9a04-31414701957b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\assetkit">
+      <UniqueIdentifier>{da382bda-fc52-4be8-8008-32c5d5559fc6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="VolumetricLighting.cpp">
@@ -49,6 +52,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Debug.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Draw.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -83,101 +89,104 @@
     <ClInclude Include="Debug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\ak\animation.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ak\assetkit.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ak\bbox.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ak\cam.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ak\common.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ak\context.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ak\controller.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ak\coord-util.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ak\coord.h">
+    <ClInclude Include="Draw.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\core-types.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ak\assetkit.h">
+      <Filter>Header Files\assetkit</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ak\bbox.h">
+      <Filter>Header Files\assetkit</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ak\cam.h">
+      <Filter>Header Files\assetkit</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ak\common.h">
+      <Filter>Header Files\assetkit</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ak\context.h">
+      <Filter>Header Files\assetkit</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ak\controller.h">
+      <Filter>Header Files\assetkit</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ak\coord.h">
+      <Filter>Header Files\assetkit</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ak\coord-util.h">
+      <Filter>Header Files\assetkit</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ak\animation.h">
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\geom.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\image.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\instance.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\library.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\light.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\map.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\material.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\memory.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\node.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\options.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\path.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\profile.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\sid.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\source.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\string.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\texture.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\transform.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\trash.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\type.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\url.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\util.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="include\ak\version.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="src\stb\stb_image.h">
       <Filter>Header Files</Filter>
@@ -191,6 +200,12 @@
       <Filter>Resource Files</Filter>
     </None>
     <None Include="res\sample.gltf">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\vertex2.glsl">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\fragment2.glsl">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
