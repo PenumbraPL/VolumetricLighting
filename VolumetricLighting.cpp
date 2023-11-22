@@ -29,11 +29,13 @@ struct WindowInfo {
     int height;
     const char* title;
     int cursor_mode;
+    int imgui;
+    int mbutton;
 } windowConfig = {
     1280,
     960,
     "Simple Triangles",
-    0
+    0, 0, 0
 };
 
 ConfigContext panel_config{
@@ -65,47 +67,61 @@ imageFlipVerticallyOnLoad(bool flip) {
 }
 
 
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    panel_config.p6 += yoffset * -6;
+}
+
+
 static void cursor_position_callback(GLFWwindow* window, double new_xpos, double new_ypos)
 {
     int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
     if (state != GLFW_RELEASE)
     {
-       // glfwGetCursorPos(window, &new_xpos, &new_ypos);
-        double nx = (2000.f / windowConfig.width) * (new_xpos - xpos);
-        double ny = (2000.f / windowConfig.height) * (new_ypos - ypos);
-        panel_config.p6 += nx;
-        panel_config.p7 += ny;
-        //glfwGetCursorPos(window, &xpos, &ypos);
-        std::cout << "diff x: " << (new_xpos - xpos) << " " << (int) nx << std::endl;
-        std::cout << "diff y: " << (new_ypos - ypos) << " " << (int) ny << std::endl;
-        std::cout << "hold left" << panel_config.p6 << " " << panel_config.p7 << "\n";
+        double nx = (1000.f / windowConfig.width) * (new_xpos - xpos);
+        double ny = (1000.f / windowConfig.height) * (new_ypos - ypos);
+        panel_config.p7 += nx;
+        panel_config.p8 += ny;
+        
         xpos = new_xpos;
         ypos = new_ypos;
     }
 }
+
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         glfwGetCursorPos(window, &xpos, &ypos);
-        std::cout << "press left\n";    
     }
 }
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.p6 += 1;
-    }
-    if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.p6 -= 1;
-    }
-    if (key == GLFW_KEY_UP && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
         panel_config.p7 += 1;
     }
-    if (key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
+    if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
         panel_config.p7 -= 1;
+    }
+    if (key == GLFW_KEY_UP && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
+        panel_config.p8 += 1;
+    }
+    if (key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
+        panel_config.p8 -= 1;
     }
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
+    }
+    if (key == GLFW_KEY_J && action == GLFW_PRESS) {
+        GLFWmousebuttonfun mouse_button_callbacks[2] = { NULL, mouse_button_callback };
+        windowConfig.mbutton += 1;
+        windowConfig.mbutton %= 2;
+        glfwSetMouseButtonCallback(window, mouse_button_callbacks[windowConfig.mbutton]);
+    }
+    if (key == GLFW_KEY_G && action == GLFW_PRESS) {
+        GLFWcursorposfun cursor_callbacks[2] = { NULL, cursor_position_callback };
+        windowConfig.imgui += 1;
+        windowConfig.imgui %= 2;
+        glfwSetCursorPosCallback(window, cursor_callbacks[windowConfig.imgui]);
     }
     if (key == GLFW_KEY_H && action == GLFW_PRESS) {
         int mode[2] = { GLFW_CURSOR_DISABLED, GLFW_CURSOR_NORMAL };
@@ -505,8 +521,8 @@ int main(void)
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -521,8 +537,8 @@ int main(void)
     glm::vec2 p2(0.5, 0.5);
     glm::vec2 p3(0, -0.5);
 
-    glfwSetErrorCallback(error_callback);
-    
+
+
     int flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
     {
@@ -643,12 +659,9 @@ int main(void)
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
     glfwSetKeyCallback(window, key_callback);
-    glfwSetMouseButtonCallback(window, mouse_button_callback);
-    glfwSetCursorPosCallback(window, cursor_position_callback);
-
-
-
-
+    glfwSetErrorCallback(error_callback);
+    glfwSetScrollCallback(window, scroll_callback);
+   
 
 
 
@@ -670,37 +683,35 @@ int main(void)
         float eye_x, eye_y, eye_z;
         float north_x, north_y, north_z;
         r = 0.1 * panel_config.p6;
-        phi = 3.14*panel_config.p7/180;
-        theta = 3.14*panel_config.p8/180;
+        theta = 3.14 * panel_config.p7 / 180;
+        phi = 3.14 * panel_config.p8 / 180;
 
         eye_x = r*cos(phi)*cos(theta);
         eye_y = r*sin(phi);
         eye_z = r*cos(phi)*sin(theta);
 
-        north_x = eye_x;
-        north_y = eye_y;
-        north_z = eye_z+0.001f;
+        float n_phi = phi + 0.01;
+        north_x = r * cos(n_phi) * cos(theta);
+        north_y = r * sin(n_phi);
+        north_z = r * cos(n_phi) * sin(theta);
 
-        glm::vec3 translate = glm::vec3(panel_config.p1 * 0.01, panel_config.p2 * 0.01, panel_config.p3 * 0.01);
+        glm::vec3 translate = glm::vec3(panel_config.p1 * 0.1, panel_config.p2 * 0.1, panel_config.p3 * 0.1);
         glm::vec3 rotate = glm::vec3(3.14 * panel_config.p4/180, 3.14 * panel_config.p5 / 180, 0.f);
 
-        
+        glm::vec3 camera = glm::vec3(eye_x, eye_y, eye_z);
 
         glUseProgram(program);
         
-        glm::mat4 LookAt = glm::lookAt(glm::vec3(eye_x, eye_y, eye_z), glm::vec3(0., 0., 0.), glm::vec3(north_x, north_y, north_z));
-        //glm::lookAt(glm::vec3(0., 0., -100.), glm::vec3(0.5, 0.5, 0.5), glm::vec3(0., 1., 0.));
+        glm::mat4 LookAt = glm::lookAt(camera, glm::vec3(0., 0., 0.), glm::vec3(north_x, north_y, north_z));
         glm::mat4 Projection = glm::perspectiveFov((float) 3.14*panel_config.fov/180, (float) width, (float) height, panel_config.near_plane, panel_config.far_plane);
 
-        glm::mat4 ViewTranslate = glm::translate(
-            glm::mat4(1.0f), translate);
-        glm::mat4 ViewRotateX = glm::rotate(
-            ViewTranslate, rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f));
-        glm::mat4 View = glm::rotate(ViewRotateX,
-            rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 Model = glm::scale(
-            glm::mat4(1.0f), glm::vec3(0.5f));
-        glm::mat4 MVP = Projection * View * Model * LookAt;
+        glm::mat4 ViewTranslate = glm::translate(glm::mat4(1.0f), translate);
+        glm::mat4 ViewRotateX = glm::rotate(ViewTranslate, rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f));
+        glm::mat4 View = glm::rotate(ViewRotateX, rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+
+        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
+        
+        glm::mat4 MVP = Projection * LookAt * View * Model;
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
         
         

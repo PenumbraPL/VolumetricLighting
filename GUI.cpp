@@ -277,11 +277,11 @@ void drawRightPanel(ImGuiIO& io, ConfigContext &config) {
     ImGui::SliderInt("Param1", &config.p1, -100, 100);
     ImGui::SliderInt("Param2", &config.p2, -100, 100);
     ImGui::SliderInt("Param3", &config.p3, -100, 100);
-    ImGui::SliderInt("Param4", &config.p4, 0, 120);
-    ImGui::SliderInt("Param5", &config.p5, 0, 120);
-    ImGui::SliderInt("Param6", &config.p6, 0, 120);
-    ImGui::SliderInt("Param7", &config.p7, 0, 180);
-    ImGui::SliderInt("Param8", &config.p8, 0, 180);
+    ImGui::SliderInt("Param4", &config.p4, 0, 360);
+    ImGui::SliderInt("Param5", &config.p5, 0, 360);
+    ImGui::SliderInt("Param6", &config.p6, 0, 360);
+    ImGui::SliderInt("Param7", &config.p7, 0, 360);
+    ImGui::SliderInt("Param8", &config.p8, 0, 360);
 
     ImGui::Separator();
     ImGui::Button("Save Image");
