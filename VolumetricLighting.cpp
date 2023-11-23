@@ -4,12 +4,12 @@
 
 #include <iostream>
 #include <stdio.h>
-#include "GL/glew.h"
+#include "GLEW.h"
 #include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
 #include "glm/mat4x4.hpp"
-//#include "glm/matrix.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include <glm/gtx/polar_coordinates.hpp>
 #include <stdlib.h>
 #include "GUI.h"
 #include "Debug.h"
@@ -38,11 +38,51 @@ struct WindowInfo {
     0, 0, 0
 };
 
-void fun() {}
+char* read_file(const char* file_name) {
+    FILE* fs;
+    fopen_s(&fs, file_name, "rb");
+
+    fseek(fs, 0, SEEK_END);
+    int file_size = ftell(fs);
+    rewind(fs);
+
+    char* buffer = (char*)calloc(file_size + 1, 1);
+    fread(buffer, 1, file_size, fs);
+    fclose(fs);
+
+    return buffer;
+}
 
 ConfigContext panel_config{
-    2.f, 0.f, 50, 0,0,0,0, 0, 50, 50, 50
+    2.f, 0.f, 50, 0, 0, 0, 0, 0, 50, 50, 50
 };
+
+void checkPipelineStatus(GLuint vertex_shader, GLuint fragment_shader, GLuint program) {
+    GLint v_comp_status, f_comp_status, link_status;
+    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &v_comp_status);
+    if (!v_comp_status) {
+        GLchar comp_info[1024];
+        glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, NULL);
+        glGetShaderInfoLog(vertex_shader, 1024, NULL, comp_info);
+
+        fwrite(comp_info, 1024, 1, stdout);
+    }
+    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &f_comp_status);
+    if (!f_comp_status) {
+        GLchar comp_info[1024];
+        glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, NULL);
+        glGetShaderInfoLog(fragment_shader, 1024, NULL, comp_info);
+
+        fwrite(comp_info, 1024, 1, stdout);
+    }
+    glGetProgramiv(program, GL_LINK_STATUS, &link_status);
+    if (!link_status) {
+        GLchar comp_info[1024];
+        glGetProgramInfoLog(program, 1024, NULL, comp_info);
+
+        fwrite(comp_info, 1024, 1, stdout);
+    }
+}
 
 double xpos, ypos;
 
@@ -175,162 +215,83 @@ struct {
 
 int main(void)
 {
-    std::cout << "=========== Initialization started =========\n";
-
-    GLFWwindow* window;
-    GLuint vertex_buffer, vertex_shader, fragment_shader, program;
-    GLint mvp_location, vpos_location, vcol_location;
-
-
+    std::cout << "========== Initialization started ============================\n";
     if (!glfwInit()) {
-        std::cout << "========== [GLFW]: Initialization failed =========\n";
+        std::cout << "========== [GLFW]: Initialization failed =====================\n";
         return 1;
     }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 
-
-    window = glfwCreateWindow(windowConfig.width, windowConfig.height, windowConfig.title, NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(windowConfig.width, windowConfig.height, windowConfig.title, NULL, NULL);
     if (!window)
     {
         glfwTerminate();
-        std::cout << "========== [GLFW]: Terminated =========\n";
-        std::cout << "========== [GLFW]: Window initialization failed =========\n";
+        std::cout << "========== [GLFW]: Terminated ================================\n";
+        std::cout << "========== [GLFW]: Window initialization failed ==============\n";
         return 1;
     }
+    
 
     glfwMakeContextCurrent(window);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetErrorCallback(error_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 
-    GLenum err = glewInit();
-    if (GLEW_OK != err)
-    {
-        std::cout << "========== [GLEW]: Initialization failed =========\n";
-        std::cout << "\tError:" << glewGetErrorString(err);
-    }
-    std::cout << "========== [GLEW]: Using GLEW " << glewGetString(GLEW_VERSION) << " ================\n";
+    initializeGLEW();
     
-    // glewIsSupported supported from version 1.3
-    if(GLEW_VERSION_1_3)
-    {
-        if (glewIsSupported("GL_VERSION_4_5  GL_ARB_point_sprite"))
-        {
-            std::cout << "========== [GLEW]: Version 4.5 of OpenGL is supported =========\n";
-            std::cout << "========== [GLEW]: Extention GL_ARB_point_sprite is supported =========\n";
-        }
-        if(glewIsSupported("GL_VERSION_4_5  GL_KHR_debug"))
-        {
-            std::cout << "========== [GLEW]: Version 4.5 of OpenGL is supported =========\n";
-            std::cout << "========== [GLEW]: Extention GL_KHR_debug is supported =========\n";
-        }
-            /*
-        GL_ARB_buffer_storage
-        GL_ARB_clear_buffer_object
-        GL_ARB_clear_texture
-        GL_ARB_clip_control
-        GL_ARB_multi_bind
-        GL_ARB_sampler_objects
-        GL_ARB_texture_storage
-        GL_ARB_vertex_attrib_binding
-        */
-    }    
-
-
-
-
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 
-    // Setup Dear ImGui style
     ImGui::StyleColorsDark();
 
-    const char* glsl_version = "#version 150"; // TO DO
+    const char* glsl_version = "#version 450";
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
 
-    glm::vec2 p1(-0.5, 0.5);
-    glm::vec2 p2(0.5, 0.5);
-    glm::vec2 p3(0, -0.5);
-
-
-
     int flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
-    if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
-    {
+    if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
         std::cout << "========== [GLFW]: Debug context initialize successful =========\n";
         std::vector<DEBUGPROC> callbacks;
         callback_list(callbacks);
         debug_init(callbacks);
-    }
-    else {
+    }  else {
         std::cout << "========== [GLFW]: Debug context initialize unsuccessful =========\n";
     }
 
-
     
-    FILE  *fs;
-    char* v_sh_buffer;
-    fopen_s(&fs, "res/vertex2.glsl", "rb");
-    if (fs) {
-        std::cout << "=================== res/vertex.glsl opened =======================\n";
-        fseek(fs, 0, SEEK_END);
-        int file_size = ftell(fs);
-        rewind(fs);
-
-        v_sh_buffer = (char*)calloc(file_size + 1, 1);
-        fread(v_sh_buffer, 1, file_size, fs);
-        fclose(fs);
-        fs = NULL;
-    }
-    else {
+    char* v_sh_buffer = read_file("res/vertex2.glsl");
+    if (!v_sh_buffer){
         std::cout << "=================== Coulnt find res/vertex.glsl =======================\n";
     }
     
-
-    char* f_sh_buffer;
-    fopen_s(&fs, "res/fragment2.glsl", "rb");
-    if (fs) {
-        std::cout << "=================== res/fragment.glsl opened  =======================\n";
-
-        fseek(fs, 0, SEEK_END);
-        int file_size = ftell(fs);
-        rewind(fs);
-
-        f_sh_buffer = (char*)calloc(file_size + 1, 1);
-        fread(f_sh_buffer, 1, file_size, fs);
-        fclose(fs);
-    }
-    else {
-        std::cout << "=================== Coulnt find res/fragment.glsl =======================\n";
-    }
+    char* f_sh_buffer = read_file("res/fragment2.glsl");
+    if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl =======================\n";
     
-    GLuint vao;
+
+    GLuint vao, vertex_buffer, vertex_shader, fragment_shader, program;
+    GLint mvp_location, vpos_location, vcol_location;
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
-    //glGenBuffers(1, &vertex_buffer);
-    //glBufferData(GL_ARRAY_BUFFER, buffer_size, raw_buffer, GL_STATIC_DRAW);    
-    //glNamedBufferData(vertex_buffer, buffer_size, raw_buffer, GL_STATIC_DRAW);
-    //glBindVertexBuffer(0, vertex_buffer, 0, sizeof(float)*3);
-    
-    
-    
-
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glObjectLabel(GL_SHADER, vertex_shader, -1, "Vertex Shader");
-    glShaderSource(vertex_shader, 1, (GLchar**) &v_sh_buffer, NULL);
+    glShaderSource(vertex_shader, 1, &v_sh_buffer, NULL);
     glCompileShader(vertex_shader);
 
     fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
     glObjectLabel(GL_SHADER, fragment_shader, -1, "Fragment Shader");
-    glShaderSource(fragment_shader, 1, (GLchar**) &f_sh_buffer, NULL);
+    glShaderSource(fragment_shader, 1, &f_sh_buffer, NULL);
     glCompileShader(fragment_shader);
 
     program = glCreateProgram();
@@ -339,35 +300,13 @@ int main(void)
     glAttachShader(program, fragment_shader);
     glLinkProgram(program);
 
+    //GLuint pipeline;
+    //glGenProgramPipelines(1, &pipeline);
+    //glUseProgramStages(pipeline, GL_VERTEX_SHADER_BIT, fragment_shader);
+    //glUseProgramStages(pipeline, GL_FRAGMENT_SHADER_BIT, vertex_shader);
+    
     /* ======================================================== */
-
-    GLint v_comp_status, f_comp_status, link_status;
-    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &v_comp_status);
-    if (!v_comp_status) {
-        GLint v_comp_len = 0; // niepotrzebne chyba ze z ifem
-        GLchar comp_info[1024];
-        glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &v_comp_len);
-        glGetShaderInfoLog(vertex_shader, 1024, NULL, comp_info);
-
-        fwrite(comp_info, 1024, 1, stdout);
-    }
-    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &f_comp_status);
-    if (!f_comp_status) {
-        GLint f_comp_len = 0; // niepotrzebne chyba ze z ifem
-        GLchar comp_info[1024];
-        glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &f_comp_len);
-        glGetShaderInfoLog(fragment_shader, 1024, NULL, comp_info);
-
-        fwrite(comp_info, 1024, 1, stdout);
-    }
-    glGetProgramiv(program, GL_LINK_STATUS, &link_status);
-    if (!link_status) {
-        GLchar comp_info[1024];
-        glGetProgramInfoLog(program, 1024, NULL, comp_info);
-
-        fwrite(comp_info, 1024, 1, stdout);
-    }
-
+    checkPipelineStatus(vertex_shader, fragment_shader, program);
     /* ======================================================== */
 
 
@@ -375,12 +314,8 @@ int main(void)
 
     AkDoc* doc;
     AkResult ret;
-
     if ((ret = ak_load(&doc, "./res/sample.gltf", NULL)) != AK_OK) {
         printf("Document couldn't be loaded\n");
-    }
-    else {
-        printf("sample.gltf loaded sucessful\n");
     }
 
     AkInstanceBase* instScene;
@@ -392,9 +327,8 @@ int main(void)
     float* camera_mat = (float*)calloc(16, sizeof(float));
     float* camera_proj = (float*)calloc(16, sizeof(float));
 
-    int empty[4] = { 1,2,3,4 };
-    int8_t* raw_buffer = (int8_t*) empty;
-    uint32_t* indecies = (uint32_t*)empty;
+    int8_t* raw_buffer;
+    uint32_t* indecies = nullptr;
     unsigned int indecies_size = 0;
     int buffer_size = 0;
     
@@ -549,19 +483,9 @@ int main(void)
 
     /* ======================================================== */
 
-    //setPointer(program, mvp_location, vpos_location, vcol_location);
-    //setPointer2(program, mvp_location, vpos_location, vcol_location);
-    //setPointer3(program, mvp_location, vpos_location, vcol_location);
 
 
 
-
-
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetErrorCallback(error_callback);
-    glfwSetScrollCallback(window, scroll_callback);
    
 
 
@@ -570,58 +494,46 @@ int main(void)
     std::cout << "===================== Main loop ===================\n";
     while (!glfwWindowShouldClose(window))
     {
-        float ratio;
         int width, height;
-        //glm::mat4 m, p, mvp;
-
         glfwGetFramebufferSize(window, &width, &height);
-        ratio = width / (float)height;
+        float ratio = width / (float)height;
+        
         glViewport(0, 0, width, height);
-
         glClear(GL_COLOR_BUFFER_BIT);
         
-        float r, phi, theta;
-        float eye_x, eye_y, eye_z;
-        float north_x, north_y, north_z;
-        r = 0.1 * panel_config.p6;
-        theta = 3.14 * panel_config.p7 / 180;
-        phi = 3.14 * panel_config.p8 / 180;
+        float r = 0.1 * panel_config.p6;
+        float theta = 3.14 * panel_config.p7 / 180;
+        float phi = 3.14 * panel_config.p8 / 180;
 
-        eye_x = r*cos(phi)*cos(theta);
-        eye_y = r*sin(phi);
-        eye_z = r*cos(phi)*sin(theta);
-
-        float n_phi = phi + 0.01;
-        north_x = r * cos(n_phi) * cos(theta);
-        north_y = r * sin(n_phi);
-        north_z = r * cos(n_phi) * sin(theta);
+        glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
+        eye = glm::vec3(eye.z, eye.y, eye.x);
+        glm::vec3 north = r * glm::euclidean(glm::vec2(theta, phi+0.01));
+        if (theta > 90 && theta < 270) {
+            north = glm::vec3(north.z, -north.y, north.x);
+        } else {
+            north = glm::vec3(north.z, north.y, north.x);
+        }
 
         glm::vec3 translate = glm::vec3(panel_config.p1 * 0.1, panel_config.p2 * 0.1, panel_config.p3 * 0.1);
         glm::vec3 rotate = glm::vec3(3.14 * panel_config.p4/180, 3.14 * panel_config.p5 / 180, 0.f);
 
-        glm::vec3 camera = glm::vec3(eye_x, eye_y, eye_z);
-
         glUseProgram(program);
-        
-        glm::mat4 LookAt = glm::lookAt(camera, glm::vec3(0., 0., 0.), glm::vec3(north_x, north_y, north_z));
+        //glBindProgramPipeline(pipeline);
+
+        glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
         glm::mat4 Projection = glm::perspectiveFov((float) 3.14*panel_config.fov/180, (float) width, (float) height, panel_config.near_plane, panel_config.far_plane);
 
         glm::mat4 ViewTranslate = glm::translate(glm::mat4(1.0f), translate);
         glm::mat4 ViewRotateX = glm::rotate(ViewTranslate, rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f));
         glm::mat4 View = glm::rotate(ViewRotateX, rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-
-        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
-        
+        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));   
         glm::mat4 MVP = Projection * LookAt * View * Model;
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
         
         
-        //glDrawArrays(GL_TRIANGLES, 0, 3);
-        //glDrawArrays(GL_TRIANGLE_STRIP, 0, 8);
-        //glDrawArrays(GL_POINTS, 0, 1966);
         glDrawElements(GL_TRIANGLES, indecies_size, GL_UNSIGNED_INT, indecies);
 
-        //fun();
+        //glBindProgramPipeline(0);
 
         // ImGui
         ImGui_ImplOpenGL3_NewFrame();
@@ -643,6 +555,8 @@ int main(void)
     free(v_sh_buffer);
     free(f_sh_buffer);
 
+    //glDeleteProgramPipelines(1, &pipeline);
+
     GLuint buffers[] = {vertex_buffer};
     glDeleteBuffers(1, buffers);
     glDeleteVertexArrays(1, &vao);
@@ -656,7 +570,7 @@ int main(void)
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     glfwTerminate();
-    std::cout << "========== [GLFW]: Terminated =========\n";
-    std::cout << "===================== Exit succeeded ===================\n";
+    std::cout << "========== [GLFW]: Terminated ================================\n";
+    std::cout << "===================== Exit succeeded =========================\n";
     return 0;
 }

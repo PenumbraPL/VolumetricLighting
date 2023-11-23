@@ -192,6 +192,7 @@ Shell32.lib
   <ItemGroup>
     <ClInclude Include="Debug.h" />
     <ClInclude Include="Draw.h" />
+    <ClInclude Include="GLEW.h" />
     <ClInclude Include="GUI.h" />
     <ClInclude Include="include\ak\animation.h" />
     <ClInclude Include="include\ak\assetkit.h" />
