@@ -314,7 +314,7 @@ int main(void)
 
     AkDoc* doc;
     AkResult ret;
-    if ((ret = ak_load(&doc, "./res/sample.gltf", NULL)) != AK_OK) {
+    if ((ret = ak_load(&doc, "./res/sample2.gltf", NULL)) != AK_OK) {
         printf("Document couldn't be loaded\n");
     }
 
@@ -335,8 +335,8 @@ int main(void)
     if ((instScene = doc->scene.visualScene)) {
         scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
         printf("Visual Scene loaded\n");
+
         std::cout << "Scene name: " << scene->name << std::endl;
-        //geometry = ak_libFirstGeom(doc);
         if (scene->lights)
             if (scene->lights->first) {
                 AkLight* light = (AkLight*)ak_instanceObject(scene->lights->first->instance);
@@ -353,18 +353,17 @@ int main(void)
                 std::cout << "Render: " << render << std::endl;
             }
 
-        root = ak_instanceObjectNode(scene->node);
-        node_ptr = root;
+        node_ptr = ak_instanceObjectNode(scene->node);
+        int j = 0;
 
         do {
+            float* word_transform = (float*)calloc(16, sizeof(float));
+            ak_transformCombineWorld(node_ptr, word_transform);
+            float* transform = (float*)calloc(16, sizeof(float));
+            ak_transformCombine(node_ptr, transform);
+
             std::cout << "Node name: " << node_ptr->name << std::endl;
-            std::string node_type;
-            switch (node_ptr->nodeType) {
-            case AK_NODE_TYPE_NODE:             node_type = "node"; break;
-            case AK_NODE_TYPE_CAMERA_NODE:      node_type = "camera"; break;
-            case AK_NODE_TYPE_JOINT:            node_type = "joint"; break;
-            };
-            int j = 0;
+
 
             std::string geo_type;
             if (node_ptr->geometry) {
@@ -374,20 +373,31 @@ int main(void)
                 case AK_GEOMETRY_MESH:
                     geo_type = "mesh";
                     if (mesh) {
-                        std::string prim_type;
+                        GLuint prim_type;
+                        std::cout << "Mesh name:" << mesh->name << std::endl;
+                        //geometry->materialMap;
+                        for (int i = 0; i < mesh->primitiveCount; i++) {/*prim = prim->next;*/ }
                         AkMeshPrimitive* prim = mesh->primitive;
-                        std::cout << prim_type << std::endl;
                         switch (prim->type) {
-                        case AK_PRIMITIVE_LINES:              prim_type = "line"; break;
-                        case AK_PRIMITIVE_POLYGONS:           prim_type = "polygon"; break;
-                        case AK_PRIMITIVE_TRIANGLES:          prim_type = "triangle"; break;
-                        case AK_PRIMITIVE_POINTS:             prim_type = "point"; break;
+                            case AK_PRIMITIVE_LINES:              prim_type = GL_LINES; break;
+                            case AK_PRIMITIVE_POLYGONS:           prim_type = GL_POLYGON; break;
+                            case AK_PRIMITIVE_TRIANGLES:          prim_type = GL_TRIANGLES; break;
+                            case AK_PRIMITIVE_POINTS:             
+                            default:                              prim_type = GL_POINTS; break;
                         }
                         if (prim->indices) {
                             indecies = (unsigned int*) prim->indices->items;
                             indecies_size = prim->indices->count;
                         }
+                        //prim->material
+                        //prim->bindMaterial
                         
+                        int set = prim->input->set;
+                        AkInput* pos = ak_meshInputGet(prim, "POSITION", set);
+                        AkInput* tex = ak_meshInputGet(prim, "TEXCOORD", set);
+                        AkInput* nor = ak_meshInputGet(prim, "NORMAL", set);
+                        // propably number of akinputs in next
+                        //int c = ak_meshInputCount(mesh);
 
                         AkBuffer* buffer = prim->input->accessor->buffer;
                         raw_buffer = (int8_t*)buffer->data;
@@ -432,7 +442,7 @@ int main(void)
                         std::cout << ak_meshInputCount(mesh) << std::endl;
 
 
-
+                        //meshGenNormals
 
                         mvp_location = glGetUniformLocation(program, "MVP");
                         vpos_location = glGetAttribLocation(program, "vPos");
@@ -462,8 +472,9 @@ int main(void)
             }
             std::cout << "No. " << j++ << std::endl;
             std::cout << "Node type: " << geo_type << std::endl;
-
-
+            
+            free(transform);
+            free(word_transform);
             node_ptr = node_ptr->next;
         } while (node_ptr);
 
@@ -475,6 +486,8 @@ int main(void)
             if (i % 4 == 3) std::cout << std::endl;
         }
     }
+    glm::mat4 Camera = glm::make_mat4x4(camera_mat);
+    glm::mat4 Projection = glm::make_mat4x4(camera_proj);
 
     if (camera_mat) free(camera_mat);
     if (camera_proj) free(camera_proj);
@@ -521,7 +534,7 @@ int main(void)
         //glBindProgramPipeline(pipeline);
 
         glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
-        glm::mat4 Projection = glm::perspectiveFov((float) 3.14*panel_config.fov/180, (float) width, (float) height, panel_config.near_plane, panel_config.far_plane);
+        //glm::mat4 Projection = glm::perspectiveFov((float) 3.14*panel_config.fov/180, (float) width, (float) height, panel_config.near_plane, panel_config.far_plane);
 
         glm::mat4 ViewTranslate = glm::translate(glm::mat4(1.0f), translate);
         glm::mat4 ViewRotateX = glm::rotate(ViewTranslate, rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f));
