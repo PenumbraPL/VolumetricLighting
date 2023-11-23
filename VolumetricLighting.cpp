@@ -474,7 +474,7 @@ int main(void)
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
-
+    if (!raw_buffer) std::cout << "No data in buffer" << std::endl;
     glGenBuffers(1, &vertex_buffer);
     //glBufferData(GL_ARRAY_BUFFER, buffer_size, raw_buffer, GL_STATIC_DRAW);    
     glNamedBufferData(vertex_buffer, buffer_size, raw_buffer, GL_STATIC_DRAW);
