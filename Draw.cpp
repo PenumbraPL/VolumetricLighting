@@ -27,11 +27,9 @@ void setPointer2(GLuint program, GLint& mvp_location, GLint& vpos_location, GLin
 void setPointer3(GLuint program, GLint& mvp_location, GLint& vpos_location, GLint& vcol_location) {
     mvp_location = glGetUniformLocation(program, "MVP");
     vpos_location = glGetAttribLocation(program, "vPos");
-    //vcol_location = glGetAttribLocation(program, "vCol");
-
+    
+    glVertexAttribFormat(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3);
+    glVertexAttribBinding(vpos_location, 0);
     glEnableVertexAttribArray(vpos_location);
-    //glEnableVertexAttribArray(vcol_location);
 
-    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0);
-    //glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 2));
 }

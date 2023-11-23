@@ -262,6 +262,22 @@ int main(void)
         printf("Visual Scene loaded\n");
         std::cout << "Scene name: " << scene->name << std::endl;
         //geometry = ak_libFirstGeom(doc);
+        if(scene->lights)
+        if (scene->lights->first) {
+            AkLight* light = (AkLight*) ak_instanceObject(scene->lights->first->instance);
+            std::cout << "Light name: " << light->name << std::endl;
+        }
+        if (scene->cameras)
+        if (scene->cameras->first) {
+            AkCamera* camera = (AkCamera*)ak_instanceObject(scene->cameras->first->instance);
+            std::cout << "Camera name: " << camera->name << std::endl;
+        }
+        if (scene->evaluateScene)
+        if (scene->evaluateScene->render) {
+            const char* render = scene->evaluateScene->render->cameraNode;
+            std::cout << "Render: " << render << std::endl;
+        }
+
         root = ak_instanceObjectNode(scene->node);
         node_ptr = root;
 
@@ -269,15 +285,9 @@ int main(void)
             std::cout << node_ptr->name << std::endl;
             std::string node_type;
             switch (node_ptr->nodeType) {
-            case AK_NODE_TYPE_NODE:
-                node_type = "node";
-                break;
-            case AK_NODE_TYPE_CAMERA_NODE:
-                node_type = "camera";
-                break;
-            case AK_NODE_TYPE_JOINT:
-                node_type = "joint";
-                break;
+                case AK_NODE_TYPE_NODE:             node_type = "node"; break;
+                case AK_NODE_TYPE_CAMERA_NODE:      node_type = "camera"; break;
+                case AK_NODE_TYPE_JOINT:            node_type = "joint"; break;
             };
             int j = 0;
 
@@ -292,18 +302,10 @@ int main(void)
                         std::string prim_type;
                         AkMeshPrimitive* prim = mesh->primitive;
                         switch (prim->type) {
-                        case AK_PRIMITIVE_LINES:
-                            prim_type = "line";
-                            break;
-                        case AK_PRIMITIVE_POLYGONS:
-                            prim_type = "polygon";
-                            break;
-                        case AK_PRIMITIVE_TRIANGLES:
-                            prim_type = "triangle";
-                            break;
-                        case AK_PRIMITIVE_POINTS:
-                            prim_type = "point";
-                            break;
+                            case AK_PRIMITIVE_LINES:              prim_type = "line"; break;
+                            case AK_PRIMITIVE_POLYGONS:           prim_type = "polygon"; break;
+                            case AK_PRIMITIVE_TRIANGLES:          prim_type = "triangle"; break;
+                            case AK_PRIMITIVE_POINTS:             prim_type = "point"; break;
                         }
                         std::cout << prim_type << std::endl;
                         //if (prim) prim->input;
@@ -321,161 +323,40 @@ int main(void)
 
                         for (int8_t* i = raw_buffer + offset;i<raw_buffer+length;i+=comp_stride, j++) {
                             switch (type) {
-                                case AKT_UNKNOWN:
-									break;
-                                    case AKT_NONE:
-									break;
-                                    case AKT_OBJECT:
-									break;
-                                    case AKT_BOOL:
-									break;
-                                    case AKT_BOOL2:
-									break;
-                                    case AKT_BOOL3:
-									break;
-                                    case AKT_BOOL4:
-									break;
-                                    case AKT_INT:
-									break;
-                                    case AKT_INT2:
-									break;
-                                    case AKT_INT3:
-									break;
-                                    case AKT_INT4:
-									break;
-                                    case AKT_FLOAT:
-                                        switch (comp_size) {
-                                            case AK_COMPONENT_SIZE_UNKNOWN:
-                                                break;
-                                            case AK_COMPONENT_SIZE_SCALAR:
-                                                std::cout << "fvec(" << glm::to_string(*(glm::fvec1*)i) << ")" << std::endl;
-                                                break;
-                                            case AK_COMPONENT_SIZE_VEC2:
-                                                std::cout << "fvec(" << glm::to_string(*(glm::fvec2*)i) << ")" << std::endl;
-                                                break;
-                                            case AK_COMPONENT_SIZE_VEC3:
-                                                std::cout << "fvec(" << glm::to_string(*(glm::fvec3*)i) << ")" << std::endl;
-                                                break;
-                                            case AK_COMPONENT_SIZE_VEC4:
-                                                std::cout << "fvec(" << glm::to_string(*(glm::fvec4*)i) << ")" << std::endl;
-                                                break;
-                                            case AK_COMPONENT_SIZE_MAT2:
-                                                break;
-                                            case AK_COMPONENT_SIZE_MAT3:
-                                                break;
-                                            case AK_COMPONENT_SIZE_MAT4:
-                                                break;
-                                        }
-                                        break;
-                                    case AKT_FLOAT2:
-									break;
-                                    case AKT_FLOAT3:
-                                        std::cout << "fvec3(" << glm::to_string(*(glm::fvec3*) i) << ")" << std::endl;
-									break;
-                                    case AKT_FLOAT4:
-									break;
-                                    case AKT_FLOAT2x2:
-									break;
-                                    case AKT_FLOAT3x3:
-									break;
-                                    case AKT_FLOAT4x4:
-									break;
-                                    case AKT_STRING:
-									break;
-                                    case AKT_SAMPLER1D:
-									break;
-                                    case AKT_SAMPLER2D:
-									break;
-                                    case AKT_SAMPLER3D:
-									break;
-                                    case AKT_SAMPLER_CUBE:
-									break;
-                                    case AKT_SAMPLER_RECT:
-									break;
-                                    case AKT_SAMPLER_DEPTH:
-									break;
-                                    case AKT_IDREF:
-									break;
-                                    case AKT_NAME:
-									break;
-                                    case AKT_SIDREF:
-									break;
-                                    case AKT_TOKEN:
-									break;
-                                    case AKT_UINT:
-									break;
-                                    case AKT_BYTE:
-									break;
-                                    case AKT_UBYTE:
-									break;
-                                    case AKT_SHORT:
-									break;
-                                    case AKT_USHORT:
-									break;
-                                    case AKT_DOUBLE:
-									break;
-                                    case AKT_INT64:
-									break;
-                                    case AKT_UINT64:
-									break;
-                                    case AKT_EFFECT:
-									break;
-                                    case AKT_PROFILE:
-									break;
-                                    case AKT_PARAM:
-									break;
-                                    case AKT_NEWPARAM:
-									break;
-                                    case AKT_SETPARAM:
-									break;
-                                    case AKT_TECHNIQUE_FX:
-									break;
-                                    case AKT_TECHNIQUE:
-									break;
-                                    case AKT_SAMPLER:
-									break;
-                                    case AKT_TEXTURE:
-									break;
-                                    case AKT_TEXTURE_REF:
-									break;
-                                    case AKT_TEXTURE_NAME:
-									break;
-                                    case AKT_TEXCOORD:
-									break;
-                                    case AKT_NODE:
-									break;
-                                    case AKT_SCENE:
-									break;
-                                    case AKT_SOURCE:
-									break;
-                                    case AKT_ACCESSOR:
-									break;
-                                    case AKT_BUFFER:
-									break;
-                                    case AKT_GEOMETRY:
-									break;
-                                    case AKT_MESH:
-									break;
-                                    case AKT_CONTROLLER:
-									break;
-                                    case AKT_SKIN:
-									break;
-                                    case AKT_MORPH:
-									break;
-                                    case AKT_LOOKAT:
-									break;
-                                    case AKT_TRANSLATE:
-									break;
-                                    case AKT_ROTATE:
-									break;
-                                    case AKT_SCALE:
-									break;
-                                    case AKT_SKEW:
-									break;
-                                    case AKT_MATRIX:
-									break;
-                                    case AKT_QUATERNION:
-                                        break;
+                                case AKT_FLOAT:
+                                    switch (comp_size) {
+                                        case AK_COMPONENT_SIZE_SCALAR:
+                                            //std::cout << "fvec(" << glm::to_string(*(glm::fvec1*)i) << ")" << std::endl;
+                                            break;
+                                        case AK_COMPONENT_SIZE_VEC2:
+                                            //std::cout << "fvec(" << glm::to_string(*(glm::fvec2*)i) << ")" << std::endl;
+                                            break;
+                                        case AK_COMPONENT_SIZE_VEC3:
+                                            //std::cout << "fvec(" << glm::to_string(*(glm::fvec3*)i) << ")" << std::endl;
+                                            break;
+                                        case AK_COMPONENT_SIZE_VEC4:
+                                            //std::cout << "fvec(" << glm::to_string(*(glm::fvec4*)i) << ")" << std::endl;
+                                            break;
+                                        case AK_COMPONENT_SIZE_MAT2:
+                                            break;
+                                        case AK_COMPONENT_SIZE_MAT3:
+                                            break;
+                                        case AK_COMPONENT_SIZE_MAT4:
+                                            break;
+                                        case AK_COMPONENT_SIZE_UNKNOWN:
+                                        default:
+                                            break;
+                                    }
+                                    break;
+                                case AKT_UINT:									break;
+                                case AKT_BYTE:									break;
+                                case AKT_UBYTE:									break;
+                                case AKT_SHORT:									break;
+                                case AKT_USHORT:								break;
+                                case AKT_UNKNOWN:									
+                                case AKT_NONE:									
+                                default:
+                                    break;
                             };
                             
                         }
@@ -595,10 +476,10 @@ int main(void)
     glBindVertexArray(vao);
 
     glGenBuffers(1, &vertex_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-    //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    //glBufferData(GL_ARRAY_BUFFER, sizeof(cube), cube, GL_STATIC_DRAW);
-    glBufferData(GL_ARRAY_BUFFER, buffer_size, raw_buffer, GL_STATIC_DRAW);
+    //glBufferData(GL_ARRAY_BUFFER, buffer_size, raw_buffer, GL_STATIC_DRAW);    
+    glNamedBufferData(vertex_buffer, buffer_size, raw_buffer, GL_STATIC_DRAW);
+    glBindVertexBuffer(0, vertex_buffer, 0, sizeof(float)*3);
+
 
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, (GLchar**) &v_sh_buffer, NULL);
