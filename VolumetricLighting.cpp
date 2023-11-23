@@ -181,6 +181,7 @@ int main(void)
     GLuint vertex_buffer, vertex_shader, fragment_shader, program;
     GLint mvp_location, vpos_location, vcol_location;
 
+
     if (!glfwInit()) {
         std::cout << "========== [GLFW]: Initialization failed =========\n";
         return 1;
@@ -318,17 +319,22 @@ int main(void)
     //glBufferData(GL_ARRAY_BUFFER, buffer_size, raw_buffer, GL_STATIC_DRAW);    
     //glNamedBufferData(vertex_buffer, buffer_size, raw_buffer, GL_STATIC_DRAW);
     //glBindVertexBuffer(0, vertex_buffer, 0, sizeof(float)*3);
-
+    
+    
+    
 
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+    glObjectLabel(GL_SHADER, vertex_shader, -1, "Vertex Shader");
     glShaderSource(vertex_shader, 1, (GLchar**) &v_sh_buffer, NULL);
     glCompileShader(vertex_shader);
 
     fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    glObjectLabel(GL_SHADER, fragment_shader, -1, "Fragment Shader");
     glShaderSource(fragment_shader, 1, (GLchar**) &f_sh_buffer, NULL);
     glCompileShader(fragment_shader);
 
     program = glCreateProgram();
+    glObjectLabel(GL_PROGRAM, program, -1, "Volumetric lighting");
     glAttachShader(program, vertex_shader);
     glAttachShader(program, fragment_shader);
     glLinkProgram(program);
@@ -386,12 +392,12 @@ int main(void)
     float* camera_mat = (float*)calloc(16, sizeof(float));
     float* camera_proj = (float*)calloc(16, sizeof(float));
 
-
-    int8_t* raw_buffer = nullptr;
-    uint32_t* indecies = nullptr;
-    unsigned int indecies_size;
-    int buffer_size;
-
+    int empty[4] = { 1,2,3,4 };
+    int8_t* raw_buffer = (int8_t*) empty;
+    uint32_t* indecies = (uint32_t*)empty;
+    unsigned int indecies_size = 0;
+    int buffer_size = 0;
+    
     if ((instScene = doc->scene.visualScene)) {
         scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
         printf("Visual Scene loaded\n");
@@ -493,16 +499,17 @@ int main(void)
 
 
 
+
                         mvp_location = glGetUniformLocation(program, "MVP");
                         vpos_location = glGetAttribLocation(program, "vPos");
                         int binding_point = 0;
 
-                        glVertexAttribFormat(vpos_location, comp_size, type, normalize, 0); // comp_stride change to comp_size*type
+                        glVertexAttribFormat(vpos_location, comp_size, type, normalize, 0); // comp_stride change to comp_size*typ
                         glVertexAttribBinding(vpos_location, binding_point);
-
-                        glGenBuffers(1, &vertex_buffer);
-                        glNamedBufferData(vertex_buffer, buffer_size, raw_buffer, GL_STATIC_DRAW);
+                        glGenBuffers(1, &vertex_buffer); // createbuffers
                         glBindVertexBuffer(binding_point, vertex_buffer, offset, comp_stride);
+                        glObjectLabel(GL_BUFFER, vertex_buffer, -1, "Vertex Buffer");
+                        glNamedBufferData(vertex_buffer, buffer_size, raw_buffer, GL_STATIC_DRAW);
                         glEnableVertexAttribArray(vpos_location);
 
                     };
@@ -547,10 +554,7 @@ int main(void)
     //setPointer3(program, mvp_location, vpos_location, vcol_location);
 
 
-    glObjectLabel(GL_BUFFER, vertex_buffer, 0, "Vertex Buffer");
-    glObjectLabel(GL_SHADER, vertex_shader, 0, "Vertex Shader");
-    glObjectLabel(GL_SHADER, fragment_shader, 0, "Fragment Shader");
-    glObjectLabel(GL_PROGRAM, program, 0, "Volumetric lighting");
+
 
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -615,9 +619,9 @@ int main(void)
         //glDrawArrays(GL_TRIANGLES, 0, 3);
         //glDrawArrays(GL_TRIANGLE_STRIP, 0, 8);
         //glDrawArrays(GL_POINTS, 0, 1966);
-        glDrawElements(GL_TRIANGLES, indecies_size / 3, GL_UNSIGNED_INT, indecies);
+        glDrawElements(GL_TRIANGLES, indecies_size, GL_UNSIGNED_INT, indecies);
 
-        fun();
+        //fun();
 
         // ImGui
         ImGui_ImplOpenGL3_NewFrame();
