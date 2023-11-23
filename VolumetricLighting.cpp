@@ -38,6 +38,8 @@ struct WindowInfo {
     0, 0, 0
 };
 
+void fun() {}
+
 ConfigContext panel_config{
     2.f, 0.f, 50, 0,0,0,0, 0, 50, 50, 50
 };
@@ -232,170 +234,7 @@ int main(void)
         */
     }    
 
-    ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
 
-    AkDoc* doc;
-    AkResult ret;
-
-    if ((ret = ak_load(&doc, "./res/sample.gltf", NULL)) != AK_OK) {
-        printf("Document couldn't be loaded\n");
-    }
-    else {
-        printf("sample.gltf loaded sucessful\n");
-    }
-
-    AkInstanceBase* instScene;
-    AkVisualScene* scene;
-    AkCamera* camera;
-    AkInstanceGeometry* geometry;
-    AkNode *root, *node_ptr;
-
-    float* camera_mat = (float*) calloc(16, sizeof(float));
-    float* camera_proj = (float*) calloc(16, sizeof(float));
-
-
-    int8_t* raw_buffer = nullptr;
-    int buffer_size;
-
-    if ((instScene = doc->scene.visualScene)) {
-        scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
-        printf("Visual Scene loaded\n");
-        std::cout << "Scene name: " << scene->name << std::endl;
-        //geometry = ak_libFirstGeom(doc);
-        if(scene->lights)
-        if (scene->lights->first) {
-            AkLight* light = (AkLight*) ak_instanceObject(scene->lights->first->instance);
-            std::cout << "Light name: " << light->name << std::endl;
-        }
-        if (scene->cameras)
-        if (scene->cameras->first) {
-            AkCamera* camera = (AkCamera*)ak_instanceObject(scene->cameras->first->instance);
-            std::cout << "Camera name: " << camera->name << std::endl;
-        }
-        if (scene->evaluateScene)
-        if (scene->evaluateScene->render) {
-            const char* render = scene->evaluateScene->render->cameraNode;
-            std::cout << "Render: " << render << std::endl;
-        }
-
-        root = ak_instanceObjectNode(scene->node);
-        node_ptr = root;
-
-       do{
-            std::cout << node_ptr->name << std::endl;
-            std::string node_type;
-            switch (node_ptr->nodeType) {
-                case AK_NODE_TYPE_NODE:             node_type = "node"; break;
-                case AK_NODE_TYPE_CAMERA_NODE:      node_type = "camera"; break;
-                case AK_NODE_TYPE_JOINT:            node_type = "joint"; break;
-            };
-            int j = 0;
-
-            std::string geo_type;
-            if (node_ptr->geometry) {
-                AkGeometry* geometry = ak_instanceObjectGeom(node_ptr);
-                AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
-                switch ((AkGeometryType)geometry->gdata->type) {
-                case AK_GEOMETRY_MESH:
-                    geo_type = "mesh";
-                    if (mesh) {
-                        std::string prim_type;
-                        AkMeshPrimitive* prim = mesh->primitive;
-                        switch (prim->type) {
-                            case AK_PRIMITIVE_LINES:              prim_type = "line"; break;
-                            case AK_PRIMITIVE_POLYGONS:           prim_type = "polygon"; break;
-                            case AK_PRIMITIVE_TRIANGLES:          prim_type = "triangle"; break;
-                            case AK_PRIMITIVE_POINTS:             prim_type = "point"; break;
-                        }
-                        std::cout << prim_type << std::endl;
-                        //if (prim) prim->input;
-                        AkBuffer* buffer = prim->input->accessor->buffer;
-                        int offset = prim->input->accessor->byteOffset;
-                        raw_buffer = (int8_t*) buffer->data;
-                        int stride = prim->input->accessor->byteStride;
-                        int length = prim->input->accessor->byteLength;
-                        int type = prim->input->accessor->componentType;
-                        int comp_stride = prim->input->accessor->componentBytes;
-                        int comp_size = prim->input->accessor->componentSize;
-                        int count = prim->input->accessor->count;
-                        buffer_size = length;
-                        std::cout << prim->input->semanticRaw << std::endl;
-
-                        for (int8_t* i = raw_buffer + offset;i<raw_buffer+length;i+=comp_stride, j++) {
-                            switch (type) {
-                                case AKT_FLOAT:
-                                    switch (comp_size) {
-                                        case AK_COMPONENT_SIZE_SCALAR:
-                                            //std::cout << "fvec(" << glm::to_string(*(glm::fvec1*)i) << ")" << std::endl;
-                                            break;
-                                        case AK_COMPONENT_SIZE_VEC2:
-                                            //std::cout << "fvec(" << glm::to_string(*(glm::fvec2*)i) << ")" << std::endl;
-                                            break;
-                                        case AK_COMPONENT_SIZE_VEC3:
-                                            //std::cout << "fvec(" << glm::to_string(*(glm::fvec3*)i) << ")" << std::endl;
-                                            break;
-                                        case AK_COMPONENT_SIZE_VEC4:
-                                            //std::cout << "fvec(" << glm::to_string(*(glm::fvec4*)i) << ")" << std::endl;
-                                            break;
-                                        case AK_COMPONENT_SIZE_MAT2:
-                                            break;
-                                        case AK_COMPONENT_SIZE_MAT3:
-                                            break;
-                                        case AK_COMPONENT_SIZE_MAT4:
-                                            break;
-                                        case AK_COMPONENT_SIZE_UNKNOWN:
-                                        default:
-                                            break;
-                                    }
-                                    break;
-                                case AKT_UINT:									break;
-                                case AKT_BYTE:									break;
-                                case AKT_UBYTE:									break;
-                                case AKT_SHORT:									break;
-                                case AKT_USHORT:								break;
-                                case AKT_UNKNOWN:									
-                                case AKT_NONE:									
-                                default:
-                                    break;
-                            };
-                            
-                        }
-                        prim->input->accessor->count;
-
-                        int i = 0;
-                        while (prim = prim->next) {
-                            //std::cout << prim->input << std::endl;
-                           // i++;
-                        }
-                        std::cout << ak_meshInputCount(mesh) << std::endl;
-                    };
-                    break;
-                case AK_GEOMETRY_SPLINE:
-                    geo_type = "spline";
-                    break;
-                case  AK_GEOMETRY_BREP:
-                    geo_type = "brep";
-                    break;
-                };
-
-            }
-            std::cout << j << std::endl;
-            std::cout << geo_type << std::endl;
-
-            node_ptr = node_ptr->next;
-        } while (node_ptr);
-        
-
-        ak_firstCamera(doc, &camera, camera_mat, camera_proj);
-        std::cout << "Camera:" << camera->name << std::endl;
-        for (int i = 0; i < 16; i++) {
-            std::cout << camera_mat[i] << ", ";
-            if (i % 4 == 3) std::cout << std::endl;
-        }
-    }
-
-    if(camera_mat) free(camera_mat);
-    if(camera_proj) free(camera_proj);
 
 
     // Setup Dear ImGui context
@@ -475,10 +314,10 @@ int main(void)
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
-    glGenBuffers(1, &vertex_buffer);
+    //glGenBuffers(1, &vertex_buffer);
     //glBufferData(GL_ARRAY_BUFFER, buffer_size, raw_buffer, GL_STATIC_DRAW);    
-    glNamedBufferData(vertex_buffer, buffer_size, raw_buffer, GL_STATIC_DRAW);
-    glBindVertexBuffer(0, vertex_buffer, 0, sizeof(float)*3);
+    //glNamedBufferData(vertex_buffer, buffer_size, raw_buffer, GL_STATIC_DRAW);
+    //glBindVertexBuffer(0, vertex_buffer, 0, sizeof(float)*3);
 
 
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
@@ -526,9 +365,186 @@ int main(void)
     /* ======================================================== */
 
 
+    ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
+
+    AkDoc* doc;
+    AkResult ret;
+
+    if ((ret = ak_load(&doc, "./res/sample.gltf", NULL)) != AK_OK) {
+        printf("Document couldn't be loaded\n");
+    }
+    else {
+        printf("sample.gltf loaded sucessful\n");
+    }
+
+    AkInstanceBase* instScene;
+    AkVisualScene* scene;
+    AkCamera* camera;
+    AkInstanceGeometry* geometry;
+    AkNode* root, * node_ptr;
+
+    float* camera_mat = (float*)calloc(16, sizeof(float));
+    float* camera_proj = (float*)calloc(16, sizeof(float));
+
+
+    int8_t* raw_buffer = nullptr;
+    uint32_t* indecies = nullptr;
+    unsigned int indecies_size;
+    int buffer_size;
+
+    if ((instScene = doc->scene.visualScene)) {
+        scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
+        printf("Visual Scene loaded\n");
+        std::cout << "Scene name: " << scene->name << std::endl;
+        //geometry = ak_libFirstGeom(doc);
+        if (scene->lights)
+            if (scene->lights->first) {
+                AkLight* light = (AkLight*)ak_instanceObject(scene->lights->first->instance);
+                std::cout << "Light name: " << light->name << std::endl;
+            }
+        if (scene->cameras)
+            if (scene->cameras->first) {
+                AkCamera* camera = (AkCamera*)ak_instanceObject(scene->cameras->first->instance);
+                std::cout << "Camera name: " << camera->name << std::endl;
+            }
+        if (scene->evaluateScene)
+            if (scene->evaluateScene->render) {
+                const char* render = scene->evaluateScene->render->cameraNode;
+                std::cout << "Render: " << render << std::endl;
+            }
+
+        root = ak_instanceObjectNode(scene->node);
+        node_ptr = root;
+
+        do {
+            std::cout << "Node name: " << node_ptr->name << std::endl;
+            std::string node_type;
+            switch (node_ptr->nodeType) {
+            case AK_NODE_TYPE_NODE:             node_type = "node"; break;
+            case AK_NODE_TYPE_CAMERA_NODE:      node_type = "camera"; break;
+            case AK_NODE_TYPE_JOINT:            node_type = "joint"; break;
+            };
+            int j = 0;
+
+            std::string geo_type;
+            if (node_ptr->geometry) {
+                AkGeometry* geometry = ak_instanceObjectGeom(node_ptr);
+                AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
+                switch ((AkGeometryType)geometry->gdata->type) {
+                case AK_GEOMETRY_MESH:
+                    geo_type = "mesh";
+                    if (mesh) {
+                        std::string prim_type;
+                        AkMeshPrimitive* prim = mesh->primitive;
+                        std::cout << prim_type << std::endl;
+                        switch (prim->type) {
+                        case AK_PRIMITIVE_LINES:              prim_type = "line"; break;
+                        case AK_PRIMITIVE_POLYGONS:           prim_type = "polygon"; break;
+                        case AK_PRIMITIVE_TRIANGLES:          prim_type = "triangle"; break;
+                        case AK_PRIMITIVE_POINTS:             prim_type = "point"; break;
+                        }
+                        if (prim->indices) {
+                            indecies = (unsigned int*) prim->indices->items;
+                            indecies_size = prim->indices->count;
+                        }
+                        
+
+                        AkBuffer* buffer = prim->input->accessor->buffer;
+                        raw_buffer = (int8_t*)buffer->data;
+                        int length = prim->input->accessor->byteLength;
+                        buffer_size = length;
+
+                        int offset = prim->input->accessor->byteOffset;
+                        //int stride = prim->input->accessor->byteStride;
+                        int comp_stride = prim->input->accessor->componentBytes;
+                        //int count = prim->input->accessor->count;
+                        //std::cout << prim->input->semanticRaw << std::endl;
+                        int normalize = prim->input->accessor->normalized;
+
+                        int comp_size = prim->input->accessor->componentSize;
+                        switch (comp_size) {
+                        case AK_COMPONENT_SIZE_SCALAR:                comp_size = 1; break;
+                        case AK_COMPONENT_SIZE_VEC2:                  comp_size = 2; break;
+                        case AK_COMPONENT_SIZE_VEC3:                  comp_size = 3; break;
+                        case AK_COMPONENT_SIZE_VEC4:                  comp_size = 4; break;
+                        case AK_COMPONENT_SIZE_MAT2:                  comp_size = 4; break;
+                        case AK_COMPONENT_SIZE_MAT3:                  comp_size = 9; break;
+                        case AK_COMPONENT_SIZE_MAT4:                  comp_size = 16; break;
+                        case AK_COMPONENT_SIZE_UNKNOWN:
+                        default:                                      comp_size = 1; break;
+                        }
+
+                        int type = prim->input->accessor->componentType;
+                        switch (type) {
+                        case AKT_FLOAT:						type = GL_FLOAT; break;
+                        case AKT_UINT:						type = GL_UNSIGNED_INT; break;
+                        case AKT_BYTE:						type = GL_BYTE; break;
+                        case AKT_UBYTE:						type = GL_UNSIGNED_BYTE; break;
+                        case AKT_SHORT:						type = GL_SHORT; break;
+                        case AKT_USHORT:					type = GL_UNSIGNED_SHORT; break;
+                        case AKT_UNKNOWN:
+                        case AKT_NONE:
+                        default:                            type = GL_INT; break;
+                        };
+
+                        std::cout << "Buffer ptr: " << raw_buffer << " Length: " << length << " Stride: " << comp_stride << " Offset: "
+                            << offset << " Comp Size: " << comp_size << " Comp Type: " << type << std::endl;
+                        std::cout << ak_meshInputCount(mesh) << std::endl;
+
+
+
+                        mvp_location = glGetUniformLocation(program, "MVP");
+                        vpos_location = glGetAttribLocation(program, "vPos");
+                        int binding_point = 0;
+
+                        glVertexAttribFormat(vpos_location, comp_size, type, normalize, 0); // comp_stride change to comp_size*type
+                        glVertexAttribBinding(vpos_location, binding_point);
+
+                        glGenBuffers(1, &vertex_buffer);
+                        glNamedBufferData(vertex_buffer, buffer_size, raw_buffer, GL_STATIC_DRAW);
+                        glBindVertexBuffer(binding_point, vertex_buffer, offset, comp_stride);
+                        glEnableVertexAttribArray(vpos_location);
+
+                    };
+                    break;
+                case AK_GEOMETRY_SPLINE:
+                    geo_type = "spline";
+                    break;
+                case  AK_GEOMETRY_BREP:
+                    geo_type = "brep";
+                    break;
+                default:
+                    geo_type = "other";
+                    break;
+                };
+
+            }
+            std::cout << "No. " << j++ << std::endl;
+            std::cout << "Node type: " << geo_type << std::endl;
+
+
+            node_ptr = node_ptr->next;
+        } while (node_ptr);
+
+
+        ak_firstCamera(doc, &camera, camera_mat, camera_proj);
+        std::cout << "Camera:" << camera->name << std::endl;
+        for (int i = 0; i < 16; i++) {
+            std::cout << camera_mat[i] << ", ";
+            if (i % 4 == 3) std::cout << std::endl;
+        }
+    }
+
+    if (camera_mat) free(camera_mat);
+    if (camera_proj) free(camera_proj);
+
+
+
+    /* ======================================================== */
+
     //setPointer(program, mvp_location, vpos_location, vcol_location);
     //setPointer2(program, mvp_location, vpos_location, vcol_location);
-    setPointer3(program, mvp_location, vpos_location, vcol_location);
+    //setPointer3(program, mvp_location, vpos_location, vcol_location);
 
 
     glObjectLabel(GL_BUFFER, vertex_buffer, 0, "Vertex Buffer");
@@ -598,8 +614,10 @@ int main(void)
         
         //glDrawArrays(GL_TRIANGLES, 0, 3);
         //glDrawArrays(GL_TRIANGLE_STRIP, 0, 8);
-        glDrawArrays(GL_POINTS, 0, 1966);
-        //glDrawArrays(GL_LINES, 0, 983);
+        //glDrawArrays(GL_POINTS, 0, 1966);
+        glDrawElements(GL_TRIANGLES, indecies_size / 3, GL_UNSIGNED_INT, indecies);
+
+        fun();
 
         // ImGui
         ImGui_ImplOpenGL3_NewFrame();
