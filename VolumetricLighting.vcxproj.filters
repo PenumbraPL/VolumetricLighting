@@ -211,5 +211,8 @@
     <None Include="res\fragment2.glsl">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="res\sample2.gltf">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

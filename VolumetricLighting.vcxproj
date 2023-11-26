@@ -240,6 +240,7 @@ Shell32.lib
     <None Include="res\fragment.glsl" />
     <None Include="res\fragment2.glsl" />
     <None Include="res\sample.gltf" />
+    <None Include="res\sample2.gltf" />
     <None Include="res\vertex.glsl" />
     <None Include="res\vertex2.glsl" />
   </ItemGroup>

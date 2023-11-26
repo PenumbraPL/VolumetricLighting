@@ -314,7 +314,7 @@ int main(void)
 
     AkDoc* doc;
     AkResult ret;
-    if ((ret = ak_load(&doc, "./res/sample2.gltf", NULL)) != AK_OK) {
+    if ((ret = ak_load(&doc, "./res/volkswagen/scene.gltf", NULL)) != AK_OK) {
         printf("Document couldn't be loaded\n");
     }
 
@@ -331,7 +331,12 @@ int main(void)
     uint32_t* indecies = nullptr;
     unsigned int indecies_size = 0;
     int buffer_size = 0;
-    
+
+    int8_t* raw_normal_buffer;
+    unsigned int normal_size = 0;
+    int8_t* raw_tex_buffer;
+    unsigned int texture_size = 0;
+
     if ((instScene = doc->scene.visualScene)) {
         scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
         printf("Visual Scene loaded\n");
@@ -389,9 +394,27 @@ int main(void)
                             indecies = (unsigned int*) prim->indices->items;
                             indecies_size = prim->indices->count;
                         }
-                        //prim->material
                         //prim->bindMaterial
                         
+                        //AkMaterial* mat = (AkMaterial*) doc->lib.materials->chld;
+                        AkMaterial* mat = prim->material;
+                        AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
+                        AkTechniqueFxCommon* tch = ef->profile->technique->common;
+                        switch (ef->profile->type) {
+                        case AK_MATERIAL_METALLIC_ROUGHNESS: AkMetallicRoughness mr = *((AkMetallicRoughness*)tch); break;
+                        case AK_MATERIAL_SPECULAR_GLOSSINES: AkSpecularGlossiness sg = *((AkSpecularGlossiness*)tch); break;
+                        default: break;
+                        }
+                        
+                        ak_mem_printKeys();
+                        AkHeap* heap = ak_heap_getheap(prim);
+                        AkDoc* doc = (AkDoc *) ak_heap_data(heap);
+                        ak_heap_printKeys(geometry->materialMap->heap);
+                        ak_heap_printKeys(heap);
+                        ak_heap_printKeys(ak_heap_default());
+                        AkHeapNode* heapnode;
+                        //ak_heap_getNodeById(heap, "node1", &heapnode);
+
                         int set = prim->input->set;
                         AkInput* pos = ak_meshInputGet(prim, "POSITION", set);
                         AkInput* tex = ak_meshInputGet(prim, "TEXCOORD", set);
@@ -399,19 +422,26 @@ int main(void)
                         // propably number of akinputs in next
                         //int c = ak_meshInputCount(mesh);
 
-                        AkBuffer* buffer = prim->input->accessor->buffer;
+                        AkBuffer* buffer;
+                        buffer = pos->accessor->buffer;
                         raw_buffer = (int8_t*)buffer->data;
-                        int length = prim->input->accessor->byteLength;
-                        buffer_size = length;
+                        buffer_size = pos->accessor->byteLength;
+                        buffer = tex->accessor->buffer;
+                        raw_tex_buffer = (int8_t*)buffer->data;
+                        texture_size = tex->accessor->byteLength;
+                        buffer = nor->accessor->buffer;
+                        raw_normal_buffer = (int8_t*)buffer->data;
+                        normal_size = nor->accessor->byteLength;
 
-                        int offset = prim->input->accessor->byteOffset;
-                        //int stride = prim->input->accessor->byteStride;
-                        int comp_stride = prim->input->accessor->componentBytes;
-                        //int count = prim->input->accessor->count;
-                        //std::cout << prim->input->semanticRaw << std::endl;
-                        int normalize = prim->input->accessor->normalized;
 
-                        int comp_size = prim->input->accessor->componentSize;
+                        int offset = pos->accessor->byteOffset;
+                        //int stride = pos->accessor->byteStride;
+                        int comp_stride = pos->accessor->componentBytes;
+                        //int count = pos->accessor->count;
+                        //std::cout << pos->semanticRaw << std::endl;
+                        int normalize = pos->accessor->normalized;
+
+                        int comp_size = pos->accessor->componentSize;
                         switch (comp_size) {
                         case AK_COMPONENT_SIZE_SCALAR:                comp_size = 1; break;
                         case AK_COMPONENT_SIZE_VEC2:                  comp_size = 2; break;
@@ -424,7 +454,7 @@ int main(void)
                         default:                                      comp_size = 1; break;
                         }
 
-                        int type = prim->input->accessor->componentType;
+                        int type = pos->accessor->componentType;
                         switch (type) {
                         case AKT_FLOAT:						type = GL_FLOAT; break;
                         case AKT_UINT:						type = GL_UNSIGNED_INT; break;
@@ -437,14 +467,13 @@ int main(void)
                         default:                            type = GL_INT; break;
                         };
 
-                        std::cout << "Buffer ptr: " << raw_buffer << " Length: " << length << " Stride: " << comp_stride << " Offset: "
+                        std::cout << "Buffer ptr: " << raw_buffer << " Length: " << buffer_size << " Stride: " << comp_stride << " Offset: "
                             << offset << " Comp Size: " << comp_size << " Comp Type: " << type << std::endl;
                         std::cout << ak_meshInputCount(mesh) << std::endl;
 
 
                         //meshGenNormals
 
-                        mvp_location = glGetUniformLocation(program, "MVP");
                         vpos_location = glGetAttribLocation(program, "vPos");
                         int binding_point = 0;
 
@@ -475,15 +504,17 @@ int main(void)
             
             free(transform);
             free(word_transform);
-            node_ptr = node_ptr->next;
+            node_ptr = node_ptr->chld;
         } while (node_ptr);
 
 
         ak_firstCamera(doc, &camera, camera_mat, camera_proj);
-        std::cout << "Camera:" << camera->name << std::endl;
-        for (int i = 0; i < 16; i++) {
-            std::cout << camera_mat[i] << ", ";
-            if (i % 4 == 3) std::cout << std::endl;
+        if (camera) {
+            std::cout << "Camera:" << camera->name << std::endl;
+            for (int i = 0; i < 16; i++) {
+                std::cout << camera_mat[i] << ", ";
+                if (i % 4 == 3) std::cout << std::endl;
+            }
         }
     }
     glm::mat4 Camera = glm::make_mat4x4(camera_mat);
@@ -502,6 +533,7 @@ int main(void)
    
 
 
+    mvp_location = glGetUniformLocation(program, "MVP");
 
 
     std::cout << "===================== Main loop ===================\n";
@@ -518,14 +550,12 @@ int main(void)
         float theta = 3.14 * panel_config.p7 / 180;
         float phi = 3.14 * panel_config.p8 / 180;
 
+
         glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
         eye = glm::vec3(eye.z, eye.y, eye.x);
         glm::vec3 north = r * glm::euclidean(glm::vec2(theta, phi+0.01));
-        if (theta > 90 && theta < 270) {
-            north = glm::vec3(north.z, -north.y, north.x);
-        } else {
-            north = glm::vec3(north.z, north.y, north.x);
-        }
+        if (theta > 90) north.y = - north.y;
+        north = glm::vec3(north.z, north.y, north.x);
 
         glm::vec3 translate = glm::vec3(panel_config.p1 * 0.1, panel_config.p2 * 0.1, panel_config.p3 * 0.1);
         glm::vec3 rotate = glm::vec3(3.14 * panel_config.p4/180, 3.14 * panel_config.p5 / 180, 0.f);
@@ -544,7 +574,7 @@ int main(void)
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
         
         
-        glDrawElements(GL_TRIANGLES, indecies_size, GL_UNSIGNED_INT, indecies);
+        glDrawElements(GL_POINTS, indecies_size, GL_UNSIGNED_INT, indecies);
 
         //glBindProgramPipeline(0);
 
@@ -570,8 +600,10 @@ int main(void)
 
     //glDeleteProgramPipelines(1, &pipeline);
 
-    GLuint buffers[] = {vertex_buffer};
-    glDeleteBuffers(1, buffers);
+    //if (vertex_buffer) {
+    //    GLuint buffers[] = { vertex_buffer };
+    //    glDeleteBuffers(1, buffers);
+    //}
     glDeleteVertexArrays(1, &vao);
 
     glDeleteShader(vertex_shader);
