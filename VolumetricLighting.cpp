@@ -337,8 +337,81 @@ int main(void)
     int8_t* raw_tex_buffer;
     unsigned int texture_size = 0;
 
+
+    AkLibraries* lib = &doc->lib;
+    if (lib) {
+        AkLibrary* cam = lib->cameras;
+        AkLibrary* light = lib->lights;
+        FListItem* tex = lib->textures;
+        AkLibrary* mat = lib->materials;
+        FListItem* samp = lib->samplers;
+        AkLibrary* geo = lib->geometries;
+        FListItem* acc = lib->accessors;
+        AkLibrary* eff = lib->effects;
+        AkLibrary* nodes = lib->nodes;
+
+        if (mat) {
+            AkMaterial* m = (AkMaterial*)mat->chld;
+            while (m->base.next) {
+                if(m->name)
+                std::cout << m->name << std::endl;
+                m = (AkMaterial*) m->base.next;
+            }
+        }
+        if (cam) {
+            AkCamera* c = (AkCamera*)cam->chld;
+            while (c->base.next) {
+                if (c->name)
+                    std::cout << c->name << std::endl;
+                c = (AkCamera*)c->base.next;
+            }
+        }
+        if (geo) {
+            AkGeometry* g = (AkGeometry*)geo->chld;
+            while (g->base.next) {
+                if (g->name)
+                    std::cout << g->name << std::endl;
+                g = (AkGeometry*)g->base.next;
+            }
+        }
+        if (nodes) {
+            AkNode* n = (AkNode*)nodes->chld;
+            while (n->chld) {
+                if (n->name)
+                    std::cout << n->name << std::endl;
+                n = (AkNode*)n->chld;
+            }
+        }
+        if (eff) {
+            AkEffect* e = (AkEffect*)eff->chld;
+            while (e->next) {
+                if (e->name)
+                    std::cout << e->name << std::endl;
+                e = (AkEffect*)e->next;
+            }
+        }
+        /*if (samp) {
+            FListItem* s = (FListItem*)samp->next;
+            while (samp->next) {
+                if (e->name)
+                    std::cout << e->name << std::endl;
+                e = (AkEffect*)e->next;
+            }
+        }
+        if (tex) {
+            AkEffect* e = (AkEffect*)eff->chld;
+            while (e->next) {
+                if (e->name)
+                    std::cout << e->name << std::endl;
+                e = (AkEffect*)e->next;
+            }
+        }*/
+    }
+    
+
+
     if ((instScene = doc->scene.visualScene)) {
-        scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
+        scene = (AkVisualScene*)ak_instanceObject(instScene);
         printf("Visual Scene loaded\n");
 
         std::cout << "Scene name: " << scene->name << std::endl;
