@@ -226,6 +226,17 @@ Shell32.lib
     <ClInclude Include="include\ak\url.h" />
     <ClInclude Include="include\ak\util.h" />
     <ClInclude Include="include\ak\version.h" />
+    <ClInclude Include="include\ds\allocator.h" />
+    <ClInclude Include="include\ds\common.h" />
+    <ClInclude Include="include\ds\forward-list-common.h" />
+    <ClInclude Include="include\ds\forward-list-sep.h" />
+    <ClInclude Include="include\ds\forward-list.h" />
+    <ClInclude Include="include\ds\hash-funcs.h" />
+    <ClInclude Include="include\ds\hash.h" />
+    <ClInclude Include="include\ds\rb.h" />
+    <ClInclude Include="include\ds\sort.h" />
+    <ClInclude Include="include\ds\util.h" />
+    <ClInclude Include="include\ds\version.h" />
     <ClInclude Include="src\imgui\backends\imgui_impl_glfw.h" />
     <ClInclude Include="src\imgui\backends\imgui_impl_opengl3.h" />
     <ClInclude Include="src\imgui\imconfig.h" />

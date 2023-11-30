@@ -43,6 +43,9 @@
     <Filter Include="Resource Files\volkswagen\textures">
       <UniqueIdentifier>{0024b537-e3c1-4387-9824-1d9b27ed32a3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\ds">
+      <UniqueIdentifier>{ee78a6cd-a909-47e0-bc52-196fde750da5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="VolumetricLighting.cpp">
@@ -214,6 +217,39 @@
     </ClInclude>
     <ClInclude Include="GLEW.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\allocator.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\common.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\forward-list-common.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\forward-list-sep.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\forward-list.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\hash-funcs.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\hash.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\rb.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\sort.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\util.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\version.h">
+      <Filter>Header Files\ds</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

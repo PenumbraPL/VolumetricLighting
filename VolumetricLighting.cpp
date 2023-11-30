@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <stdio.h>
+#include <map>
 #include "GLEW.h"
 #include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
@@ -16,6 +17,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "glm/gtx/string_cast.hpp"
 #include "Draw.h"
+#include "ds/forward-list-common.h"
 
 //#define AK_STATIC 1
 #include "ak/assetkit.h"
@@ -38,6 +40,11 @@ struct WindowInfo {
     0, 0, 0
 };
 
+void print_map(const std::map<void*, unsigned int>& m){
+      for (const auto& n : m)
+          std::cout << n.first << " = " << n.second << "; ";
+    std::cout << '\n';
+}
 
 void set_up_color(AkColorDesc* colordesc){
     if (colordesc) {
@@ -261,10 +268,10 @@ void proccess_node(AkNode* node, AkNode* node_ptr) {
 
                         switch (tch->type) {
                         case AK_MATERIAL_METALLIC_ROUGHNESS:
-                            std::cout << "metalic roughness\n";
+                            std::cout << "\nmetalic roughness\n";
                             break;
                         case AK_MATERIAL_SPECULAR_GLOSSINES:
-                            std::cout << "specular glossines\n";
+                            std::cout << "\nspecular glossines\n";
                             break;
                         };
                         std::cout << "Is double sized: " << tch->doubleSided ? "True" : "False";
@@ -275,7 +282,7 @@ void proccess_node(AkNode* node, AkNode* node_ptr) {
                 AkInput* wgs = ak_meshInputGet(prim, "WEIGHTS", set);
                 AkInput* jts = ak_meshInputGet(prim, "JOINTS", set);
                 AkInput* pos = ak_meshInputGet(prim, "POSITION", set);
-                AkInput* tex = ak_meshInputGet(prim, "TEXCOORD", set);
+                AkInput* tex = ak_meshInputGet(prim, "TEXCOORD", set); // if indexed then multiple parts to proccess
                 AkInput* nor = ak_meshInputGet(prim, "NORMAL", set);
                 //Color tangent
 
@@ -425,11 +432,16 @@ std::string printInf(AkDocInf* inf, AkUnit* unit) {
     return "AkDocInf or AkUnit is nullptr!\n";
 }
 
+
+std::vector<AkAccessor*> acc;
+std::vector<glm::mat4x4*> mats;
+glm::vec4 cam;
+
 int main(void)
 {
-    std::cout << "========== Initialization started ============================\n";
+    std::cout << "========== Initialization started ============================================\n";
     if (!glfwInit()) {
-        std::cout << "========== [GLFW]: Initialization failed =====================\n";
+        std::cout << "========== [GLFW]: Initialization failed =====================================\n";
         return 1;
     }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
@@ -440,8 +452,8 @@ int main(void)
     if (!window)
     {
         glfwTerminate();
-        std::cout << "========== [GLFW]: Terminated ================================\n";
-        std::cout << "========== [GLFW]: Window initialization failed ==============\n";
+        std::cout << "========== [GLFW]: Terminated ================================================\n";
+        std::cout << "========== [GLFW]: Window initialization failed ==============================\n";
         return 1;
     }
     
@@ -472,22 +484,22 @@ int main(void)
 
     int flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
-        std::cout << "========== [GLFW]: Debug context initialize successful =========\n";
+        std::cout << "========== [GLFW]: Debug context initialize successful =======================\n";
         std::vector<DEBUGPROC> callbacks;
         callback_list(callbacks);
         debug_init(callbacks);
     }  else {
-        std::cout << "========== [GLFW]: Debug context initialize unsuccessful =========\n";
+        std::cout << "========== [GLFW]: Debug context initialize unsuccessful =====================\n";
     }
 
     
     char* v_sh_buffer = read_file("res/vertex2.glsl");
     if (!v_sh_buffer){
-        std::cout << "=================== Coulnt find res/vertex.glsl =======================\n";
+        std::cout << "=================== Coulnt find res/vertex.glsl ==============================\n";
     }
     
     char* f_sh_buffer = read_file("res/fragment2.glsl");
-    if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl =======================\n";
+    if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
     
 
     GLuint vao, vertex_buffer, vertex_shader, fragment_shader, program;
@@ -536,7 +548,7 @@ int main(void)
     }else {
         std::cout << printCoordSys(doc->coordSys);
         std::cout << printInf(doc->inf, doc->unit);
-        std::cout << "===============================================================\n";
+        std::cout << "==============================================================================\n";
     }
 
     float* camera_mat = (float*)calloc(16, sizeof(float));
@@ -572,20 +584,31 @@ int main(void)
         }
 
 
-        AkMaterial* m = (AkMaterial*) doc->lib.materials->chld;
+        //AkMaterial* m = (AkMaterial*) doc->lib.materials->chld;
+        //do {
+        //    AkEffect* ef = (AkEffect*)ak_instanceObject(&m->effect->base);
+        //    AkTechniqueFxCommon* tch = ef->profile->technique->common;
+        //    m = (AkMaterial*)m->base.next;
+        //}
+        //while (m);
+
+        FListItem* b = (FListItem*) doc->lib.buffers;
+        std::map <void*, unsigned int> unique_ptr;
         do {
-            AkEffect* ef = (AkEffect*)ak_instanceObject(&m->effect->base);
-            AkTechniqueFxCommon* tch = ef->profile->technique->common;
-            m = (AkMaterial*)m->base.next;
-        }
-        while (m);
+            AkBuffer* buf = (AkBuffer*)b->data; //if
+            //std::cout << buf << " " << buf->length << std::endl;
+            unique_ptr.insert({{buf, buf->length}});
+            b = b->next;
+        } while (b);
+        print_map(unique_ptr);
+
 
         //AkNode* node_ptr = (AkNode*) doc->lib.nodes->chld;
         AkNode* node_ptr = ak_instanceObjectNode(scene->node);
         AkNode* node = node_ptr;
         int j = 0;
 
-        proccess_node(node, node_ptr);
+        proccess_node(node, node_ptr); // pointer to pointer?
     }
 
     glm::mat4 Camera = glm::make_mat4x4(camera_mat);
@@ -606,7 +629,7 @@ int main(void)
 
 
 
-    std::cout << "===================== Main loop ===================\n";
+    std::cout << "===================== Main loop ==============================================\n";
     while (!glfwWindowShouldClose(window))
     {
         int width, height;
@@ -685,7 +708,7 @@ int main(void)
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     glfwTerminate();
-    std::cout << "========== [GLFW]: Terminated ================================\n";
-    std::cout << "===================== Exit succeeded =========================\n";
+    std::cout << "========== [GLFW]: Terminated ================================================\n";
+    std::cout << "===================== Exit succeeded =========================================\n";
     return 0;
 }
