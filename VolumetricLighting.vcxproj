@@ -255,8 +255,23 @@ Shell32.lib
     <None Include="res\shaders\ph_vec.glsl" />
     <None Include="res\shaders\skybox_frag.glsl" />
     <None Include="res\shaders\skybox_vec.glsl" />
+    <None Include="res\ship_in_clouds\scene.bin" />
+    <None Include="res\ship_in_clouds\scene.gltf" />
     <None Include="res\vertex.glsl" />
     <None Include="res\vertex2.glsl" />
+    <None Include="res\volkswagen\scene.bin" />
+    <None Include="res\volkswagen\scene.gltf" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\ship_in_clouds\textures\Boot_Finaal_emissive.jpeg" />
+    <Image Include="res\ship_in_clouds\textures\Cloud_1_baseColor.png" />
+    <Image Include="res\ship_in_clouds\textures\Cloud_1_emissive.jpeg" />
+    <Image Include="res\ship_in_clouds\textures\Cloud_2_emissive.jpeg" />
+    <Image Include="res\ship_in_clouds\textures\Cloud_3_baseColor.png" />
+    <Image Include="res\ship_in_clouds\textures\Cloud_3_emissive.jpeg" />
+    <Image Include="res\ship_in_clouds\textures\material_emissive.jpeg" />
+    <Image Include="res\ship_in_clouds\textures\Poly_emissive.jpeg" />
+    <Image Include="res\volkswagen\textures\Grates_baseColor.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

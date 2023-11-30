@@ -38,6 +38,32 @@ struct WindowInfo {
     0, 0, 0
 };
 
+
+void set_up_color(AkColorDesc* colordesc){
+    if (colordesc) {
+    if (colordesc->texture) {
+        AkTextureRef* tex = colordesc->texture;
+        std::cout << "Texture path: " << tex->texture->image->initFrom->ref;
+        //data?
+        //next?
+        AkSampler* sampler = tex->texture->sampler;
+        //next?
+        AkTypeId type = tex->texture->type;
+        switch (type) {
+        case AKT_SAMPLER1D:
+        case AKT_SAMPLER2D:
+        case AKT_SAMPLER3D:
+        case AKT_SAMPLER_CUBE:
+        case AKT_SAMPLER_RECT:
+        case AKT_SAMPLER_DEPTH:
+            break;
+        }
+        //AkInput* tex_coord = ak_meshInputGet(prim, tex->coordInputName, set);
+    }
+}
+}
+
+
 char* read_file(const char* file_name) {
     FILE* fs;
     fopen_s(&fs, file_name, "rb");
@@ -189,6 +215,138 @@ void setUniformMVP(GLuint Location, glm::vec3 const& Translate, glm::vec3 const&
     glUniformMatrix4fv(Location, 1, GL_FALSE, glm::value_ptr(MVP));
 }
 
+
+void proccess_node(AkNode* node, AkNode* node_ptr) {
+    float* word_transform = (float*)calloc(16, sizeof(float));
+    ak_transformCombineWorld(node_ptr, word_transform);
+    float* transform = (float*)calloc(16, sizeof(float));
+    ak_transformCombine(node_ptr, transform);
+
+    std::string geo_type;
+    if (node->geometry) {
+        AkGeometry* geometry = ak_instanceObjectGeom(node); // if geometry
+        AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
+        switch ((AkGeometryType)geometry->gdata->type) { //if gdata
+        case AK_GEOMETRY_MESH:
+            geo_type = "mesh";
+            if (mesh) {
+                GLuint prim_type;
+                std::cout << "Mesh name:" << mesh->name << std::endl;   // should i insert mesh->name ??
+                std::cout << "Mesh center:" << mesh->center << std::endl; // same
+                for (int i = 0; i < mesh->primitiveCount; i++) {/*prim = prim->next;*/ }
+                AkMeshPrimitive* prim = mesh->primitive;
+                switch (prim->type) {
+                case AK_PRIMITIVE_LINES:              prim_type = GL_LINES; break;
+                case AK_PRIMITIVE_POLYGONS:           prim_type = GL_POLYGON; break;
+                case AK_PRIMITIVE_TRIANGLES:          prim_type = GL_TRIANGLES; break;
+                case AK_PRIMITIVE_POINTS:
+                default:                              prim_type = GL_POINTS; break;
+                }
+                //if (prim->indices) {
+                //    indecies = (unsigned int*)prim->indices->items;
+                //    indecies_size = prim->indices->count;
+                //}
+                std::cout << "Primitive center: " << prim->center << std::endl;
+                int set = prim->input->set;
+
+                if (prim->material) {
+                    AkMaterial* mat = prim->material;
+                    AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
+                    AkTechniqueFxCommon* tch = ef->profile->technique->common;
+                    if (tch) {
+                        set_up_color(tch->ambient);
+                        set_up_color(tch->emission);
+                        set_up_color(tch->diffuse);
+                        set_up_color(tch->specular);
+
+                        switch (tch->type) {
+                        case AK_MATERIAL_METALLIC_ROUGHNESS:
+                            std::cout << "metalic roughness\n";
+                            break;
+                        case AK_MATERIAL_SPECULAR_GLOSSINES:
+                            std::cout << "specular glossines\n";
+                            break;
+                        };
+                        std::cout << "Is double sized: " << tch->doubleSided ? "True" : "False";
+                    }
+                }
+
+
+                AkInput* wgs = ak_meshInputGet(prim, "WEIGHTS", set);
+                AkInput* jts = ak_meshInputGet(prim, "JOINTS", set);
+                AkInput* pos = ak_meshInputGet(prim, "POSITION", set);
+                AkInput* tex = ak_meshInputGet(prim, "TEXCOORD", set);
+                AkInput* nor = ak_meshInputGet(prim, "NORMAL", set);
+                //Color tangent
+
+                AkBuffer* buffer = prim->input->accessor->buffer;
+                //raw_buffer = (int8_t*)buffer->data;
+                //int length = prim->input->accessor->byteLength;
+                //buffer_size = length;
+
+                int offset = prim->input->accessor->byteOffset;
+                //int stride = prim->input->accessor->byteStride;
+                int comp_stride = prim->input->accessor->componentBytes;
+                //int count = prim->input->accessor->count;
+                int normalize = prim->input->accessor->normalized;
+
+                int comp_size = prim->input->accessor->componentSize;
+                switch (comp_size) {
+                case AK_COMPONENT_SIZE_SCALAR:                comp_size = 1; break;
+                case AK_COMPONENT_SIZE_VEC2:                  comp_size = 2; break;
+                case AK_COMPONENT_SIZE_VEC3:                  comp_size = 3; break;
+                case AK_COMPONENT_SIZE_VEC4:                  comp_size = 4; break;
+                case AK_COMPONENT_SIZE_MAT2:                  comp_size = 4; break;
+                case AK_COMPONENT_SIZE_MAT3:                  comp_size = 9; break;
+                case AK_COMPONENT_SIZE_MAT4:                  comp_size = 16; break;
+                case AK_COMPONENT_SIZE_UNKNOWN:
+                default:                                      comp_size = 1; break;
+                }
+
+                int type = prim->input->accessor->componentType;
+                switch (type) {
+                case AKT_FLOAT:						type = GL_FLOAT; break;
+                case AKT_UINT:						type = GL_UNSIGNED_INT; break;
+                case AKT_BYTE:						type = GL_BYTE; break;
+                case AKT_UBYTE:						type = GL_UNSIGNED_BYTE; break;
+                case AKT_SHORT:						type = GL_SHORT; break;
+                case AKT_USHORT:					type = GL_UNSIGNED_SHORT; break;
+                case AKT_UNKNOWN:
+                case AKT_NONE:
+                default:                            type = GL_INT; break;
+                };
+                //<< " Length: " << length
+                std::cout  << " Stride: " << comp_stride << " Offset: "
+                    << offset << " Comp Size: " << comp_size << " Comp Type: " << type << std::endl;
+                std::cout << ak_meshInputCount(mesh) << std::endl;
+
+            };
+            break;
+        case AK_GEOMETRY_SPLINE: geo_type = "spline"; break;
+        case  AK_GEOMETRY_BREP:  geo_type = "brep";   break;
+        default:                 geo_type = "other";  break;
+        };
+
+    }
+    std::cout << "Node name: " << node->name << std::endl;
+    //std::cout << "No. " << j++ << std::endl;
+    std::cout << "Node type: " << geo_type << std::endl;
+    
+    free(transform);
+    free(word_transform);
+
+    if (node->next) {
+        node = node->next;
+        proccess_node(node, node_ptr);
+    }
+    if (node->chld) {
+        node = node->chld;
+        proccess_node(node, node_ptr);
+    }
+}
+
+
+
 static const struct
 {
     float x, y;
@@ -212,6 +370,60 @@ struct {
     -0.25f, 0.25f, 0.25f,
 };
 
+
+std::string printCoordSys(AkCoordSys* coord) {
+    if (coord) {
+        AkAxis axis[] = { coord->axis.fwd,
+        coord->axis.right,
+        coord->axis.up,
+        coord->cameraOrientation.fwd,
+        coord->cameraOrientation.right,
+        coord->cameraOrientation.up };
+        std::string ax_name[] = { "axis FW:" ,"axis RH:" ,"axis UP:", "camera FW:", "camera RH:", "camera UP : "};
+
+        AkAxisRotDirection axis_dir = coord->rotDirection;
+        std::string coordString;
+
+        for (int i = 0; i < sizeof(axis)/sizeof(AkAxis); i++) {
+            std::string st;
+            switch (axis[i]) {
+            case AK_AXIS_NEGATIVE_X: st = "NEGATIVE_X"; break;
+            case AK_AXIS_NEGATIVE_Y: st = "NEGATIVE_Y"; break;
+            case AK_AXIS_NEGATIVE_Z: st = "NEGATIVE_Z"; break;
+            case AK_AXIS_POSITIVE_X: st = "POSITIVE_X"; break;
+            case AK_AXIS_POSITIVE_Y: st = "POSITIVE_Y"; break;
+            case AK_AXIS_POSITIVE_Z: st = "POSITIVE_Z"; break;
+            }
+            coordString += ax_name[i] + " " + st + "\n";
+        }
+        switch (axis_dir) {
+        case AK_AXIS_ROT_DIR_LH: coordString += "rot dir: ROT LEFT\n";  break;
+        case AK_AXIS_ROT_DIR_RH: coordString += "rot dir: ROT RIGHT\n";  break;
+        }
+        return coordString;
+    }
+    return "CoordSys is nullptr!\n";
+}
+
+std::string printInf(AkDocInf* inf, AkUnit* unit) {
+    std::string infString;
+    if (inf && unit) {
+        infString += "Units: " + std::string(unit->name) + " ";
+        infString += unit->dist;
+        infString += "\nPath: " + std::string(inf->name);
+        infString += "\nFlip Image: ";
+        infString += inf->flipImage ? "True" : "False";
+        infString+= "\n";
+        if (AK_FILE_TYPE_GLTF == inf->ftype) {
+            infString += "Type: GLTF\n";
+        }else {
+            infString += "Unknown type\n";
+        }
+        
+        return infString;
+    }
+    return "AkDocInf or AkUnit is nullptr!\n";
+}
 
 int main(void)
 {
@@ -313,286 +525,208 @@ int main(void)
     ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
 
     AkDoc* doc;
-    AkResult ret;
-    if ((ret = ak_load(&doc, "./res/volkswagen/scene.gltf", NULL)) != AK_OK) {
-        printf("Document couldn't be loaded\n");
-    }
-
-    AkInstanceBase* instScene;
     AkVisualScene* scene;
     AkCamera* camera;
     AkInstanceGeometry* geometry;
     AkNode* root, * node_ptr;
 
+    std::string scene_path = "./res/ship_in_clouds/scene.gltf";
+    if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
+        std::cout << "Document couldn't be loaded\n";
+    }else {
+        std::cout << printCoordSys(doc->coordSys);
+        std::cout << printInf(doc->inf, doc->unit);
+        std::cout << "===============================================================\n";
+    }
+
     float* camera_mat = (float*)calloc(16, sizeof(float));
     float* camera_proj = (float*)calloc(16, sizeof(float));
-
     int8_t* raw_buffer;
     uint32_t* indecies = nullptr;
     unsigned int indecies_size = 0;
     int buffer_size = 0;
-
-    int8_t* raw_normal_buffer;
-    unsigned int normal_size = 0;
-    int8_t* raw_tex_buffer;
-    unsigned int texture_size = 0;
-
-
-    AkLibraries* lib = &doc->lib;
-    if (lib) {
-        AkLibrary* cam = lib->cameras;
-        AkLibrary* light = lib->lights;
-        FListItem* tex = lib->textures;
-        AkLibrary* mat = lib->materials;
-        FListItem* samp = lib->samplers;
-        AkLibrary* geo = lib->geometries;
-        FListItem* acc = lib->accessors;
-        AkLibrary* eff = lib->effects;
-        AkLibrary* nodes = lib->nodes;
-
-        if (mat) {
-            AkMaterial* m = (AkMaterial*)mat->chld;
-            while (m->base.next) {
-                if(m->name)
-                std::cout << m->name << std::endl;
-                m = (AkMaterial*) m->base.next;
-            }
-        }
-        if (cam) {
-            AkCamera* c = (AkCamera*)cam->chld;
-            while (c->base.next) {
-                if (c->name)
-                    std::cout << c->name << std::endl;
-                c = (AkCamera*)c->base.next;
-            }
-        }
-        if (geo) {
-            AkGeometry* g = (AkGeometry*)geo->chld;
-            while (g->base.next) {
-                if (g->name)
-                    std::cout << g->name << std::endl;
-                g = (AkGeometry*)g->base.next;
-            }
-        }
-        if (nodes) {
-            AkNode* n = (AkNode*)nodes->chld;
-            while (n->chld) {
-                if (n->name)
-                    std::cout << n->name << std::endl;
-                n = (AkNode*)n->chld;
-            }
-        }
-        if (eff) {
-            AkEffect* e = (AkEffect*)eff->chld;
-            while (e->next) {
-                if (e->name)
-                    std::cout << e->name << std::endl;
-                e = (AkEffect*)e->next;
-            }
-        }
-        /*if (samp) {
-            FListItem* s = (FListItem*)samp->next;
-            while (samp->next) {
-                if (e->name)
-                    std::cout << e->name << std::endl;
-                e = (AkEffect*)e->next;
-            }
-        }
-        if (tex) {
-            AkEffect* e = (AkEffect*)eff->chld;
-            while (e->next) {
-                if (e->name)
-                    std::cout << e->name << std::endl;
-                e = (AkEffect*)e->next;
-            }
-        }*/
-    }
     
+    if (doc->scene.visualScene) {
+        scene = (AkVisualScene*) ak_instanceObject(doc->scene.visualScene);
+        std::cout << "Visual Scene loaded\n";
 
-
-    if ((instScene = doc->scene.visualScene)) {
-        scene = (AkVisualScene*)ak_instanceObject(instScene);
-        printf("Visual Scene loaded\n");
-
-        std::cout << "Scene name: " << scene->name << std::endl;
+        if(scene->name) std::cout << "Scene name: " << scene->name << std::endl;
         if (scene->lights)
             if (scene->lights->first) {
-                AkLight* light = (AkLight*)ak_instanceObject(scene->lights->first->instance);
+                AkLight* light = (AkLight*) ak_instanceObject(scene->lights->first->instance);
+                if(light)
                 std::cout << "Light name: " << light->name << std::endl;
             }
         if (scene->cameras)
             if (scene->cameras->first) {
-                AkCamera* camera = (AkCamera*)ak_instanceObject(scene->cameras->first->instance);
+                AkCamera* camera = (AkCamera*) ak_instanceObject(scene->cameras->first->instance);
+                if(camera)
                 std::cout << "Camera name: " << camera->name << std::endl;
             }
-        if (scene->evaluateScene)
-            if (scene->evaluateScene->render) {
-                const char* render = scene->evaluateScene->render->cameraNode;
-                std::cout << "Render: " << render << std::endl;
-            }
+        ak_firstCamera(doc, &camera, camera_mat, camera_proj);
+        if (camera)
+            std::cout << "Camera:" << camera->name << std::endl;
+        for (int i = 0; i < 16; i++) {
+            std::cout << camera_mat[i] << ", ";
+            if (i % 4 == 3) std::cout << std::endl;
+        }
 
-        node_ptr = ak_instanceObjectNode(scene->node);
+
+        AkMaterial* m = (AkMaterial*) doc->lib.materials->chld;
+        do {
+            AkEffect* ef = (AkEffect*)ak_instanceObject(&m->effect->base);
+            AkTechniqueFxCommon* tch = ef->profile->technique->common;
+            m = (AkMaterial*)m->base.next;
+        }
+        while (m);
+
+        //AkNode* node_ptr = (AkNode*) doc->lib.nodes->chld;
+        AkNode* node_ptr = ak_instanceObjectNode(scene->node);
+        AkNode* node = node_ptr;
         int j = 0;
 
-        do {
-            float* word_transform = (float*)calloc(16, sizeof(float));
-            ak_transformCombineWorld(node_ptr, word_transform);
-            float* transform = (float*)calloc(16, sizeof(float));
-            ak_transformCombine(node_ptr, transform);
+        //do {
+        //    node = node_ptr;
+        //    do{
+        //        float* word_transform = (float*) calloc(16, sizeof(float));
+        //        ak_transformCombineWorld(node_ptr, word_transform);
+        //        float* transform = (float*) calloc(16, sizeof(float));
+        //        ak_transformCombine(node_ptr, transform);
 
-            std::cout << "Node name: " << node_ptr->name << std::endl;
-
-
-            std::string geo_type;
-            if (node_ptr->geometry) {
-                AkGeometry* geometry = ak_instanceObjectGeom(node_ptr);
-                AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
-                switch ((AkGeometryType)geometry->gdata->type) {
-                case AK_GEOMETRY_MESH:
-                    geo_type = "mesh";
-                    if (mesh) {
-                        GLuint prim_type;
-                        std::cout << "Mesh name:" << mesh->name << std::endl;
-                        //geometry->materialMap;
-                        for (int i = 0; i < mesh->primitiveCount; i++) {/*prim = prim->next;*/ }
-                        AkMeshPrimitive* prim = mesh->primitive;
-                        switch (prim->type) {
-                            case AK_PRIMITIVE_LINES:              prim_type = GL_LINES; break;
-                            case AK_PRIMITIVE_POLYGONS:           prim_type = GL_POLYGON; break;
-                            case AK_PRIMITIVE_TRIANGLES:          prim_type = GL_TRIANGLES; break;
-                            case AK_PRIMITIVE_POINTS:             
-                            default:                              prim_type = GL_POINTS; break;
-                        }
-                        if (prim->indices) {
-                            indecies = (unsigned int*) prim->indices->items;
-                            indecies_size = prim->indices->count;
-                        }
-                        //prim->bindMaterial
-                        
-                        //AkMaterial* mat = (AkMaterial*) doc->lib.materials->chld;
-                        AkMaterial* mat = prim->material;
-                        AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
-                        AkTechniqueFxCommon* tch = ef->profile->technique->common;
-                        switch (ef->profile->type) {
-                        case AK_MATERIAL_METALLIC_ROUGHNESS: AkMetallicRoughness mr = *((AkMetallicRoughness*)tch); break;
-                        case AK_MATERIAL_SPECULAR_GLOSSINES: AkSpecularGlossiness sg = *((AkSpecularGlossiness*)tch); break;
-                        default: break;
-                        }
-                        
-                        ak_mem_printKeys();
-                        AkHeap* heap = ak_heap_getheap(prim);
-                        AkDoc* doc = (AkDoc *) ak_heap_data(heap);
-                        ak_heap_printKeys(geometry->materialMap->heap);
-                        ak_heap_printKeys(heap);
-                        ak_heap_printKeys(ak_heap_default());
-                        AkHeapNode* heapnode;
-                        //ak_heap_getNodeById(heap, "node1", &heapnode);
-
-                        int set = prim->input->set;
-                        AkInput* pos = ak_meshInputGet(prim, "POSITION", set);
-                        AkInput* tex = ak_meshInputGet(prim, "TEXCOORD", set);
-                        AkInput* nor = ak_meshInputGet(prim, "NORMAL", set);
-                        // propably number of akinputs in next
-                        //int c = ak_meshInputCount(mesh);
-
-                        AkBuffer* buffer;
-                        buffer = pos->accessor->buffer;
-                        raw_buffer = (int8_t*)buffer->data;
-                        buffer_size = pos->accessor->byteLength;
-                        buffer = tex->accessor->buffer;
-                        raw_tex_buffer = (int8_t*)buffer->data;
-                        texture_size = tex->accessor->byteLength;
-                        buffer = nor->accessor->buffer;
-                        raw_normal_buffer = (int8_t*)buffer->data;
-                        normal_size = nor->accessor->byteLength;
+        //        std::string geo_type;
+        //        if (node->geometry) {
+        //            AkGeometry* geometry = ak_instanceObjectGeom(node); // if geometry
+        //            AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata); 
+        //            switch ((AkGeometryType)geometry->gdata->type) { //if gdata
+        //            case AK_GEOMETRY_MESH:
+        //                geo_type = "mesh";
+        //                if (mesh) {
+        //                    GLuint prim_type;
+        //                    std::cout << "Mesh name:" << mesh->name << std::endl;   // should i insert mesh->name ??
+        //                    std::cout << "Mesh center:" << mesh->center << std::endl; // same
+        //                    for (int i = 0; i < mesh->primitiveCount; i++) {/*prim = prim->next;*/ }
+        //                    AkMeshPrimitive* prim = mesh->primitive;
+        //                    switch (prim->type) {
+        //                        case AK_PRIMITIVE_LINES:              prim_type = GL_LINES; break;
+        //                        case AK_PRIMITIVE_POLYGONS:           prim_type = GL_POLYGON; break;
+        //                        case AK_PRIMITIVE_TRIANGLES:          prim_type = GL_TRIANGLES; break;
+        //                        case AK_PRIMITIVE_POINTS:             
+        //                        default:                              prim_type = GL_POINTS; break;
+        //                    }
+        //                    if (prim->indices) {
+        //                        indecies = (unsigned int*) prim->indices->items;
+        //                        indecies_size = prim->indices->count;
+        //                    }
+        //                    std::cout << "Primitive center: " << prim->center << std::endl;
+        //                    int set = prim->input->set;
+        //                    
+        //                    if (prim->material) {
+        //                        AkMaterial* mat = prim->material;
+        //                        AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
+        //                        AkTechniqueFxCommon* tch = ef->profile->technique->common;
+        //                        if (tch) {
+        //                            set_up_color(tch->ambient);
+        //                            set_up_color(tch->emission);
+        //                            set_up_color(tch->diffuse);
+        //                            set_up_color(tch->specular);
+        //                            
+        //                            switch (tch->type) {
+        //                            case AK_MATERIAL_METALLIC_ROUGHNESS:
+        //                                std::cout << "metalic roughness\n";
+        //                                    break;
+        //                            case AK_MATERIAL_SPECULAR_GLOSSINES:
+        //                                std::cout << "specular glossines\n";
+        //                                break;
+        //                            };
+        //                            std::cout << "Is double sized: " << tch->doubleSided ? "True" : "False";
+        //                        }
+        //                    }
 
 
-                        int offset = pos->accessor->byteOffset;
-                        //int stride = pos->accessor->byteStride;
-                        int comp_stride = pos->accessor->componentBytes;
-                        //int count = pos->accessor->count;
-                        //std::cout << pos->semanticRaw << std::endl;
-                        int normalize = pos->accessor->normalized;
+        //                    AkInput* wgs = ak_meshInputGet(prim, "WEIGHTS", set);
+        //                    AkInput* jts = ak_meshInputGet(prim, "JOINTS", set);
+        //                    AkInput* pos = ak_meshInputGet(prim, "POSITION", set);
+        //                    AkInput* tex = ak_meshInputGet(prim, "TEXCOORD", set);
+        //                    AkInput* nor = ak_meshInputGet(prim, "NORMAL", set);
+        //                    //Color tangent
 
-                        int comp_size = pos->accessor->componentSize;
-                        switch (comp_size) {
-                        case AK_COMPONENT_SIZE_SCALAR:                comp_size = 1; break;
-                        case AK_COMPONENT_SIZE_VEC2:                  comp_size = 2; break;
-                        case AK_COMPONENT_SIZE_VEC3:                  comp_size = 3; break;
-                        case AK_COMPONENT_SIZE_VEC4:                  comp_size = 4; break;
-                        case AK_COMPONENT_SIZE_MAT2:                  comp_size = 4; break;
-                        case AK_COMPONENT_SIZE_MAT3:                  comp_size = 9; break;
-                        case AK_COMPONENT_SIZE_MAT4:                  comp_size = 16; break;
-                        case AK_COMPONENT_SIZE_UNKNOWN:
-                        default:                                      comp_size = 1; break;
-                        }
+        //                    AkBuffer* buffer = prim->input->accessor->buffer;
+        //                    raw_buffer = (int8_t*)buffer->data;
+        //                    int length = prim->input->accessor->byteLength;
+        //                    buffer_size = length;
 
-                        int type = pos->accessor->componentType;
-                        switch (type) {
-                        case AKT_FLOAT:						type = GL_FLOAT; break;
-                        case AKT_UINT:						type = GL_UNSIGNED_INT; break;
-                        case AKT_BYTE:						type = GL_BYTE; break;
-                        case AKT_UBYTE:						type = GL_UNSIGNED_BYTE; break;
-                        case AKT_SHORT:						type = GL_SHORT; break;
-                        case AKT_USHORT:					type = GL_UNSIGNED_SHORT; break;
-                        case AKT_UNKNOWN:
-                        case AKT_NONE:
-                        default:                            type = GL_INT; break;
-                        };
+        //                    int offset = prim->input->accessor->byteOffset;
+        //                    //int stride = prim->input->accessor->byteStride;
+        //                    int comp_stride = prim->input->accessor->componentBytes;
+        //                    //int count = prim->input->accessor->count;
+        //                    int normalize = prim->input->accessor->normalized;
 
-                        std::cout << "Buffer ptr: " << raw_buffer << " Length: " << buffer_size << " Stride: " << comp_stride << " Offset: "
-                            << offset << " Comp Size: " << comp_size << " Comp Type: " << type << std::endl;
-                        std::cout << ak_meshInputCount(mesh) << std::endl;
+        //                    int comp_size = prim->input->accessor->componentSize;
+        //                    switch (comp_size) {
+        //                    case AK_COMPONENT_SIZE_SCALAR:                comp_size = 1; break;
+        //                    case AK_COMPONENT_SIZE_VEC2:                  comp_size = 2; break;
+        //                    case AK_COMPONENT_SIZE_VEC3:                  comp_size = 3; break;
+        //                    case AK_COMPONENT_SIZE_VEC4:                  comp_size = 4; break;
+        //                    case AK_COMPONENT_SIZE_MAT2:                  comp_size = 4; break;
+        //                    case AK_COMPONENT_SIZE_MAT3:                  comp_size = 9; break;
+        //                    case AK_COMPONENT_SIZE_MAT4:                  comp_size = 16; break;
+        //                    case AK_COMPONENT_SIZE_UNKNOWN:
+        //                    default:                                      comp_size = 1; break;
+        //                    }
 
+        //                    int type = prim->input->accessor->componentType;
+        //                    switch (type) {
+        //                    case AKT_FLOAT:						type = GL_FLOAT; break;
+        //                    case AKT_UINT:						type = GL_UNSIGNED_INT; break;
+        //                    case AKT_BYTE:						type = GL_BYTE; break;
+        //                    case AKT_UBYTE:						type = GL_UNSIGNED_BYTE; break;
+        //                    case AKT_SHORT:						type = GL_SHORT; break;
+        //                    case AKT_USHORT:					type = GL_UNSIGNED_SHORT; break;
+        //                    case AKT_UNKNOWN:
+        //                    case AKT_NONE:
+        //                    default:                            type = GL_INT; break;
+        //                    };
 
-                        //meshGenNormals
+        //                    std::cout << " Length: " << length << " Stride: " << comp_stride << " Offset: "
+        //                        << offset << " Comp Size: " << comp_size << " Comp Type: " << type << std::endl;
+        //                    std::cout << ak_meshInputCount(mesh) << std::endl;
 
-                        vpos_location = glGetAttribLocation(program, "vPos");
-                        int binding_point = 0;
+        //                    vpos_location = glGetAttribLocation(program, "vPos");
+        //                    int binding_point = 0;
 
-                        glVertexAttribFormat(vpos_location, comp_size, type, normalize, 0); // comp_stride change to comp_size*typ
-                        glVertexAttribBinding(vpos_location, binding_point);
-                        glGenBuffers(1, &vertex_buffer); // createbuffers
-                        glBindVertexBuffer(binding_point, vertex_buffer, offset, comp_stride);
-                        glObjectLabel(GL_BUFFER, vertex_buffer, -1, "Vertex Buffer");
-                        glNamedBufferData(vertex_buffer, buffer_size, raw_buffer, GL_STATIC_DRAW);
-                        glEnableVertexAttribArray(vpos_location);
+        //                    glVertexAttribFormat(vpos_location, comp_size, type, normalize, 0); // comp_stride change to comp_size*typ
+        //                    glVertexAttribBinding(vpos_location, binding_point);
+        //                    glGenBuffers(1, &vertex_buffer); // createbuffers
+        //                    glBindVertexBuffer(binding_point, vertex_buffer, offset, comp_stride);
+        //                    glObjectLabel(GL_BUFFER, vertex_buffer, -1, "Vertex Buffer");
+        //                    glNamedBufferData(vertex_buffer, buffer_size, raw_buffer, GL_STATIC_DRAW);
+        //                    glEnableVertexAttribArray(vpos_location);
 
-                    };
-                    break;
-                case AK_GEOMETRY_SPLINE:
-                    geo_type = "spline";
-                    break;
-                case  AK_GEOMETRY_BREP:
-                    geo_type = "brep";
-                    break;
-                default:
-                    geo_type = "other";
-                    break;
-                };
+        //                };
+        //                break;
+        //            case AK_GEOMETRY_SPLINE: geo_type = "spline"; break;
+        //            case  AK_GEOMETRY_BREP:  geo_type = "brep";   break;
+        //            default:                 geo_type = "other";  break;
+        //            };
 
-            }
-            std::cout << "No. " << j++ << std::endl;
-            std::cout << "Node type: " << geo_type << std::endl;
-            
-            free(transform);
-            free(word_transform);
-            node_ptr = node_ptr->chld;
-        } while (node_ptr);
+        //        }
+        //        std::cout << "Node name: " << node->name << std::endl;
+        //        std::cout << "No. " << j++ << std::endl;
+        //        std::cout << "Node type: " << geo_type << std::endl;
+        //    
+        //        free(transform);
+        //        free(word_transform);
+        //    
+        //        node = node->next;
+        //    } while (node);
+        //    node_ptr = node_ptr->chld;
+        //} while (node_ptr);
 
-
-        ak_firstCamera(doc, &camera, camera_mat, camera_proj);
-        if (camera) {
-            std::cout << "Camera:" << camera->name << std::endl;
-            for (int i = 0; i < 16; i++) {
-                std::cout << camera_mat[i] << ", ";
-                if (i % 4 == 3) std::cout << std::endl;
-            }
-        }
+        proccess_node(node, node_ptr);
     }
+
     glm::mat4 Camera = glm::make_mat4x4(camera_mat);
     glm::mat4 Projection = glm::make_mat4x4(camera_proj);
-
     if (camera_mat) free(camera_mat);
     if (camera_proj) free(camera_proj);
 
@@ -600,13 +734,13 @@ int main(void)
 
     /* ======================================================== */
 
+    mvp_location = glGetUniformLocation(program, "MVP");
 
 
 
    
 
 
-    mvp_location = glGetUniformLocation(program, "MVP");
 
 
     std::cout << "===================== Main loop ===================\n";
@@ -623,12 +757,14 @@ int main(void)
         float theta = 3.14 * panel_config.p7 / 180;
         float phi = 3.14 * panel_config.p8 / 180;
 
-
         glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
         eye = glm::vec3(eye.z, eye.y, eye.x);
         glm::vec3 north = r * glm::euclidean(glm::vec2(theta, phi+0.01));
-        if (theta > 90) north.y = - north.y;
-        north = glm::vec3(north.z, north.y, north.x);
+        if (theta > 90 && theta < 270) {
+            north = glm::vec3(north.z, -north.y, north.x);
+        } else {
+            north = glm::vec3(north.z, north.y, north.x);
+        }
 
         glm::vec3 translate = glm::vec3(panel_config.p1 * 0.1, panel_config.p2 * 0.1, panel_config.p3 * 0.1);
         glm::vec3 rotate = glm::vec3(3.14 * panel_config.p4/180, 3.14 * panel_config.p5 / 180, 0.f);
@@ -647,7 +783,7 @@ int main(void)
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
         
         
-        glDrawElements(GL_POINTS, indecies_size, GL_UNSIGNED_INT, indecies);
+        glDrawElements(GL_TRIANGLES, indecies_size, GL_UNSIGNED_INT, indecies);
 
         //glBindProgramPipeline(0);
 
@@ -673,10 +809,8 @@ int main(void)
 
     //glDeleteProgramPipelines(1, &pipeline);
 
-    //if (vertex_buffer) {
-    //    GLuint buffers[] = { vertex_buffer };
-    //    glDeleteBuffers(1, buffers);
-    //}
+    //GLuint buffers[] = {vertex_buffer};
+    //glDeleteBuffers(1, buffers);
     glDeleteVertexArrays(1, &vao);
 
     glDeleteShader(vertex_shader);
