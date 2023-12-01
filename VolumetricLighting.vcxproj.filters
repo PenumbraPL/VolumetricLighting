@@ -251,6 +251,9 @@
     <ClInclude Include="include\ds\version.h">
       <Filter>Header Files\ds</Filter>
     </ClInclude>
+    <ClInclude Include="VolumetricLighting.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\sample.gltf">

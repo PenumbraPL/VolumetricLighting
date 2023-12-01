@@ -246,6 +246,7 @@ Shell32.lib
     <ClInclude Include="src\imgui\imstb_textedit.h" />
     <ClInclude Include="src\imgui\imstb_truetype.h" />
     <ClInclude Include="src\stb\stb_image.h" />
+    <ClInclude Include="VolumetricLighting.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="res\fragment.glsl" />

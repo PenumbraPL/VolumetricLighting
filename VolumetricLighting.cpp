@@ -1,44 +1,21 @@
 // VolumetricLighting.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-//#define GLEW_STATIC
+#include "VolumetricLighting.h"
 
-#include <iostream>
-#include <stdio.h>
-#include <map>
-#include "GLEW.h"
-#include "GLFW/glfw3.h"
-#include "glm/glm.hpp"
-#include "glm/mat4x4.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include <glm/gtx/polar_coordinates.hpp>
-#include <stdlib.h>
-#include "GUI.h"
-#include "Debug.h"
-#include <glm/gtc/type_ptr.hpp>
-#include "glm/gtx/string_cast.hpp"
-#include "Draw.h"
-#include "ds/forward-list-common.h"
-
-//#define AK_STATIC 1
-#include "ak/assetkit.h"
-
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb/stb_image.h"
-
-struct WindowInfo {
-    int width;
-    int height;
-    const char* title;
-    int cursor_mode;
-    int imgui;
-    int mbutton;
-} windowConfig = {
+WindowInfo windowConfig = {
     1280,
     960,
     "Simple Triangles",
     0, 0, 0
 };
+ConfigContext panel_config{
+    2.f, 0.f, 50, 0, 0, 0, 0, 0, 50, 50, 50
+};
+double xpos, ypos;
+std::vector<AkAccessor*> acc;
+std::vector<glm::mat4x4*> mats;
+glm::vec4 cam;
+std::map <void*, unsigned int> unique_ptr;
+
 
 void print_map(const std::map<void*, unsigned int>& m){
       for (const auto& n : m)
@@ -48,28 +25,27 @@ void print_map(const std::map<void*, unsigned int>& m){
 
 void set_up_color(AkColorDesc* colordesc){
     if (colordesc) {
-    if (colordesc->texture) {
-        AkTextureRef* tex = colordesc->texture;
-        std::cout << "Texture path: " << tex->texture->image->initFrom->ref;
-        //data?
-        //next?
-        AkSampler* sampler = tex->texture->sampler;
-        //next?
-        AkTypeId type = tex->texture->type;
-        switch (type) {
-        case AKT_SAMPLER1D:
-        case AKT_SAMPLER2D:
-        case AKT_SAMPLER3D:
-        case AKT_SAMPLER_CUBE:
-        case AKT_SAMPLER_RECT:
-        case AKT_SAMPLER_DEPTH:
-            break;
+        if (colordesc->texture) {
+            AkTextureRef* tex = colordesc->texture;
+            std::cout << "Texture path: " << tex->texture->image->initFrom->ref;
+            //data?
+            //next?
+            AkSampler* sampler = tex->texture->sampler;
+            //next?
+            AkTypeId type = tex->texture->type;
+            switch (type) {
+            case AKT_SAMPLER1D:
+            case AKT_SAMPLER2D:
+            case AKT_SAMPLER3D:
+            case AKT_SAMPLER_CUBE:
+            case AKT_SAMPLER_RECT:
+            case AKT_SAMPLER_DEPTH:
+                break;
+            }
+            //AkInput* tex_coord = ak_meshInputGet(prim, tex->coordInputName, set);
         }
-        //AkInput* tex_coord = ak_meshInputGet(prim, tex->coordInputName, set);
     }
 }
-}
-
 
 char* read_file(const char* file_name) {
     FILE* fs;
@@ -85,10 +61,6 @@ char* read_file(const char* file_name) {
 
     return buffer;
 }
-
-ConfigContext panel_config{
-    2.f, 0.f, 50, 0, 0, 0, 0, 0, 50, 50, 50
-};
 
 void checkPipelineStatus(GLuint vertex_shader, GLuint fragment_shader, GLuint program) {
     GLint v_comp_status, f_comp_status, link_status;
@@ -117,7 +89,6 @@ void checkPipelineStatus(GLuint vertex_shader, GLuint fragment_shader, GLuint pr
     }
 }
 
-double xpos, ypos;
 
 void*
 imageLoadFromFile(const char* __restrict path,
@@ -141,12 +112,10 @@ imageFlipVerticallyOnLoad(bool flip) {
     stbi_set_flip_vertically_on_load(flip);
 }
 
-
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     panel_config.p6 += yoffset * -6;
 }
-
 
 static void cursor_position_callback(GLFWwindow* window, double new_xpos, double new_ypos)
 {
@@ -169,6 +138,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         glfwGetCursorPos(window, &xpos, &ypos);
     }
 }
+
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
@@ -206,7 +176,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
 }
 
-
 void setUniformMVP(GLuint Location, glm::vec3 const& Translate, glm::vec3 const& Rotate)
 {
     glm::mat4 Projection = glm::perspective(45.0f, 4.0f / 3.0f, 0.1f, 100.f);
@@ -222,12 +191,23 @@ void setUniformMVP(GLuint Location, glm::vec3 const& Translate, glm::vec3 const&
     glUniformMatrix4fv(Location, 1, GL_FALSE, glm::value_ptr(MVP));
 }
 
-
-void proccess_node(AkNode* node, AkNode* node_ptr) {
+void proccess_node(AkNode* node, AkNode* node_ptr, GLuint* program) {
     float* word_transform = (float*)calloc(16, sizeof(float));
     ak_transformCombineWorld(node_ptr, word_transform);
     float* transform = (float*)calloc(16, sizeof(float));
     ak_transformCombine(node_ptr, transform);
+    
+
+    uint8_t *raw_buffer;
+    unsigned long buffer_size;
+
+    int offset = 0;
+    //int stride;
+    int comp_stride = 0;
+    //int count;
+    int normalize = 0;
+    int type = 0;
+    int comp_size = 0;
 
     std::string geo_type;
     if (node->geometry) {
@@ -291,49 +271,49 @@ void proccess_node(AkNode* node, AkNode* node_ptr) {
                 //int length = prim->input->accessor->byteLength;
                 //buffer_size = length;
 
-                int offset = prim->input->accessor->byteOffset;
+                offset = prim->input->accessor->byteOffset;
                 //int stride = prim->input->accessor->byteStride;
-                int comp_stride = prim->input->accessor->componentBytes;
+                comp_stride = prim->input->accessor->componentBytes;
                 //int count = prim->input->accessor->count;
-                int normalize = prim->input->accessor->normalized;
+                normalize = prim->input->accessor->normalized;
 
-                int comp_size = prim->input->accessor->componentSize;
-                switch (comp_size) {
-                case AK_COMPONENT_SIZE_SCALAR:                comp_size = 1; break;
-                case AK_COMPONENT_SIZE_VEC2:                  comp_size = 2; break;
-                case AK_COMPONENT_SIZE_VEC3:                  comp_size = 3; break;
-                case AK_COMPONENT_SIZE_VEC4:                  comp_size = 4; break;
-                case AK_COMPONENT_SIZE_MAT2:                  comp_size = 4; break;
-                case AK_COMPONENT_SIZE_MAT3:                  comp_size = 9; break;
-                case AK_COMPONENT_SIZE_MAT4:                  comp_size = 16; break;
-                case AK_COMPONENT_SIZE_UNKNOWN:
-                default:                                      comp_size = 1; break;
-                }
+                //comp_size = prim->input->accessor->componentSize;
+                //switch (comp_size) {
+                //case AK_COMPONENT_SIZE_SCALAR:                comp_size = 1; break;
+                //case AK_COMPONENT_SIZE_VEC2:                  comp_size = 2; break;
+                //case AK_COMPONENT_SIZE_VEC3:                  comp_size = 3; break;
+                //case AK_COMPONENT_SIZE_VEC4:                  comp_size = 4; break;
+                //case AK_COMPONENT_SIZE_MAT2:                  comp_size = 4; break;
+                //case AK_COMPONENT_SIZE_MAT3:                  comp_size = 9; break;
+                //case AK_COMPONENT_SIZE_MAT4:                  comp_size = 16; break;
+                //case AK_COMPONENT_SIZE_UNKNOWN:
+                //default:                                      comp_size = 1; break;
+                //}
 
-                int type = prim->input->accessor->componentType;
-                switch (type) {
-                case AKT_FLOAT:						type = GL_FLOAT; break;
-                case AKT_UINT:						type = GL_UNSIGNED_INT; break;
-                case AKT_BYTE:						type = GL_BYTE; break;
-                case AKT_UBYTE:						type = GL_UNSIGNED_BYTE; break;
-                case AKT_SHORT:						type = GL_SHORT; break;
-                case AKT_USHORT:					type = GL_UNSIGNED_SHORT; break;
-                case AKT_UNKNOWN:
-                case AKT_NONE:
-                default:                            type = GL_INT; break;
-                };
+                //type = prim->input->accessor->componentType;
+                //switch (type) {
+                //case AKT_FLOAT:						type = GL_FLOAT; break;
+                //case AKT_UINT:						type = GL_UNSIGNED_INT; break;
+                //case AKT_BYTE:						type = GL_BYTE; break;
+                //case AKT_UBYTE:						type = GL_UNSIGNED_BYTE; break;
+                //case AKT_SHORT:						type = GL_SHORT; break;
+                //case AKT_USHORT:					type = GL_UNSIGNED_SHORT; break;
+                //case AKT_UNKNOWN:
+                //case AKT_NONE:
+                //default:                            type = GL_INT; break;
+                //};
                 //<< " Length: " << length
                 std::cout  << " Stride: " << comp_stride << " Offset: "
                     << offset << " Comp Size: " << comp_size << " Comp Type: " << type << std::endl;
                 std::cout << ak_meshInputCount(mesh) << std::endl;
-
+                
+                acc.push_back(prim->input->accessor);
             };
             break;
         case AK_GEOMETRY_SPLINE: geo_type = "spline"; break;
         case  AK_GEOMETRY_BREP:  geo_type = "brep";   break;
         default:                 geo_type = "other";  break;
         };
-
     }
     std::cout << "Node name: " << node->name << std::endl;
     //std::cout << "No. " << j++ << std::endl;
@@ -344,39 +324,13 @@ void proccess_node(AkNode* node, AkNode* node_ptr) {
 
     if (node->next) {
         node = node->next;
-        proccess_node(node, node_ptr);
+        proccess_node(node, node_ptr, program);
     }
     if (node->chld) {
         node = node->chld;
-        proccess_node(node, node_ptr);
+        proccess_node(node, node_ptr, program);
     }
 }
-
-
-
-static const struct
-{
-    float x, y;
-    float r, g, b;
-} vertices[3] =
-{
-    { -0.6f, -0.4f, 1.f, 0.f, 0.f },
-    {  0.6f, -0.4f, 0.f, 1.f, 0.f },
-    {   0.f,  0.6f, 0.f, 0.f, 1.f }
-};
-struct {
-    float x, y, z;
-}cube[8] = {
-    -0.25f, -0.25f, -0.25f,
-    -0.25f, 0.25f, -0.25f,
-    0.25f, -0.25f, -0.25f,
-    0.25f, 0.25f, -0.25f,
-    0.25f, -0.25f, 0.25f,
-    0.25f, 0.25f, 0.25f,
-    -0.25f, -0.25f, 0.25f,
-    -0.25f, 0.25f, 0.25f,
-};
-
 
 std::string printCoordSys(AkCoordSys* coord) {
     if (coord) {
@@ -433,9 +387,7 @@ std::string printInf(AkDocInf* inf, AkUnit* unit) {
 }
 
 
-std::vector<AkAccessor*> acc;
-std::vector<glm::mat4x4*> mats;
-glm::vec4 cam;
+
 
 int main(void)
 {
@@ -448,6 +400,7 @@ int main(void)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 
+
     GLFWwindow* window = glfwCreateWindow(windowConfig.width, windowConfig.height, windowConfig.title, NULL, NULL);
     if (!window)
     {
@@ -456,7 +409,6 @@ int main(void)
         std::cout << "========== [GLFW]: Window initialization failed ==============================\n";
         return 1;
     }
-    
 
     glfwMakeContextCurrent(window);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -540,7 +492,7 @@ int main(void)
     AkVisualScene* scene;
     AkCamera* camera;
     AkInstanceGeometry* geometry;
-    AkNode* root, * node_ptr;
+    AkNode *root, *node_ptr;
 
     std::string scene_path = "./res/ship_in_clouds/scene.gltf";
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
@@ -592,23 +544,13 @@ int main(void)
         //}
         //while (m);
 
-        FListItem* b = (FListItem*) doc->lib.buffers;
-        std::map <void*, unsigned int> unique_ptr;
-        do {
-            AkBuffer* buf = (AkBuffer*)b->data; //if
-            //std::cout << buf << " " << buf->length << std::endl;
-            unique_ptr.insert({{buf, buf->length}});
-            b = b->next;
-        } while (b);
-        print_map(unique_ptr);
-
 
         //AkNode* node_ptr = (AkNode*) doc->lib.nodes->chld;
         AkNode* node_ptr = ak_instanceObjectNode(scene->node);
         AkNode* node = node_ptr;
         int j = 0;
 
-        proccess_node(node, node_ptr); // pointer to pointer?
+        proccess_node(node, node_ptr, &program); // pointer to pointer?
     }
 
     glm::mat4 Camera = glm::make_mat4x4(camera_mat);
@@ -621,12 +563,79 @@ int main(void)
     /* ======================================================== */
 
     mvp_location = glGetUniformLocation(program, "MVP");
+    vpos_location = glGetAttribLocation(program, "vPos");
 
 
+    FListItem* b = (FListItem*)doc->lib.buffers;
+    int j = 0;
+    do {
+        AkBuffer* buf = (AkBuffer*)b->data; //if
+        //std::cout << buf << " " << buf->length << std::endl;
+        unique_ptr.insert({ {buf, 0} });
+        b = b->next;
+    } while (b);
+    for (auto& u : unique_ptr) {
+        u.second = j++;
+    }
+    print_map(unique_ptr);
 
+    GLuint* buffers = (GLuint*) calloc(unique_ptr.size(), sizeof(GLuint));
+    glGenBuffers(unique_ptr.size(), buffers);
    
+    for (auto& a : acc) {
+        int comp_size = a->componentSize;
+        int type = a->componentType;
+        GLuint normalize = a->normalized ? GL_TRUE : GL_FALSE;
+        int offset = a->byteOffset;
+        int comp_stride = a->componentBytes;
 
 
+        switch (comp_size) {
+        case AK_COMPONENT_SIZE_SCALAR:                comp_size = 1; break;
+        case AK_COMPONENT_SIZE_VEC2:                  comp_size = 2; break;
+        case AK_COMPONENT_SIZE_VEC3:                  comp_size = 3; break;
+        case AK_COMPONENT_SIZE_VEC4:                  comp_size = 4; break;
+        case AK_COMPONENT_SIZE_MAT2:                  comp_size = 4; break;
+        case AK_COMPONENT_SIZE_MAT3:                  comp_size = 9; break;
+        case AK_COMPONENT_SIZE_MAT4:                  comp_size = 16; break;
+        case AK_COMPONENT_SIZE_UNKNOWN:
+        default:                                      comp_size = 1; break;
+        }
+
+        switch (type) {
+        case AKT_FLOAT:						type = GL_FLOAT; break;
+        case AKT_UINT:						type = GL_UNSIGNED_INT; break;
+        case AKT_BYTE:						type = GL_BYTE; break;
+        case AKT_UBYTE:						type = GL_UNSIGNED_BYTE; break;
+        case AKT_SHORT:						type = GL_SHORT; break;
+        case AKT_USHORT:					type = GL_UNSIGNED_SHORT; break;
+        case AKT_UNKNOWN:
+        case AKT_NONE:
+        default:                            type = GL_INT; break;
+        };
+
+        std::cout << comp_size << " " << type << " " << offset << " " << comp_stride << std::endl;
+
+        int binding_point = 0;
+        glVertexAttribFormat(vpos_location, comp_size, type, normalize, 0); // comp_stride change to comp_size*type
+        glVertexAttribBinding(vpos_location, binding_point);
+        glEnableVertexAttribArray(vpos_location);
+
+        int i = unique_ptr[a->buffer];
+
+        //glGenBuffers(1, &vertex_buffer);
+        //glNamedBufferData(vertex_buffer, buffer_size, raw_buffer, GL_STATIC_DRAW);
+        //glGenBuffers(1, &vertex_buffer); // createbuffers
+        glBindVertexBuffer(binding_point, buffers[i], offset, comp_stride);
+        glObjectLabel(GL_BUFFER, buffers[i], -1, "Vertex Buffer");
+        //glNamedBufferData(vertex_buffer, buffer_size, raw_buffer, GL_STATIC_DRAW);
+        glNamedBufferData(buffers[i], a->buffer->length, a->buffer->data, GL_STATIC_DRAW); //?
+    }
+    
+    //for (auto& buffer : unique_ptr) {
+    //    int i = buffer.second;
+    //    glNamedBufferData(buffers[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*) buffer.first)->data, GL_STATIC_DRAW); //?
+    //}
 
 
     std::cout << "===================== Main loop ==============================================\n";
@@ -635,7 +644,7 @@ int main(void)
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         float ratio = width / (float)height;
-        
+
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT);
         
@@ -664,7 +673,7 @@ int main(void)
         glm::mat4 ViewTranslate = glm::translate(glm::mat4(1.0f), translate);
         glm::mat4 ViewRotateX = glm::rotate(ViewTranslate, rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f));
         glm::mat4 View = glm::rotate(ViewRotateX, rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));   
+        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
         glm::mat4 MVP = Projection * LookAt * View * Model;
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
         
@@ -696,7 +705,8 @@ int main(void)
     //glDeleteProgramPipelines(1, &pipeline);
 
     //GLuint buffers[] = {vertex_buffer};
-    //glDeleteBuffers(1, buffers);
+    free(buffers);
+    glDeleteBuffers(unique_ptr.size(), buffers);
     glDeleteVertexArrays(1, &vao);
 
     glDeleteShader(vertex_shader);
