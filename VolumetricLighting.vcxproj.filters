@@ -22,6 +22,9 @@
     <Filter Include="Header Files\assetkit">
       <UniqueIdentifier>{da382bda-fc52-4be8-8008-32c5d5559fc6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\ds">
+      <UniqueIdentifier>{b95e9f8e-c885-4bd4-9889-d3ed5dae0489}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="VolumetricLighting.cpp">
@@ -193,6 +196,39 @@
     </ClInclude>
     <ClInclude Include="GLEW.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\allocator.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\common.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\forward-list-common.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\forward-list-sep.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\forward-list.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\hash-funcs.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\hash.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\rb.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\sort.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\util.h">
+      <Filter>Header Files\ds</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ds\version.h">
+      <Filter>Header Files\ds</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
