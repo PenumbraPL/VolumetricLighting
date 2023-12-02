@@ -58,3 +58,31 @@ struct {
     -0.25f, 0.25f, 0.25f,
 };
 
+struct Primitive {
+    float* transform;
+    float* w_transform;
+
+    uint32_t* ind;
+    unsigned int ind_size;
+
+    AkAccessor* wgs;
+    AkAccessor* jts;
+    AkAccessor* pos;
+    AkAccessor* tex;
+    AkAccessor* nor;
+    AkAccessor* col;
+    AkAccessor* tan;
+
+    float* setTransform(void) {
+        return transform = (float*)calloc(16, sizeof(float));
+    }
+
+    float* setWorldTransform(void) {
+        return w_transform = (float*)calloc(16, sizeof(float));
+    }
+
+    void deleteTranforms() {
+        if (transform) free(transform);
+        if (w_transform) free(w_transform);
+    }
+};

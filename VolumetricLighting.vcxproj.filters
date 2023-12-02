@@ -328,6 +328,9 @@
     <None Include="res\volkswagen\scene.gltf">
       <Filter>Resource Files\volkswagen</Filter>
     </None>
+    <None Include="res\sample3.gltf">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ship_in_clouds\textures\Cloud_3_emissive.jpeg">
