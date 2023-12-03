@@ -18,33 +18,6 @@ std::map <void*, unsigned int> bufferViews;
 std::map <void*, unsigned int> textureViews;
 std::vector<Primitive> primitives;
 
-
-
-void*
-imageLoadFromFile(const char* __restrict path,
-    int* __restrict width,
-    int* __restrict height,
-    int* __restrict components) {
-    return stbi_load(path, width, height, components, 0);
-}
-
-void*
-imageLoadFromMemory(const char* __restrict data,
-    size_t                  len,
-    int* __restrict width,
-    int* __restrict height,
-    int* __restrict components) {
-    return stbi_load_from_memory((stbi_uc const*)data, (int)len, width, height, components, 0);
-}
-
-void
-imageFlipVerticallyOnLoad(bool flip) {
-    stbi_set_flip_vertically_on_load(flip);
-}
-
-
-
-
 void print_map(const std::map<void*, unsigned int>& m){
       for (const auto& n : m)
           std::cout << n.first << " = " << n.second << "; ";
@@ -97,105 +70,28 @@ void formatAttribute(GLint attr_location, AkAccessor* acc) {
     glVertexAttribFormat(attr_location, comp_size, type, normalize, 0);
 }
 
-GLuint wrap_mode(AkWrapMode& wrap) {
-    GLuint wrap_m = GL_REPEAT;
-    switch (wrap) {
-    case AK_WRAP_MODE_WRAP: wrap_m = GL_REPEAT; break;
-    case AK_WRAP_MODE_MIRROR: wrap_m = GL_MIRRORED_REPEAT; break;
-    case AK_WRAP_MODE_CLAMP: wrap_m = GL_CLAMP_TO_EDGE; break;
-    case AK_WRAP_MODE_BORDER: wrap_m = GL_CLAMP_TO_BORDER; break;
-    case AK_WRAP_MODE_MIRROR_ONCE: wrap_m = GL_MIRROR_CLAMP_TO_EDGE; break;
-    }
-    return wrap_m;
-}
 
-void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim){
+
+void set_up_color(AkColorDesc* colordesc){
     if (colordesc) {
         if (colordesc->texture) {
             AkTextureRef* tex = colordesc->texture;
-            if (tex->texture) {
-                AkSampler* samp = tex->texture->sampler;
-                if (!samp) return;
-
-                AkTypeId type = tex->texture->type;
-                //std::cout << "Texture path: " << tex->texture->image->initFrom->ref;
-
-
-                GLuint texture_type;
-                GLuint minfilter, magfilter, mipfilter;
-                GLuint wrap_t, wrap_s, wrap_p;
-                switch (type) {
-                case AKT_SAMPLER1D:     texture_type = GL_TEXTURE_1D; break;
-                case AKT_SAMPLER2D:     texture_type = GL_TEXTURE_2D; break;
-                case AKT_SAMPLER3D:     texture_type = GL_TEXTURE_3D; break;
-                case AKT_SAMPLER_CUBE:  texture_type = GL_TEXTURE_CUBE_MAP; break;
-                case AKT_SAMPLER_RECT:  texture_type = GL_TEXTURE_RECTANGLE; break;
-                case AKT_SAMPLER_DEPTH: texture_type = GL_TEXTURE_2D; break;
-                    break;
-                }
-                wrap_t = wrap_mode(samp->wrapT);
-                wrap_s = wrap_mode(samp->wrapS);
-                wrap_p = wrap_mode(samp->wrapP);
-
-                //GLuint border_color[] = {samp->borderColor->rgba.R, samp->borderColor->rgba.G,
-                //    samp->borderColor->rgba.B, samp->borderColor->rgba.A};
-                switch (samp->minfilter) {
-                case AK_MINFILTER_LINEAR:       minfilter = GL_LINEAR; break;
-                case AK_MINFILTER_NEAREST:      minfilter = GL_NEAREST; break;
-                case AK_LINEAR_MIPMAP_NEAREST:  minfilter = GL_LINEAR_MIPMAP_NEAREST; break;
-                case AK_LINEAR_MIPMAP_LINEAR:   minfilter = GL_LINEAR_MIPMAP_LINEAR; break;
-                case AK_NEAREST_MIPMAP_NEAREST: minfilter = GL_NEAREST_MIPMAP_NEAREST; break;
-                case AK_NEAREST_MIPMAP_LINEAR:  minfilter = GL_NEAREST_MIPMAP_LINEAR; break;
-                }
-
-                switch (samp->magfilter) {
-                case AK_MAGFILTER_LINEAR:   magfilter = GL_LINEAR; break;
-                case AK_MAGFILTER_NEAREST:  magfilter = GL_NEAREST; break;
-                }
-
-                switch (samp->mipfilter) {
-                case AK_MIPFILTER_LINEAR:   mipfilter = GL_LINEAR; break;
-                case AK_MIPFILTER_NEAREST:  mipfilter = GL_NEAREST; break;
-                case AK_MIPFILTER_NONE:  mipfilter = GL_NONE; break;
-                }
-                GLuint sampler;
-                glCreateSamplers(1, &sampler);
-                glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, wrap_s);
-                glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, wrap_t);
-                glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, wrap_p);
-                glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, minfilter);
-                glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, magfilter);
-                //glSamplerParameteri(sampler, GL_TEXTURE_BORDER_COLOR, border_color);
-                glBindSampler(0, sampler); //
-
-                AkInput* tex_coord = ak_meshInputGet(prim, tex->coordInputName, tex->slot); //
-                int components = 0;
-                int width = 0;
-                int height = 0;
-                char path[128] = { "./res/ship_in_clouds/" };
-                const char* f_path = tex->texture->image->initFrom->ref;
-                memcpy_s(path+strlen(path), 128-strlen(path), f_path, strlen(f_path));
-                char* image = (char*)imageLoadFromFile(path, &width, &height, &components);
-
-
-                GLuint texture;
-                glCreateTextures(texture_type, 1, &texture);
-                if (image) {
-                    glTextureStorage2D(texture, 1, GL_RGB8, width, height);
-                    glTextureSubImage2D(texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
-                    stbi_image_free(image);
-                    glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(texture_type, texture);
-                }
-
-
-                //GLint units;
-                //glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &units);
-                //glBindTextureUnit(0, textures[0]); // (binding = 0)
-                //glDeleteSamplers(1, &sampler);
-                //glDeleteTextures(1, &texture);
+            std::cout << "Texture path: " << tex->texture->image->initFrom->ref;
+            //data?
+            //next?
+            AkSampler* sampler = tex->texture->sampler;
+            //next?
+            AkTypeId type = tex->texture->type;
+            switch (type) {
+            case AKT_SAMPLER1D:
+            case AKT_SAMPLER2D:
+            case AKT_SAMPLER3D:
+            case AKT_SAMPLER_CUBE:
+            case AKT_SAMPLER_RECT:
+            case AKT_SAMPLER_DEPTH:
+                break;
             }
-            
+            //AkInput* tex_coord = ak_meshInputGet(prim, tex->coordInputName, set);
         }
     }
 }
@@ -242,6 +138,28 @@ GLint checkPipelineStatus(GLuint vertex_shader, GLuint fragment_shader) {
     return (!v_comp_status || !f_comp_status) ? 0 : 1;
 }
 
+
+void*
+imageLoadFromFile(const char* __restrict path,
+    int* __restrict width,
+    int* __restrict height,
+    int* __restrict components) {
+    return stbi_load(path, width, height, components, 0);
+}
+
+void*
+imageLoadFromMemory(const char* __restrict data,
+    size_t                  len,
+    int* __restrict width,
+    int* __restrict height,
+    int* __restrict components) {
+    return stbi_load_from_memory((stbi_uc const*)data, (int)len, width, height, components, 0);
+}
+
+void
+imageFlipVerticallyOnLoad(bool flip) {
+    stbi_set_flip_vertically_on_load(flip);
+}
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
@@ -372,10 +290,10 @@ void proccess_node(AkNode* node) {
                     AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
                     AkTechniqueFxCommon* tch = ef->profile->technique->common;
                     if (tch) {
-                        set_up_color(tch->ambient, prim);
-                        set_up_color(tch->emission, prim);
-                        set_up_color(tch->diffuse, prim);
-                        set_up_color(tch->specular, prim);
+                        set_up_color(tch->ambient);
+                        set_up_color(tch->emission);
+                        set_up_color(tch->diffuse);
+                        set_up_color(tch->specular);
 
                         switch (tch->type) {
                         case AK_MATERIAL_METALLIC_ROUGHNESS:
@@ -554,7 +472,7 @@ int main(void)
     
 
     GLuint vao, vertex_buffer, vertex_shader, fragment_shader, program;
-    GLint mvp_location, vpos_location, vcol_location, norm_location, tex_location;
+    GLint mvp_location, vpos_location, vcol_location, norm_location;
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -609,7 +527,7 @@ int main(void)
     AkInstanceGeometry* geometry;
     AkNode *root, *node_ptr;
 
-    std::string scene_path = "./res/ship_in_clouds/scene.gltf";
+    std::string scene_path = "./res/sample.gltf";
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
         std::cout << "Document couldn't be loaded\n";
     }else {
@@ -685,12 +603,10 @@ int main(void)
     mvp_location = glGetUniformLocation(program, "MVP");
     norm_location = glGetAttribLocation(program, "vNor");
     vpos_location = glGetAttribLocation(program, "vPos");
-    tex_location = glGetAttribLocation(program, "texCoor");
 
     glEnableVertexAttribArray(mvp_location);
     glEnableVertexAttribArray(vpos_location);
     glEnableVertexAttribArray(norm_location);
-    glEnableVertexAttribArray(tex_location);
 
     
 
@@ -737,7 +653,6 @@ int main(void)
         
         formatAttribute(vpos_location, primitives[i].pos);
         formatAttribute(norm_location, primitives[i].nor);
-        formatAttribute(tex_location, primitives[i].tex);
 
         //binding_point = i;
         //glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
@@ -759,15 +674,12 @@ int main(void)
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         float ratio = width / (float)height;
+
         glEnable(GL_DEPTH_TEST);
-        glEnable(GL_CULL_FACE); glCullFace(GL_FRONT_AND_BACK);
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         for (int i = 0; i < primitives.size(); i++) {
-            
-
-
             float r = (float) 0.1 * panel_config.p6;
             float phi = panel_config.p7;//(float) 3.14 * panel_config.p7 / 180;
             float theta = panel_config.p8;//(float) 3.14 * panel_config.p8 / 180;
@@ -798,21 +710,15 @@ int main(void)
             glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
 
             int j = bufferViews[primitives[i].pos->buffer];
-            int binding_point = 0;
+            int binding_point = i;
             glVertexAttribBinding(vpos_location, binding_point);
             glBindVertexBuffer(binding_point, buffers[j], primitives[i].pos->byteOffset, primitives[i].pos->componentBytes);
             
             j = bufferViews[primitives[i].nor->buffer];
-            binding_point = 1;
+            binding_point = i+primitives.size();
             glVertexAttribBinding(norm_location, binding_point);
             glBindVertexBuffer(binding_point, buffers[j], primitives[i].nor->byteOffset, primitives[i].nor->componentBytes);
             
-
-            j = bufferViews[primitives[i].tex->buffer];
-            binding_point = 2;
-            glVertexAttribBinding(tex_location, binding_point);
-            glBindVertexBuffer(binding_point, buffers[j], primitives[i].tex->byteOffset, primitives[i].tex->componentBytes);
-
             glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
         }
         
