@@ -271,8 +271,8 @@ void drawRightPanel(ImGuiIO& io, ConfigContext &config) {
     ImGui::SliderInt("Param4", &config.p4, 0, 360);
     ImGui::SliderInt("Param5", &config.p5, 0, 360);
     ImGui::SliderInt("Param6", &config.p6, 0, 360);
-    ImGui::SliderInt("Param7", &config.p7, 0, 360);
-    ImGui::SliderInt("Param8", &config.p8, 0, 360);
+    ImGui::SliderAngle("Param7", &config.p7, 0, 360);
+    ImGui::SliderAngle("Param8", &config.p8, 0, 360);
 
     ImGui::Separator();
     ImGui::Button("Save Image");

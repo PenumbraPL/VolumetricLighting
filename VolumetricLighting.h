@@ -16,6 +16,7 @@
 #include "Debug.h"
 #include <glm/gtc/type_ptr.hpp>
 #include "glm/gtx/string_cast.hpp"
+#include "glm/gtx/common.hpp"
 #include "Draw.h"
 #include "ds/forward-list-common.h"
 

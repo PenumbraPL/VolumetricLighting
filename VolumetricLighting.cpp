@@ -8,9 +8,10 @@ WindowInfo windowConfig = {
     0, 0, 0
 };
 ConfigContext panel_config{
-    2000.f, 0.f, 50, 0, 0, 0, 0, 0, 50, 50, 50
+    2000.f, 0.f, 50, 0, 0, 0, 0, 0, 50, 0, 0
 };
 double xpos, ypos;
+float mouse_speed = 2.f;
 std::vector<glm::mat4x4*> mats;
 glm::vec4 cam;
 std::map <void*, unsigned int> bufferViews;
@@ -170,8 +171,8 @@ static void cursor_position_callback(GLFWwindow* window, double new_xpos, double
     int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
     if (state != GLFW_RELEASE)
     {
-        double nx = (1000.f / windowConfig.width) * (new_xpos - xpos);
-        double ny = (1000.f / windowConfig.height) * (new_ypos - ypos);
+        double nx = (mouse_speed / windowConfig.width) * (new_xpos - xpos);
+        double ny = (mouse_speed / windowConfig.height) * (new_ypos - ypos);
         panel_config.p7 += nx;
         panel_config.p8 += ny;
         
@@ -190,16 +191,16 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.p7 += 1;
+        panel_config.p7 += 0.01;
     }
     if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.p7 -= 1;
+        panel_config.p7 -= 0.01;
     }
     if (key == GLFW_KEY_UP && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.p8 += 1;
+        panel_config.p8 += 0.01;
     }
     if (key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.p8 -= 1;
+        panel_config.p8 -= 0.01;
     }
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -526,7 +527,7 @@ int main(void)
     AkInstanceGeometry* geometry;
     AkNode *root, *node_ptr;
 
-    std::string scene_path = "./res/sample3.gltf";
+    std::string scene_path = "./res/sample.gltf";
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
         std::cout << "Document couldn't be loaded\n";
     }else {
@@ -664,7 +665,7 @@ int main(void)
     //}
     //
 
-    //glDepthFunc(GL_LESS);
+    //glDepthFunc(GL_GEQUAL);
     //glEnable(GL_DEPTH_TEST);
 
     std::cout << "===================== Main loop ==============================================\n";
@@ -674,24 +675,23 @@ int main(void)
         glfwGetFramebufferSize(window, &width, &height);
         float ratio = width / (float)height;
 
+        glEnable(GL_DEPTH_TEST);
         glViewport(0, 0, width, height);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         for (int i = 0; i < primitives.size(); i++) {
             float r = (float) 0.1 * panel_config.p6;
-            float theta = (float) 3.14 * panel_config.p7 / 180;
-            float phi = (float) 3.14 * panel_config.p8 / 180;
+            float phi = panel_config.p7;//(float) 3.14 * panel_config.p7 / 180;
+            float theta = panel_config.p8;//(float) 3.14 * panel_config.p8 / 180;
 
             glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
             eye = glm::vec3(eye.z, eye.y, eye.x);
-            glm::vec3 north = r * glm::euclidean(glm::vec2(theta, phi + 0.01));
-            if (theta > 90 && theta < 270) {
-                north = glm::vec3(north.z, -north.y, north.x);
+            glm::vec3 north = glm::vec3(0., 1., 0.);
+            float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
+            if (corrected_theta > 3.14/2. && corrected_theta < 3.14 * 3./2.) {
+                north = glm::vec3(0., -1., 0.);
             }
-            else {
-                north = glm::vec3(north.z, north.y, north.x);
-            }
-
+            
             glm::vec3 translate = glm::vec3(panel_config.p1 * 0.1, panel_config.p2 * 0.1, panel_config.p3 * 0.1);
             glm::vec3 rotate = glm::vec3(3.14 * panel_config.p4 / 180, 3.14 * panel_config.p5 / 180, 0.f);
 
