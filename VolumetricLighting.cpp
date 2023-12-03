@@ -11,11 +11,10 @@ ConfigContext panel_config{
     2000.f, 0.f, 50, 0, 0, 0, 0, 0, 50, 50, 50
 };
 double xpos, ypos;
-std::vector<AkAccessor*> acc;
 std::vector<glm::mat4x4*> mats;
 glm::vec4 cam;
 std::map <void*, unsigned int> bufferViews;
-std::map <unsigned int*, unsigned int> indecies;
+std::map <void*, unsigned int> textureViews;
 std::vector<Primitive> primitives;
 
 void print_map(const std::map<void*, unsigned int>& m){
@@ -23,6 +22,54 @@ void print_map(const std::map<void*, unsigned int>& m){
           std::cout << n.first << " = " << n.second << "; ";
     std::cout << '\n';
 }
+
+
+void formatAttribute(GLint attr_location, AkAccessor* acc) {
+    int comp_size;
+    int type;
+    GLuint normalize;
+    size_t offset;
+    int comp_stride;
+    size_t length;
+
+    comp_size = acc->componentSize;
+    type = acc->componentType;
+    normalize = acc->normalized ? GL_TRUE : GL_FALSE;
+    offset = acc->byteOffset;
+    comp_stride = acc->componentBytes;
+    length = acc->byteLength;
+
+
+    switch (comp_size) {
+    case AK_COMPONENT_SIZE_SCALAR:                comp_size = 1; break;
+    case AK_COMPONENT_SIZE_VEC2:                  comp_size = 2; break;
+    case AK_COMPONENT_SIZE_VEC3:                  comp_size = 3; break;
+    case AK_COMPONENT_SIZE_VEC4:                  comp_size = 4; break;
+    case AK_COMPONENT_SIZE_MAT2:                  comp_size = 4; break;
+    case AK_COMPONENT_SIZE_MAT3:                  comp_size = 9; break;
+    case AK_COMPONENT_SIZE_MAT4:                  comp_size = 16; break;
+    case AK_COMPONENT_SIZE_UNKNOWN:
+    default:                                      comp_size = 1; break;
+    }
+
+    switch (type) {
+    case AKT_FLOAT:						type = GL_FLOAT; break;
+    case AKT_UINT:						type = GL_UNSIGNED_INT; break;
+    case AKT_BYTE:						type = GL_BYTE; break;
+    case AKT_UBYTE:						type = GL_UNSIGNED_BYTE; break;
+    case AKT_SHORT:						type = GL_SHORT; break;
+    case AKT_USHORT:					type = GL_UNSIGNED_SHORT; break;
+    case AKT_UNKNOWN:
+    case AKT_NONE:
+    default:                            type = GL_INT; break;
+    };
+
+    std::cout << length << " " << comp_size << " " << type << " " << offset << " " << comp_stride << std::endl;
+
+    glVertexAttribFormat(attr_location, comp_size, type, normalize, 0);
+}
+
+
 
 void set_up_color(AkColorDesc* colordesc){
     if (colordesc) {
@@ -67,31 +114,27 @@ char* read_file(const char* file_name) {
     return buffer;
 }
 
-void checkPipelineStatus(GLuint vertex_shader, GLuint fragment_shader, GLuint program) {
-    GLint v_comp_status, f_comp_status, link_status;
+GLint checkPipelineStatus(GLuint vertex_shader, GLuint fragment_shader) {
+    GLint v_comp_status, f_comp_status;
     glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &v_comp_status);
     if (!v_comp_status) {
-        GLchar comp_info[1024];
-        glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, NULL);
+        char comp_info[1024];
+        memset(comp_info, '\0', 1024);
+        //glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, NULL);
         glGetShaderInfoLog(vertex_shader, 1024, NULL, comp_info);
-
+        std::cout << "Vertex Shader: ";
         fwrite(comp_info, 1024, 1, stdout);
     }
     glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &f_comp_status);
     if (!f_comp_status) {
-        GLchar comp_info[1024];
-        glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, NULL);
+        char comp_info[1024];
+        memset(comp_info, '\0', 1024);
+        //glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, NULL);
         glGetShaderInfoLog(fragment_shader, 1024, NULL, comp_info);
-
+        std::cout << "Fragment Shader: ";
         fwrite(comp_info, 1024, 1, stdout);
     }
-    glGetProgramiv(program, GL_LINK_STATUS, &link_status);
-    if (!link_status) {
-        GLchar comp_info[1024];
-        glGetProgramInfoLog(program, 1024, NULL, comp_info);
-
-        fwrite(comp_info, 1024, 1, stdout);
-    }
+    return (!v_comp_status || !f_comp_status) ? 0 : 1;
 }
 
 
@@ -201,9 +244,7 @@ void proccess_node(AkNode* node) {
     unsigned long buffer_size;
 
     int offset = 0;
-    //int stride;
     int comp_stride = 0;
-    //int count;
     int normalize = 0;
     int type = 0;
     int comp_size = 0;
@@ -224,8 +265,7 @@ void proccess_node(AkNode* node) {
             geo_type = "mesh";
             if (mesh) {
                 GLuint prim_type;
-                std::cout << "Mesh name:" << mesh->name << std::endl;   // should i insert mesh->name ??
-                std::cout << "Mesh center:" << mesh->center << std::endl; // same
+
                 for (int i = 0; i < mesh->primitiveCount; i++) {/*prim = prim->next;*/ }
                 AkMeshPrimitive* prim = mesh->primitive;
                 switch (prim->type) {
@@ -236,10 +276,11 @@ void proccess_node(AkNode* node) {
                 default:                              prim_type = GL_POINTS; break;
                 }
                 if (prim->indices) {
-                    indecies[(unsigned int*)prim->indices->items] = prim->indices->count;
                     pr.ind = (uint32_t*)prim->indices->items;
                     pr.ind_size = prim->indices->count;
                 }
+                std::cout << "Mesh name:" << mesh->name << std::endl;   // should i insert mesh->name ??
+                std::cout << "Mesh center:" << mesh->center << std::endl; // same
                 std::cout << "Primitive center: " << prim->center << std::endl;
                 int set = prim->input->set;
 
@@ -265,7 +306,6 @@ void proccess_node(AkNode* node) {
                     }
                 }
 
-
                 AkInput* wgs = ak_meshInputGet(prim, "WEIGHTS", set);
                 AkInput* jts = ak_meshInputGet(prim, "JOINTS", set);
                 AkInput* pos = ak_meshInputGet(prim, "POSITION", set);
@@ -286,7 +326,6 @@ void proccess_node(AkNode* node) {
                 pr.col = col ? col->accessor : nullptr;
                 pr.tan = tan ? tan->accessor : nullptr;
                 
-                if(pos) acc.push_back(pos->accessor);
                 primitives.push_back(pr);
             };
             break;
@@ -297,13 +336,8 @@ void proccess_node(AkNode* node) {
     }
 
     std::cout << "Node name: " << node->name << std::endl;
-    //std::cout << "No. " << j++ << std::endl;
     std::cout << "Node type: " << geo_type << std::endl;
    
-
-
-
-
     if (node->next) {
         node = node->next;
         proccess_node(node);
@@ -437,7 +471,7 @@ int main(void)
     
 
     GLuint vao, vertex_buffer, vertex_shader, fragment_shader, program;
-    GLint mvp_location, vpos_location, vcol_location;
+    GLint mvp_location, vpos_location, vcol_location, norm_location;
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -452,20 +486,36 @@ int main(void)
     glShaderSource(fragment_shader, 1, &f_sh_buffer, NULL);
     glCompileShader(fragment_shader);
 
+
+    /* ======================================================== */
+    GLint status = checkPipelineStatus(vertex_shader, fragment_shader);
+    /* ======================================================== */
+
     program = glCreateProgram();
     glObjectLabel(GL_PROGRAM, program, -1, "Volumetric lighting");
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, fragment_shader);
-    glLinkProgram(program);
+    
+    if (status) {
+        glAttachShader(program, vertex_shader);
+        glAttachShader(program, fragment_shader);
+        glLinkProgram(program);
+
+        GLint link_status;
+        glGetProgramiv(program, GL_LINK_STATUS, &link_status);
+        if (!link_status) {
+            GLchar comp_info[1024];
+            glGetProgramInfoLog(program, 1024, NULL, comp_info);
+
+            fwrite(comp_info, 1024, 1, stdout);
+        }
+    }
+
 
     //GLuint pipeline;
     //glGenProgramPipelines(1, &pipeline);
     //glUseProgramStages(pipeline, GL_VERTEX_SHADER_BIT, fragment_shader);
     //glUseProgramStages(pipeline, GL_FRAGMENT_SHADER_BIT, vertex_shader);
     
-    /* ======================================================== */
-    checkPipelineStatus(vertex_shader, fragment_shader, program);
-    /* ======================================================== */
+
 
 
     ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
@@ -488,8 +538,6 @@ int main(void)
     float* camera_mat = (float*)calloc(16, sizeof(float));
     float* camera_proj = (float*)calloc(16, sizeof(float));
     int8_t* raw_buffer;
-    //uint32_t* indecies = nullptr;
-    //unsigned int indecies_size = 0;
     int buffer_size = 0;
     glm::mat4 Projection;
 
@@ -552,22 +600,46 @@ int main(void)
     /* ======================================================== */
 
     mvp_location = glGetUniformLocation(program, "MVP");
+    norm_location = glGetAttribLocation(program, "vNor");
     vpos_location = glGetAttribLocation(program, "vPos");
+
     glEnableVertexAttribArray(mvp_location);
     glEnableVertexAttribArray(vpos_location);
+    glEnableVertexAttribArray(norm_location);
 
-    FListItem* b = (FListItem*)doc->lib.buffers;
-    int j = 0;
-    do {
-        AkBuffer* buf = (AkBuffer*)b->data; //if
-        //std::cout << buf << " " << buf->length << std::endl;
-        bufferViews.insert({ {buf, 0} });
-        b = b->next;
-    } while (b);
-    for (auto& u : bufferViews) {
-        u.second = j++;
+    
+
+    int j;
+    
+    // What with images and libimages ??
+    j = 0;
+    FListItem* t = doc->lib.textures;
+    if (t) {
+        do {
+            AkTexture* tex = (AkTexture*)t->data;
+            textureViews.insert({ {tex, 0} });
+            t = t->next;
+        } while (t);
+        for (auto& u : textureViews) {
+            u.second = j++;
+        }
     }
-    print_map(bufferViews);
+
+
+    j = 0;
+    FListItem* b = (FListItem*)doc->lib.buffers;
+    if (b) {
+        do {
+            AkBuffer* buf = (AkBuffer*)b->data;
+            bufferViews.insert({ {buf, 0} });
+            b = b->next;
+        } while (b);
+        for (auto& u : bufferViews) {
+            u.second = j++;
+        }
+        print_map(bufferViews);
+    }
+
 
     GLuint* buffers = (GLuint*) calloc(bufferViews.size(), sizeof(GLuint));
     glCreateBuffers(bufferViews.size(), buffers);
@@ -577,45 +649,12 @@ int main(void)
     } 
     
     for (int i = 0; i < primitives.size(); i++) {
-        int comp_size = primitives[i].pos->componentSize;
-        int type = primitives[i].pos->componentType;
-        GLuint normalize = primitives[i].pos->normalized ? GL_TRUE : GL_FALSE;
-        size_t offset = primitives[i].pos->byteOffset;
-        int comp_stride = primitives[i].pos->componentBytes;
-        size_t length = primitives[i].pos->byteLength;
+        
+        formatAttribute(vpos_location, primitives[i].pos);
+        formatAttribute(norm_location, primitives[i].nor);
 
-        switch (comp_size) {
-        case AK_COMPONENT_SIZE_SCALAR:                comp_size = 1; break;
-        case AK_COMPONENT_SIZE_VEC2:                  comp_size = 2; break;
-        case AK_COMPONENT_SIZE_VEC3:                  comp_size = 3; break;
-        case AK_COMPONENT_SIZE_VEC4:                  comp_size = 4; break;
-        case AK_COMPONENT_SIZE_MAT2:                  comp_size = 4; break;
-        case AK_COMPONENT_SIZE_MAT3:                  comp_size = 9; break;
-        case AK_COMPONENT_SIZE_MAT4:                  comp_size = 16; break;
-        case AK_COMPONENT_SIZE_UNKNOWN:
-        default:                                      comp_size = 1; break;
-        }
-
-        switch (type) {
-        case AKT_FLOAT:						type = GL_FLOAT; break;
-        case AKT_UINT:						type = GL_UNSIGNED_INT; break;
-        case AKT_BYTE:						type = GL_BYTE; break;
-        case AKT_UBYTE:						type = GL_UNSIGNED_BYTE; break;
-        case AKT_SHORT:						type = GL_SHORT; break;
-        case AKT_USHORT:					type = GL_UNSIGNED_SHORT; break;
-        case AKT_UNKNOWN:
-        case AKT_NONE:
-        default:                            type = GL_INT; break;
-        };
-
-        std::cout << length << " " << comp_size << " " << type << " " << offset << " " << comp_stride << std::endl;
-
-        int binding_point = i;
-        glVertexAttribFormat(vpos_location, comp_size, type, normalize, 0); // comp_stride change to comp_size*type
-
-        glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
-        //glBindVertexBuffer(binding_point, buffers[binding_point], offset, comp_stride);
-        //glNamedBufferSubData(buffers[binding_point], offset, length, p.pos->buffer->data);
+        //binding_point = i;
+        //glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
     }
     //size_t l = primitives[0].pos->byteLength / primitives[0].pos->componentSize;
     //size_t o = primitives[0].pos->byteOffset;
@@ -624,6 +663,9 @@ int main(void)
     //    if (i % 20 == 19) std::cout << std::endl;
     //}
     //
+
+    //glDepthFunc(GL_LESS);
+    //glEnable(GL_DEPTH_TEST);
 
     std::cout << "===================== Main loop ==============================================\n";
     while (!glfwWindowShouldClose(window))
@@ -634,7 +676,7 @@ int main(void)
 
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT);
-    
+
         for (int i = 0; i < primitives.size(); i++) {
             float r = (float) 0.1 * panel_config.p6;
             float theta = (float) 3.14 * panel_config.p7 / 180;
@@ -667,11 +709,16 @@ int main(void)
             glm::mat4 MVP = Projection * LookAt * View * Model;
             glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
 
-
             int j = bufferViews[primitives[i].pos->buffer];
             int binding_point = i;
             glVertexAttribBinding(vpos_location, binding_point);
             glBindVertexBuffer(binding_point, buffers[j], primitives[i].pos->byteOffset, primitives[i].pos->componentBytes);
+            
+            j = bufferViews[primitives[i].nor->buffer];
+            binding_point = i+primitives.size();
+            glVertexAttribBinding(norm_location, binding_point);
+            glBindVertexBuffer(binding_point, buffers[j], primitives[i].nor->byteOffset, primitives[i].nor->componentBytes);
+            
             glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
         }
         
