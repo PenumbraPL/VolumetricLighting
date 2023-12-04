@@ -252,7 +252,8 @@ Shell32.lib
     <None Include="res\fragment.glsl" />
     <None Include="res\fragment2.glsl" />
     <None Include="res\sample.gltf" />
-    <None Include="res\sample2.gltf" />
+    <None Include="res\sample2\scene.bin" />
+    <None Include="res\sample2\scene.gltf" />
     <None Include="res\sample3.gltf" />
     <None Include="res\shaders\blinn.glsl" />
     <None Include="res\shaders\cube_frag.glsl" />
@@ -276,6 +277,7 @@ Shell32.lib
     <None Include="res\volkswagen\scene.gltf" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\sample2\Untitled.png" />
     <Image Include="res\ship_in_clouds\textures\Boot_Finaal_emissive.jpeg" />
     <Image Include="res\ship_in_clouds\textures\Cloud_1_baseColor.png" />
     <Image Include="res\ship_in_clouds\textures\Cloud_1_emissive.jpeg" />

@@ -66,6 +66,19 @@ struct Primitive {
     uint32_t* ind;
     unsigned int ind_size;
 
+    GLuint* amb_sampler;
+    GLuint* amb_texture;
+
+    GLuint* emi_sampler;
+    GLuint* emi_texture;
+
+    GLuint* diff_sampler;
+    GLuint* diff_texture;
+
+    GLuint* spec_sampler;
+    GLuint* spec_texture;
+
+
     AkAccessor* wgs;
     AkAccessor* jts;
     AkAccessor* pos;

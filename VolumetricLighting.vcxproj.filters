@@ -46,6 +46,9 @@
     <Filter Include="Header Files\ds">
       <UniqueIdentifier>{ee78a6cd-a909-47e0-bc52-196fde750da5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\sample2">
+      <UniqueIdentifier>{a9530890-2fde-40ff-b6f0-1565434cf603}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="VolumetricLighting.cpp">
@@ -259,9 +262,6 @@
     <None Include="res\sample.gltf">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="res\sample2.gltf">
-      <Filter>Resource Files</Filter>
-    </None>
     <None Include="res\shaders\blinn.glsl">
       <Filter>Resource Files\shaders</Filter>
     </None>
@@ -331,6 +331,12 @@
     <None Include="res\sample3.gltf">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="res\sample2\scene.bin">
+      <Filter>Resource Files\sample2</Filter>
+    </None>
+    <None Include="res\sample2\scene.gltf">
+      <Filter>Resource Files\sample2</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ship_in_clouds\textures\Cloud_3_emissive.jpeg">
@@ -359,6 +365,9 @@
     </Image>
     <Image Include="res\volkswagen\textures\Grates_baseColor.png">
       <Filter>Resource Files\volkswagen\textures</Filter>
+    </Image>
+    <Image Include="res\sample2\Untitled.png">
+      <Filter>Resource Files\sample2</Filter>
     </Image>
   </ItemGroup>
 </Project>
