@@ -11,7 +11,7 @@ void debug_init(std::vector<DEBUGPROC> callback_list) {
 	for (auto& callback : callback_list) {
 		glDebugMessageCallback(callback, userParam);
 	}
-
+	display_logs();
 	turn_on_only_errors();
 	//turn_on_everything();
 
@@ -39,9 +39,10 @@ void turn_on_only_errors() {
 
 void display_logs() {
 	char messageLog[2048];
-	//memset(messageLog, '\0', 2048);
+	memset(messageLog, '\0', 2048);
 	glGetDebugMessageLog(1, 2048, NULL, NULL, NULL, NULL, NULL, messageLog);
-	std::cout << messageLog << std::endl << "==================================" << std::endl;
+	fwrite(messageLog, sizeof(char), 2048, stdout);
+	//std::cout << messageLog << std::endl << "==================================" << std::endl;
 }
 
 void callback1(GLenum source,

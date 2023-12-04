@@ -78,6 +78,17 @@ struct Primitive {
     GLuint* spec_sampler = nullptr;
     GLuint* spec_texture = nullptr;
 
+    GLuint* sg_sampler = nullptr;
+    GLuint* sg_texture = nullptr;
+
+    GLuint* mr_sampler = nullptr;
+    GLuint* mr_texture = nullptr;
+
+    GLuint* alb_sampler = nullptr;
+    GLuint* alb_texture = nullptr;
+
+    GLuint* dif_sampler = nullptr;
+    GLuint* dif_texture = nullptr;
 
     AkAccessor* wgs;
     AkAccessor* jts;
