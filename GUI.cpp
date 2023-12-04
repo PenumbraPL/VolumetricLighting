@@ -259,20 +259,20 @@ void drawLeftPanel(ImGuiIO& io) {
 void drawRightPanel(ImGuiIO& io, ConfigContext &config) {
     ImGui::Begin("Right Panel");
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-    ImGui::Text("Far plane:"); ImGui::SliderFloat("Fp", &config.far_plane, 0.1f, 500.0f);
-    ImGui::Text("Near plane:"); ImGui::SliderFloat("Np", &config.near_plane, 0.0f, 10.0f);
+    ImGui::Text("Far plane:"); ImGui::SliderFloat("Fp", &config.far_plane, 0.1f, 200.0f);
+    ImGui::Text("Near plane:"); ImGui::SliderFloat("Np", &config.near_plane, 0.0001f, 10.0f);
     ImGui::Text("fov:"); ImGui::SliderInt("fov", &config.fov, 10, 120);
 
     ImGui::Separator();
 
-    ImGui::SliderInt("Param1", &config.p1, -100, 100);
-    ImGui::SliderInt("Param2", &config.p2, -100, 100);
-    ImGui::SliderInt("Param3", &config.p3, -100, 100);
-    ImGui::SliderInt("Param4", &config.p4, 0, 360);
-    ImGui::SliderInt("Param5", &config.p5, 0, 360);
-    ImGui::SliderInt("Param6", &config.p6, 0, 360);
-    ImGui::SliderAngle("Param7", &config.p7, 0, 360);
-    ImGui::SliderAngle("Param8", &config.p8, 0, 360);
+    ImGui::SliderInt("Translation X", &config.tr_x, -100, 100);
+    ImGui::SliderInt("Translation Y", &config.tr_y, -100, 100);
+    ImGui::SliderInt("Translation Z", &config.tr_z, -100, 100);
+    ImGui::SliderInt("Rotation X", &config.rot_x, 0, 360);
+    ImGui::SliderInt("Rotation Y", &config.rot_y, 0, 360);
+    ImGui::SliderFloat("Camera distance", &config.dist, 0, 360);
+    ImGui::SliderAngle("Camera phi", &config.phi, 0, 360);
+    ImGui::SliderAngle("Camera theta", &config.theta, 0, 360);
 
     ImGui::Separator();
     ImGui::Button("Save Image");

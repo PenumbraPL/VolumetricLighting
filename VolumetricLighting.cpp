@@ -1,7 +1,7 @@
 // VolumetricLighting.cpp : This file contains the 'main' function. Program execution begins and ends there.
 #include "VolumetricLighting.h"
-#define PATH "./res/cube/"
-#define FILE_NAME "Cube.gltf"
+#define PATH "./res/sample2/"
+#define FILE_NAME "scene.gltf"
 
 WindowInfo windowConfig = {
     1900,
@@ -10,8 +10,9 @@ WindowInfo windowConfig = {
     0, 0, 0
 };
 ConfigContext panel_config{
-    2000.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0
+    100.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0
 };
+
 double xpos, ypos;
 float mouse_speed = 2.f;
 std::vector<glm::mat4x4*> mats;
@@ -20,6 +21,11 @@ std::map <void*, unsigned int> bufferViews;
 std::map <void*, unsigned int> textureViews;
 std::map <void*, unsigned int> imageViews;
 std::vector<Primitive> primitives;
+
+std::vector<Light> lights;
+std::vector<Camera> cameras;
+
+/* ============================================================================= */
 
 void print_map(const std::map<void*, unsigned int>& m){
       for (const auto& n : m)
@@ -100,11 +106,11 @@ imageFlipVerticallyOnLoad(bool flip) {
 GLuint wrap_mode(AkWrapMode& wrap) {
     GLuint wrap_m = GL_REPEAT;
     switch (wrap) {
-    case AK_WRAP_MODE_WRAP: wrap_m = GL_REPEAT; break;
-    case AK_WRAP_MODE_MIRROR: wrap_m = GL_MIRRORED_REPEAT; break;
-    case AK_WRAP_MODE_CLAMP: wrap_m = GL_CLAMP_TO_EDGE; break;
-    case AK_WRAP_MODE_BORDER: wrap_m = GL_CLAMP_TO_BORDER; break;
-    case AK_WRAP_MODE_MIRROR_ONCE: wrap_m = GL_MIRROR_CLAMP_TO_EDGE; break;
+    case AK_WRAP_MODE_WRAP:         wrap_m = GL_REPEAT; break;
+    case AK_WRAP_MODE_MIRROR:       wrap_m = GL_MIRRORED_REPEAT; break;
+    case AK_WRAP_MODE_CLAMP:        wrap_m = GL_CLAMP_TO_EDGE; break;
+    case AK_WRAP_MODE_BORDER:       wrap_m = GL_CLAMP_TO_BORDER; break;
+    case AK_WRAP_MODE_MIRROR_ONCE:  wrap_m = GL_MIRROR_CLAMP_TO_EDGE; break;
     }
     return wrap_m;
 }
@@ -150,9 +156,9 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint** sample
                 }
 
                 switch (samp->mipfilter) {
-                case AK_MIPFILTER_LINEAR:   mipfilter = GL_LINEAR; break;
-                case AK_MIPFILTER_NEAREST:  mipfilter = GL_NEAREST; break;
-                case AK_MIPFILTER_NONE:  mipfilter = GL_NONE; break;
+                case AK_MIPFILTER_LINEAR:    mipfilter = GL_LINEAR; break;
+                case AK_MIPFILTER_NEAREST:   mipfilter = GL_NEAREST; break;
+                case AK_MIPFILTER_NONE:      mipfilter = GL_NONE; break;
                 }
 
                 *sampler = (GLuint*)calloc(1, sizeof(GLuint));
@@ -172,10 +178,11 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint** sample
                 const char* f_path = tex->texture->image->initFrom->ref;
                 memcpy_s(path + strlen(path), 128 - strlen(path), f_path, strlen(f_path));
                 char* image = (char*)imageLoadFromFile(path, &width, &height, &components);
-
-                *texture = (GLuint*)calloc(1, sizeof(GLuint));
-                glCreateTextures(texture_type, 1, *texture);
+               
                 if (image) {
+                    *texture = (GLuint*)calloc(1, sizeof(GLuint));
+                    glCreateTextures(texture_type, 1, *texture);
+
                     if (std::string::npos != std::string(path).find(".jpg", 0)) {
                         glTextureStorage2D(*texture[0], 1, GL_RGB8, width, height);
                         glTextureSubImage2D(*texture[0], 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image); //jpg
@@ -186,15 +193,11 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint** sample
                     }
                     if (std::string::npos != std::string(path).find(".png", 0)) {
                         glTextureStorage2D(*texture[0], 1, GL_RGBA8, width, height);
-                        glTextureSubImage2D(*texture[0], 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image); //
+                        glTextureSubImage2D(*texture[0], 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image); // problem
                     }
+                    std::cout << "a" << std::endl;
                     stbi_image_free(image);
                 }
-
-
-                //GLint units;
-                //glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &units);
-                //glBindTextureUnit(0, textures[0]); // (binding = 0)
             }
         }
     }
@@ -245,7 +248,7 @@ GLint checkPipelineStatus(GLuint vertex_shader, GLuint fragment_shader) {
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    panel_config.p6 += yoffset * -6;
+    panel_config.dist += yoffset * panel_config.dist / -6.;
 }
 
 static void cursor_position_callback(GLFWwindow* window, double new_xpos, double new_ypos)
@@ -255,8 +258,8 @@ static void cursor_position_callback(GLFWwindow* window, double new_xpos, double
     {
         double nx = (mouse_speed / windowConfig.width) * (new_xpos - xpos);
         double ny = (mouse_speed / windowConfig.height) * (new_ypos - ypos);
-        panel_config.p7 += nx;
-        panel_config.p8 += ny;
+        panel_config.phi += nx;
+        panel_config.theta += ny;
         
         xpos = new_xpos;
         ypos = new_ypos;
@@ -267,38 +270,25 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         glfwGetCursorPos(window, &xpos, &ypos);
-        std::cout << "Mouse button: " << xpos << ", " << ypos << std::endl;
     }
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.p7 += 0.01;
+        panel_config.phi += 0.01;
     }
     if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.p7 -= 0.01;
+        panel_config.phi -= 0.01;
     }
     if (key == GLFW_KEY_UP && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.p8 += 0.01;
+        panel_config.theta += 0.01;
     }
     if (key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.p8 -= 0.01;
+        panel_config.theta -= 0.01;
     }
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
-    }
-    if (key == GLFW_KEY_J && action == GLFW_PRESS) {
-        GLFWmousebuttonfun mouse_button_callbacks[2] = { NULL, mouse_button_callback };
-        windowConfig.mbutton += 1;
-        windowConfig.mbutton %= 2;
-        glfwSetMouseButtonCallback(window, mouse_button_callbacks[windowConfig.mbutton]);
-    }
-    if (key == GLFW_KEY_G && action == GLFW_PRESS) {
-        GLFWcursorposfun cursor_callbacks[2] = { NULL, cursor_position_callback };
-        windowConfig.imgui += 1;
-        windowConfig.imgui %= 2;
-        glfwSetCursorPosCallback(window, cursor_callbacks[windowConfig.imgui]);
     }
     if (key == GLFW_KEY_H && action == GLFW_PRESS) {
         int mode[2] = { GLFW_CURSOR_DISABLED, GLFW_CURSOR_NORMAL };
@@ -308,25 +298,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
 }
 
-void setUniformMVP(GLuint Location, glm::vec3 const& Translate, glm::vec3 const& Rotate)
-{
-    glm::mat4 Projection = glm::perspective(45.0f, 4.0f / 3.0f, 0.1f, 100.f);
-    glm::mat4 ViewTranslate = glm::translate(
-        glm::mat4(1.0f), Translate);
-    glm::mat4 ViewRotateX = glm::rotate(
-        ViewTranslate, Rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f));
-    glm::mat4 View = glm::rotate(ViewRotateX,
-        Rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 Model = glm::scale(
-        glm::mat4(1.0f), glm::vec3(0.5f));
-    glm::mat4 MVP = Projection * View * Model;
-    glUniformMatrix4fv(Location, 1, GL_FALSE, glm::value_ptr(MVP));
-}
-
 void proccess_node(AkNode* node) {
-    uint8_t *raw_buffer;
-    unsigned long buffer_size;
-
     int offset = 0;
     int comp_stride = 0;
     int normalize = 0;
@@ -340,6 +312,7 @@ void proccess_node(AkNode* node) {
     float* transform = pr.setTransform();
     ak_transformCombineWorld(node, world_transform);
     ak_transformCombine(node, transform);
+    std::regex light_regex("^[Ll]ight.*");
 
     if (node->geometry) {
         AkGeometry* geometry = ak_instanceObjectGeom(node); // if geometry
@@ -380,7 +353,6 @@ void proccess_node(AkNode* node) {
 
                         switch (tch->type) {
                         case AK_MATERIAL_METALLIC_ROUGHNESS: {
-                            //std::cout << "\nmetalic roughness\n";
                             AkMetallicRoughness* mr = (AkMetallicRoughness*)tch;
                             AkColorDesc alb_cd;
                             AkColorDesc mr_cd;
@@ -394,7 +366,6 @@ void proccess_node(AkNode* node) {
                         }
                             
                         case AK_MATERIAL_SPECULAR_GLOSSINES:{
-                            //std::cout << "\nspecular glossines\n";
                             AkSpecularGlossiness* sg = (AkSpecularGlossiness*)tch;
                             AkColorDesc sg_cd;
                             AkColorDesc dif_cd;
@@ -419,7 +390,6 @@ void proccess_node(AkNode* node) {
 
                 AkInput* col = ak_meshInputGet(prim, "COLOR", set);
                 AkInput* tan = ak_meshInputGet(prim, "TANGENT", set);
-                //Color tangent
 
                 //std::cout << ak_meshInputCount(mesh) << std::endl;
                 
@@ -438,6 +408,15 @@ void proccess_node(AkNode* node) {
         case  AK_GEOMETRY_BREP:  geo_type = "brep";   break;
         default:                 geo_type = "other";  break;
         };
+    }
+    else if (std::regex_match(node->name, light_regex)) {
+        Light light;
+        light.transform = glm::make_mat4x4(transform);
+        light.w_transform = glm::make_mat4x4(world_transform);
+        free(transform);
+        free(world_transform);
+
+        lights.push_back(light);
     }
 
     std::cout << "Node name: " << node->name << std::endl;
@@ -534,6 +513,7 @@ int main(void)
     glfwMakeContextCurrent(window);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
+    
     glfwSetKeyCallback(window, key_callback);
     glfwSetErrorCallback(error_callback);
     glfwSetScrollCallback(window, scroll_callback);
@@ -616,20 +596,19 @@ int main(void)
         }
     }
 
-
     //GLuint pipeline;
     //glGenProgramPipelines(1, &pipeline);
     //glUseProgramStages(pipeline, GL_VERTEX_SHADER_BIT, fragment_shader);
     //glUseProgramStages(pipeline, GL_FRAGMENT_SHADER_BIT, vertex_shader);
     
 
-
+    /* ================================================ */
 
     ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
 
     AkDoc* doc;
     AkVisualScene* scene;
-    AkCamera* camera;
+    AkCamera* camera = nullptr;
     AkInstanceGeometry* geometry;
     AkNode *root, *node_ptr;
 
@@ -637,6 +616,7 @@ int main(void)
     scene_path += FILE_NAME;
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
         std::cout << "Document couldn't be loaded\n";
+        return -1;
     }else {
         std::cout << printCoordSys(doc->coordSys);
         std::cout << printInf(doc->inf, doc->unit);
@@ -645,83 +625,44 @@ int main(void)
 
     float* camera_mat = (float*)calloc(16, sizeof(float));
     float* camera_proj = (float*)calloc(16, sizeof(float));
-    int8_t* raw_buffer;
-    int buffer_size = 0;
     glm::mat4 Projection;
+    glm::mat4 Camera;
 
     if (doc->scene.visualScene) {
         scene = (AkVisualScene*) ak_instanceObject(doc->scene.visualScene);
-        std::cout << "Visual Scene loaded\n";
+        std::cout << "=============== Visual Scene loaded ====";
+        if(scene->name) std::cout << "Scene name: " << scene->name << "============" << std::endl;
+        
 
-        if(scene->name) std::cout << "Scene name: " << scene->name << std::endl;
-        if (scene->lights)
-            if (scene->lights->first) {
-                AkLight* light = (AkLight*) ak_instanceObject(scene->lights->first->instance);
-                if(light)
-                std::cout << "Light name: " << light->name << std::endl;
-            }
-        if (scene->cameras)
-            if (scene->cameras->first) {
-                AkCamera* camera = (AkCamera*) ak_instanceObject(scene->cameras->first->instance);
-                if(camera)
-                std::cout << "Camera name: " << camera->name << std::endl;
-            }
         ak_firstCamera(doc, &camera, camera_mat, camera_proj);
         if (camera) {
-            std::cout << "Camera:" << camera->name << std::endl;
             Projection = glm::make_mat4x4(camera_proj);
-        }else {
-            int width, height;
-            glfwGetFramebufferSize(window, &width, &height);
-            Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
+            Camera = glm::make_mat4x4(camera_mat);
+            for (int i = 0; i < 16; i++) {
+                std::cout << camera_mat[i] << ", ";
+                if (i % 4 == 3) std::cout << std::endl;
+            }
+        } else if (scene->cameras) {
+            if (scene->cameras->first) {
+                camera = (AkCamera*)ak_instanceObject(scene->cameras->first->instance);
+            }
         }
-            
-        for (int i = 0; i < 16; i++) {
-            std::cout << camera_mat[i] << ", ";
-            if (i % 4 == 3) std::cout << std::endl;
-        }
+        if (camera) std::cout << "Camera name: " << camera->name << std::endl;
 
 
-        //AkMaterial* m = (AkMaterial*) doc->lib.materials->chld;
-        //do {
-        //    AkEffect* ef = (AkEffect*)ak_instanceObject(&m->effect->base);
-        //    AkTechniqueFxCommon* tch = ef->profile->technique->common;
-        //    m = (AkMaterial*)m->base.next;
-        //}
-        //while (m);
-
-
-        //AkNode* node_ptr = (AkNode*) doc->lib.nodes->chld;
-        AkNode* node_ptr = ak_instanceObjectNode(scene->node);
-        AkNode* node = node_ptr;
-        int j = 0;
-
+        AkNode* node = ak_instanceObjectNode(scene->node);
         proccess_node(node); // pointer to pointer?
     }
 
-    glm::mat4 Camera = glm::make_mat4x4(camera_mat);
     if (camera_mat) free(camera_mat);
     if (camera_proj) free(camera_proj);
 
+    primitives[0].program = &program;
 
-
-    /* ======================================================== */
-
-    mvp_location = glGetUniformLocation(program, "MVP");
-    norm_location = glGetAttribLocation(program, "vNor");
-    vpos_location = glGetAttribLocation(program, "vPos");
-    tex_location = glGetAttribLocation(program, "vTex");
-    is_tex_location = glGetUniformLocation(program, "isTexture");
-
-    glEnableVertexAttribArray(mvp_location);
-    glEnableVertexAttribArray(vpos_location);
-    if(norm_location != -1) glEnableVertexAttribArray(norm_location);
-    if (tex_location != -1) glEnableVertexAttribArray(tex_location);
-    glEnableVertexAttribArray(is_tex_location);
 
     int j;
-    
-    // What with images and libimages ??
+
+    // What with and libimages ??
     j = 0;
     FListItem* i = doc->lib.images;
     if (i) {
@@ -765,6 +706,21 @@ int main(void)
     }
 
 
+    /* ======================================================== */
+
+    mvp_location = glGetUniformLocation(program, "MVP");
+    norm_location = glGetAttribLocation(program, "vNor");
+    vpos_location = glGetAttribLocation(program, "vPos");
+    tex_location = glGetAttribLocation(program, "vTex");
+    is_tex_location = glGetUniformLocation(program, "isTexture");
+
+    glEnableVertexAttribArray(mvp_location);
+    glEnableVertexAttribArray(vpos_location);
+    if(norm_location != -1) glEnableVertexAttribArray(norm_location);
+    if (tex_location != -1) glEnableVertexAttribArray(tex_location);
+    glEnableVertexAttribArray(is_tex_location);
+
+   
     GLuint* buffers = (GLuint*) calloc(bufferViews.size(), sizeof(GLuint));
     glCreateBuffers(bufferViews.size(), buffers);
     for (auto &buffer : bufferViews) {
@@ -773,61 +729,54 @@ int main(void)
     } 
     
     for (int i = 0; i < primitives.size(); i++) {
-        
-        formatAttribute(vpos_location, primitives[i].pos);
-        if(norm_location != -1) formatAttribute(norm_location, primitives[i].nor);
-        if (tex_location != -1) formatAttribute(tex_location, primitives[i].tex);
-        //binding_point = i;
+        if (vpos_location != -1) formatAttribute(vpos_location, primitives[i].pos);
+        if (norm_location != -1) formatAttribute(norm_location, primitives[i].nor);
+        if (tex_location  != -1) formatAttribute(tex_location, primitives[i].tex);
         //glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
     }
-    //size_t l = primitives[0].pos->byteLength / primitives[0].pos->componentSize;
-    //size_t o = primitives[0].pos->byteOffset;
-    //for (size_t i = o; i < o+l; i++) {
-    //    std::cout << ((float*) primitives[0].pos->buffer->data)[i] << ", ";
-    //    if (i % 20 == 19) std::cout << std::endl;
-    //}
-    //
 
     glDepthFunc(GL_LEQUAL);
-    //glEnable(GL_DEPTH_TEST);
 
     std::cout << "===================== Main loop ==============================================\n";
     while (!glfwWindowShouldClose(window))
     {
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
-        float ratio = width / (float)height;
 
         glEnable(GL_DEPTH_TEST);
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         for (int i = 0; i < primitives.size(); i++) {
-            float r = (float) 0.1 * panel_config.p6;
-            float phi = panel_config.p7;
-            float theta = panel_config.p8;
+            float r     = 0.1 * panel_config.dist;
+            float phi   = panel_config.phi;
+            float theta = panel_config.theta;
 
             glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
             eye = glm::vec3(eye.z, eye.y, eye.x);
+            
             glm::vec3 north = glm::vec3(0., 1., 0.);
             float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
             if (corrected_theta > 3.14/2. && corrected_theta < 3.14 * 3./2.) {
                 north = glm::vec3(0., -1., 0.);
             }
             
-            glm::vec3 translate = glm::vec3(panel_config.p1 * 0.1, panel_config.p2 * 0.1, panel_config.p3 * 0.1);
-            glm::vec3 rotate = glm::vec3(3.14 * panel_config.p4 / 180, 3.14 * panel_config.p5 / 180, 0.f);
+            glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
+            glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
 
-            glUseProgram(program);
+            glUseProgram(*primitives[i].program);
             //glBindProgramPipeline(pipeline);
 
             glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
-            //glm::mat4 Projection = glm::perspectiveFov((float) 3.14*panel_config.fov/180, (float) width, (float) height, panel_config.near_plane, panel_config.far_plane);
+            if(!camera) Projection = glm::perspectiveFov((float) 3.14*panel_config.fov/180, (float) width, (float) height, panel_config.near_plane, panel_config.far_plane);
 
-            //glm::mat4 ViewTranslate = glm::translate(glm::mat4(1.0f), translate);
-            //glm::mat4 ViewRotateX = glm::rotate(ViewTranslate, rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f));
-            //glm::mat4 View = glm::rotate(ViewRotateX, rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-            glm::mat4 View = glm::make_mat4x4(primitives[i].transform);
+            glm::mat4 View =  glm::rotate(
+                                glm::rotate(
+                                    glm::translate(
+                                        glm::make_mat4x4(primitives[i].transform)
+                                        , translate)
+                                    , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+                                    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
             glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
             glm::mat4 MVP = Projection * LookAt * View * Model;
             glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));

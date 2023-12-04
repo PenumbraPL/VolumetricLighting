@@ -337,6 +337,9 @@
     <None Include="res\sample2\scene.gltf">
       <Filter>Resource Files\sample2</Filter>
     </None>
+    <None Include="res\shaders\metalic_r.glsl">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ship_in_clouds\textures\Cloud_3_emissive.jpeg">

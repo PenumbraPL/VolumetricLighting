@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <stdio.h>
+#include <regex>
 #include <map>
 #include "GLEW.h"
 #include "GLFW/glfw3.h"
@@ -65,6 +66,7 @@ struct Primitive {
 
     uint32_t* ind;
     unsigned int ind_size;
+    GLuint* program;
 
     GLuint* amb_sampler = nullptr;
     GLuint* amb_texture = nullptr;
@@ -110,4 +112,22 @@ struct Primitive {
         if (transform) free(transform);
         if (w_transform) free(w_transform);
     }
+};
+
+struct Light {
+    enum LightType {POSITIONAL, DIRECTIONAL, AREA} light_type;
+    glm::mat4x4 transform;
+    glm::mat4x4 w_transform;
+    glm::vec4 direction;
+    glm::vec4 color;
+    int intensity;
+};
+
+struct Camera {
+    glm::mat4x4 transform;
+    glm::mat4x4 w_transform;
+    glm::vec4 direction;
+    float zNear;
+    float zFar;
+    int fov;
 };

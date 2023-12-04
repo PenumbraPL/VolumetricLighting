@@ -4,17 +4,17 @@
 #include "backends/imgui_impl_opengl3.h"
 
 struct ConfigContext{
-    float far_plane;
+     float far_plane;
      float near_plane;
      int fov;
-     int p1;
-     int p2;
-     int p3;
-     int p4;
-     int p5;
-     int p6;
-     float p7;
-     float p8;
+     int tr_x;
+     int tr_y;
+     int tr_z;
+     int rot_x;
+     int rot_y;
+     float dist;
+     float phi;
+     float theta;
 };
 
 void drawLeftPanel(ImGuiIO& io);

@@ -262,6 +262,7 @@ Shell32.lib
     <None Include="res\shaders\env_vec.glsl" />
     <None Include="res\shaders\fog_frag.glsl" />
     <None Include="res\shaders\fog_vec.glsl" />
+    <None Include="res\shaders\metalic_r.glsl" />
     <None Include="res\shaders\gourand_frag.glsl" />
     <None Include="res\shaders\gourand_vec.glsl" />
     <None Include="res\shaders\phong.glsl" />
