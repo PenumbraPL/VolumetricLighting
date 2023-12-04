@@ -185,6 +185,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         glfwGetCursorPos(window, &xpos, &ypos);
+        std::cout << "Mouse button: " << xpos << ", " << ypos << std::endl;
     }
 }
 
@@ -433,6 +434,8 @@ int main(void)
     glfwSetKeyCallback(window, key_callback);
     glfwSetErrorCallback(error_callback);
     glfwSetScrollCallback(window, scroll_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetCursorPosCallback(window, cursor_position_callback);
 
     initializeGLEW();
     
@@ -527,7 +530,7 @@ int main(void)
     AkInstanceGeometry* geometry;
     AkNode *root, *node_ptr;
 
-    std::string scene_path = "./res/sample.gltf";
+    std::string scene_path = "./res/sample3.gltf";
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
         std::cout << "Document couldn't be loaded\n";
     }else {
@@ -665,7 +668,7 @@ int main(void)
     //}
     //
 
-    //glDepthFunc(GL_GEQUAL);
+    glDepthFunc(GL_GEQUAL);
     //glEnable(GL_DEPTH_TEST);
 
     std::cout << "===================== Main loop ==============================================\n";
