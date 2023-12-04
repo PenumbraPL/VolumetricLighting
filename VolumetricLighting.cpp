@@ -8,7 +8,7 @@ WindowInfo windowConfig = {
     0, 0, 0
 };
 ConfigContext panel_config{
-    2000.f, 0.f, 50, 0, 0, 0, 0, 0, 50, 0, 0
+    2000.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0
 };
 double xpos, ypos;
 float mouse_speed = 2.f;
@@ -751,7 +751,7 @@ int main(void)
     //}
     //
 
-    glDepthFunc(GL_GEQUAL);
+    glDepthFunc(GL_LEQUAL);
     //glEnable(GL_DEPTH_TEST);
 
     std::cout << "===================== Main loop ==============================================\n";
