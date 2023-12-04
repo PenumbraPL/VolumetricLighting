@@ -2,9 +2,9 @@
 #include "VolumetricLighting.h"
 
 WindowInfo windowConfig = {
-    1280,
-    960,
-    "Simple Triangles",
+    1900,
+    1000,
+    "GLTF Viewer",
     0, 0, 0
 };
 ConfigContext panel_config{
@@ -106,7 +106,7 @@ GLuint wrap_mode(AkWrapMode& wrap) {
     return wrap_m;
 }
 
-void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint* sampler, GLuint* texture) {
+void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint** sampler, GLuint** texture) {
     if (colordesc) {
         if (colordesc->texture) {
             AkTextureRef* tex = colordesc->texture;
@@ -156,13 +156,13 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint* sampler
                 case AK_MIPFILTER_NONE:  mipfilter = GL_NONE; break;
                 }
                 //GLuint sampler = primitive.sampler;
-                sampler = (GLuint*)calloc(1, sizeof(GLuint));
-                glCreateSamplers(1, sampler);
-                glSamplerParameteri(sampler[0], GL_TEXTURE_WRAP_S, wrap_s);
-                glSamplerParameteri(sampler[0], GL_TEXTURE_WRAP_T, wrap_t);
-                glSamplerParameteri(sampler[0], GL_TEXTURE_WRAP_R, wrap_p);
-                glSamplerParameteri(sampler[0], GL_TEXTURE_MIN_FILTER, minfilter);
-                glSamplerParameteri(sampler[0], GL_TEXTURE_MAG_FILTER, magfilter);
+                *sampler = (GLuint*)calloc(1, sizeof(GLuint));
+                glCreateSamplers(1, *sampler);
+                glSamplerParameteri(*sampler[0], GL_TEXTURE_WRAP_S, wrap_s);
+                glSamplerParameteri(*sampler[0], GL_TEXTURE_WRAP_T, wrap_t);
+                glSamplerParameteri(*sampler[0], GL_TEXTURE_WRAP_R, wrap_p);
+                glSamplerParameteri(*sampler[0], GL_TEXTURE_MIN_FILTER, minfilter);
+                glSamplerParameteri(*sampler[0], GL_TEXTURE_MAG_FILTER, magfilter);
                 //glSamplerParameteri(sampler, GL_TEXTURE_BORDER_COLOR, border_color);
                 //glBindSampler(0, sampler); //
 
@@ -177,11 +177,11 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint* sampler
 
 
                 //GLuint texture = primitive.texture;
-                texture = (GLuint*)calloc(1, sizeof(GLuint));
-                glCreateTextures(texture_type, 1, texture);
+                *texture = (GLuint*)calloc(1, sizeof(GLuint));
+                glCreateTextures(texture_type, 1, *texture);
                 if (image) {
-                    glTextureStorage2D(texture[0], 1, GL_RGB8, width, height);
-                    glTextureSubImage2D(texture[0], 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
+                    glTextureStorage2D(*texture[0], 1, GL_RGB8, width, height);
+                    glTextureSubImage2D(*texture[0], 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
                     stbi_image_free(image);
                     //glActiveTexture(GL_TEXTURE0);
                     //glBindTexture(texture_type, texture);
@@ -372,10 +372,10 @@ void proccess_node(AkNode* node) {
                     AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
                     AkTechniqueFxCommon* tch = ef->profile->technique->common;
                     if (tch) {
-                        set_up_color(tch->ambient, prim, pr.amb_sampler, pr.amb_texture);
-                        set_up_color(tch->emission, prim, pr.emi_sampler, pr.emi_texture);
-                        set_up_color(tch->diffuse, prim, pr.diff_sampler, pr.diff_texture);
-                        set_up_color(tch->specular, prim, pr.spec_sampler, pr.spec_texture);
+                        set_up_color(tch->ambient, prim, &pr.amb_sampler, &pr.amb_texture);
+                        set_up_color(tch->emission, prim, &pr.emi_sampler, &pr.emi_texture);
+                        set_up_color(tch->diffuse, prim, &pr.diff_sampler, &pr.diff_texture);
+                        set_up_color(tch->specular, prim, &pr.spec_sampler, &pr.spec_texture);
 
                         switch (tch->type) {
                         case AK_MATERIAL_METALLIC_ROUGHNESS:
@@ -813,6 +813,13 @@ int main(void)
                 glVertexAttribBinding(tex_location, binding_point);
                 glBindVertexBuffer(binding_point, buffers[j], primitives[i].tex->byteOffset, primitives[i].tex->componentBytes);
             }
+            GLuint* sampler = primitives[i].emi_sampler;
+            GLuint* texture = primitives[i].emi_texture;
+            if (sampler && texture) {
+                glBindSampler(0, *sampler);
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, *texture);
+            }
 
             glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
         }
@@ -845,41 +852,41 @@ int main(void)
     for (auto& p : primitives) p.deleteTranforms();
 
 
-    //for (auto& p : primitives) {
-    //    if (p.amb_sampler) {
-    //        glDeleteSamplers(1, p.amb_sampler);
-    //        //free(p.amb_sampler);
-    //    }
-    //    if (p.emi_sampler) {
-    //        glDeleteSamplers(1, p.emi_sampler);
-    //        //free(p.emi_sampler);
-    //    }
-    //    if (p.diff_sampler) {
-    //        glDeleteSamplers(1, p.diff_sampler);
-    //        //free(p.diff_sampler);
-    //    }
-    //    if (p.spec_sampler) {
-    //        glDeleteSamplers(1, p.spec_sampler);
-    //        //free(p.spec_sampler);
-    //    }
-    //    if (p.amb_texture) {
-    //        glDeleteTextures(1, p.amb_texture);
-    //        //free(p.amb_texture);
-    //    }
-    //    if (p.emi_texture) {
-    //        glDeleteTextures(1, p.emi_texture);
-    //        //free(p.emi_texture);
-    //    }
-    //    if (p.diff_texture) {
-    //        glDeleteTextures(1, p.diff_texture);
-    //       // free(p.diff_texture);
-    //    }
-    //    if (p.spec_texture) {
-    //        glDeleteTextures(1, p.spec_texture);
-    //        //free(p.spec_texture);
-    //    }
-    //}
-    //    
+    for (auto& p : primitives) {
+        if (p.amb_sampler) {
+            glDeleteSamplers(1, p.amb_sampler);
+            //free(p.amb_sampler);
+        }
+        if (p.emi_sampler) {
+            glDeleteSamplers(1, p.emi_sampler);
+            //free(p.emi_sampler);
+        }
+        if (p.diff_sampler) {
+            glDeleteSamplers(1, p.diff_sampler);
+            //free(p.diff_sampler);
+        }
+        if (p.spec_sampler) {
+            glDeleteSamplers(1, p.spec_sampler);
+            //free(p.spec_sampler);
+        }
+        if (p.amb_texture) {
+            glDeleteTextures(1, p.amb_texture);
+            //free(p.amb_texture);
+        }
+        if (p.emi_texture) {
+            glDeleteTextures(1, p.emi_texture);
+            //free(p.emi_texture);
+        }
+        if (p.diff_texture) {
+            glDeleteTextures(1, p.diff_texture);
+           // free(p.diff_texture);
+        }
+        if (p.spec_texture) {
+            glDeleteTextures(1, p.spec_texture);
+            //free(p.spec_texture);
+        }
+    }
+        
     
     //glDeleteProgramPipelines(1, &pipeline);
 

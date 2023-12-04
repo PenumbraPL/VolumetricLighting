@@ -66,17 +66,17 @@ struct Primitive {
     uint32_t* ind;
     unsigned int ind_size;
 
-    GLuint* amb_sampler;
-    GLuint* amb_texture;
+    GLuint* amb_sampler = nullptr;
+    GLuint* amb_texture = nullptr;
 
-    GLuint* emi_sampler;
-    GLuint* emi_texture;
+    GLuint* emi_sampler = nullptr;
+    GLuint* emi_texture = nullptr;
 
-    GLuint* diff_sampler;
-    GLuint* diff_texture;
+    GLuint* diff_sampler = nullptr;
+    GLuint* diff_texture = nullptr;
 
-    GLuint* spec_sampler;
-    GLuint* spec_texture;
+    GLuint* spec_sampler = nullptr;
+    GLuint* spec_texture = nullptr;
 
 
     AkAccessor* wgs;
