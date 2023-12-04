@@ -1,5 +1,7 @@
 #version 450 core
 
+//layout (binding = 0) uniform sampler2D tex;
+
 in VS_OUT {
 vec3 _normal;
 vec3 _color;
