@@ -277,15 +277,15 @@ struct Primitive {
 
     GLuint* createTextures() {
         textures = (GLuint*)calloc(8, sizeof(GLuint));
-        memset(textures, -1, 8);
+        memset(textures, 0, 8);
         tex_type = (GLuint*)calloc(8, sizeof(GLuint));
-        memset(tex_type, -1, 8);
+        memset(tex_type, 0, 8);
         return textures;
     }
 
     GLuint* createSamplers() {
         samplers = (GLuint*)calloc(8, sizeof(GLuint));
-        memset(samplers, -1, 8);
+        memset(samplers, 0, 8);
         return samplers;
     }
 

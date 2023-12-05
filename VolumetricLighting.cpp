@@ -1,6 +1,6 @@
 // VolumetricLighting.cpp : This file contains the 'main' function. Program execution begins and ends there.
 #include "VolumetricLighting.h"
-#define PATH "./res/sample2/"
+#define PATH "./res/volkswagen/"
 #define FILE_NAME "scene.gltf"
 
 WindowInfo windowConfig = {
@@ -85,6 +85,9 @@ imageLoadFromFile(const char* __restrict path,
     int* __restrict width,
     int* __restrict height,
     int* __restrict components) {
+    if (std::string::npos != std::string(path).find(".png", 0)) {
+        return stbi_load(path, width, height, components, STBI_rgb_alpha);
+    }
     return stbi_load(path, width, height, components, 0);
 }
 
@@ -183,17 +186,16 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint* sampler
                     *tex_type = texture_type;
                     if (std::string::npos != std::string(path).find(".jpg", 0)) {
                         glTextureStorage2D(*texture, 1, GL_RGB8, width, height);
-                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image); //jpg
+                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
                     }
                     if(std::string::npos != std::string(path).find(".jpeg", 0)){
                         glTextureStorage2D(*texture, 1, GL_RGB8, width, height);
-                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image); //jpg
+                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
                     }
                     if (std::string::npos != std::string(path).find(".png", 0)) {
-                        glTextureStorage2D(*texture, 1, GL_RGBA8, width+1, height+1); // ?
-                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image); // problem
+                        glTextureStorage2D(*texture, 1, GL_RGBA8, width, height);
+                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image);
                     }
-                    std::cout << "a" << std::endl;
                     stbi_image_free(image);
                 }
             }
@@ -741,10 +743,10 @@ int main(void)
             TextureType tex_type = ALBEDO;
             GLuint sampler = primitives[i].samplers[tex_type];
             GLuint texture = primitives[i].textures[tex_type];
-            if (sampler != -1 && texture != -1) {
+            if (sampler && texture) {
                 glBindSampler(0, sampler); // + tex_type
                 glActiveTexture(GL_TEXTURE0);
-                glBindTexture(primitives[i].tex_type[ALBEDO], texture);
+                glBindTexture(primitives[i].tex_type[tex_type], texture);
             }
             else {
                 glProgramUniform1ui(primitives[i].programs[FRAGMENT], is_tex_location, GL_FALSE);
@@ -753,9 +755,6 @@ int main(void)
             glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
         }
         
-        glBindProgramPipeline(0);
-
-
 
         // ImGui
         ImGui_ImplOpenGL3_NewFrame();
@@ -772,6 +771,7 @@ int main(void)
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+    glBindProgramPipeline(0);
 
 
 
@@ -779,8 +779,7 @@ int main(void)
     for (auto& p : primitives) p.deleteTexturesAndSamplers();
     for (auto& p : primitives) p.deletePipeline();
 
-    glDeleteBuffers(bufferViews.size(), buffers);
-    free(buffers);
+    glDeleteBuffers(bufferViews.size(), buffers); free(buffers);
     glDeleteVertexArrays(1, &vao);
 
 
