@@ -60,37 +60,50 @@ struct {
     -0.25f, 0.25f, 0.25f,
 };
 
+enum TextureType {
+    AMBIENT,
+    EMISIVE,
+    DIFFUSE,
+    SPECULAR,
+    SP_GLOSSINESS,
+    MAT_ROUGH,
+    ALBEDO,
+    SP_DIFFUSE,
+};
+
 struct Primitive {
     float* transform;
     float* w_transform;
 
     uint32_t* ind;
     unsigned int ind_size;
-    GLuint* program;
+    GLuint* program; // shaders or pipeline
 
-    GLuint* amb_sampler = nullptr;
-    GLuint* amb_texture = nullptr;
+    GLuint* textures = nullptr;
+    GLuint* tex_type = nullptr;
+    GLuint* samplers = nullptr;
 
-    GLuint* emi_sampler = nullptr;
-    GLuint* emi_texture = nullptr;
 
-    GLuint* diff_sampler = nullptr;
-    GLuint* diff_texture = nullptr;
 
-    GLuint* spec_sampler = nullptr;
-    GLuint* spec_texture = nullptr;
+    //struct Tex{
+    //    Primitive* p;
+    //    Tex(Primitive* p) : p(p) {}
+    //    GLuint* operator[](enum TextureType t) {
+    //        return  &p->textures[t];
+    //    }
+    //} te = Primitive::Tex(this);
 
-    GLuint* sg_sampler = nullptr;
-    GLuint* sg_texture = nullptr;
 
-    GLuint* mr_sampler = nullptr;
-    GLuint* mr_texture = nullptr;
+    //struct Samp {
+    //    Primitive* p;
+    //    Samp(Primitive* p): p(p) {}
+    //    GLuint* operator[](enum TextureType t) {
+    //        return &p->samplers[t];
+    //    }
+    //} samp = Primitive::Samp(this);
 
-    GLuint* alb_sampler = nullptr;
-    GLuint* alb_texture = nullptr;
-
-    GLuint* dif_sampler = nullptr;
-    GLuint* dif_texture = nullptr;
+    //friend Primitive::Tex;
+    //friend Primitive::Samp;
 
     AkAccessor* wgs;
     AkAccessor* jts;
@@ -111,6 +124,34 @@ struct Primitive {
     void deleteTranforms() {
         if (transform) free(transform);
         if (w_transform) free(w_transform);
+    }
+
+    GLuint* createTextures() {
+        textures = (GLuint*)calloc(8, sizeof(GLuint));
+        memset(textures, -1, 8);
+        tex_type = (GLuint*)calloc(8, sizeof(GLuint));
+        memset(tex_type, -1, 8);
+        return textures;
+    }
+
+    GLuint* createSamplers() {
+        samplers = (GLuint*)calloc(8, sizeof(GLuint));
+        memset(samplers, -1, 8);
+        return samplers;
+    }
+
+    void deleteTexturesAndSamplers() {
+        if (textures) {
+            glDeleteTextures(8, textures);
+            free(textures);
+        }
+        if (tex_type) {
+            free(tex_type);
+        }
+        if (samplers) {
+            glDeleteSamplers(8, samplers);
+            free(samplers);
+        }
     }
 };
 

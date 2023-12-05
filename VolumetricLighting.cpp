@@ -115,7 +115,7 @@ GLuint wrap_mode(AkWrapMode& wrap) {
     return wrap_m;
 }
 
-void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint** sampler, GLuint** texture) {
+void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint* sampler, GLuint* texture, GLuint* tex_type) {
     if (colordesc) {
         if (colordesc->texture) {
             AkTextureRef* tex = colordesc->texture;
@@ -161,13 +161,12 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint** sample
                 case AK_MIPFILTER_NONE:      mipfilter = GL_NONE; break;
                 }
 
-                *sampler = (GLuint*)calloc(1, sizeof(GLuint));
-                glCreateSamplers(1, *sampler);
-                glSamplerParameteri(*sampler[0], GL_TEXTURE_WRAP_S, wrap_s);
-                glSamplerParameteri(*sampler[0], GL_TEXTURE_WRAP_T, wrap_t);
-                glSamplerParameteri(*sampler[0], GL_TEXTURE_WRAP_R, wrap_p);
-                glSamplerParameteri(*sampler[0], GL_TEXTURE_MIN_FILTER, minfilter);
-                glSamplerParameteri(*sampler[0], GL_TEXTURE_MAG_FILTER, magfilter);
+                glCreateSamplers(1, sampler);
+                glSamplerParameteri(*sampler, GL_TEXTURE_WRAP_S, wrap_s);
+                glSamplerParameteri(*sampler, GL_TEXTURE_WRAP_T, wrap_t);
+                glSamplerParameteri(*sampler, GL_TEXTURE_WRAP_R, wrap_p);
+                glSamplerParameteri(*sampler, GL_TEXTURE_MIN_FILTER, minfilter);
+                glSamplerParameteri(*sampler, GL_TEXTURE_MAG_FILTER, magfilter);
 
 
                 AkInput* tex_coord = ak_meshInputGet(prim, tex->coordInputName, tex->slot); //
@@ -180,20 +179,19 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint** sample
                 char* image = (char*)imageLoadFromFile(path, &width, &height, &components);
                
                 if (image) {
-                    *texture = (GLuint*)calloc(1, sizeof(GLuint));
-                    glCreateTextures(texture_type, 1, *texture);
-
+                    glCreateTextures(texture_type, 1, texture);
+                    *tex_type = texture_type;
                     if (std::string::npos != std::string(path).find(".jpg", 0)) {
-                        glTextureStorage2D(*texture[0], 1, GL_RGB8, width, height);
-                        glTextureSubImage2D(*texture[0], 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image); //jpg
+                        glTextureStorage2D(*texture, 1, GL_RGB8, width, height);
+                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image); //jpg
                     }
                     if(std::string::npos != std::string(path).find(".jpeg", 0)){
-                        glTextureStorage2D(*texture[0], 1, GL_RGB8, width, height);
-                        glTextureSubImage2D(*texture[0], 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image); //jpg
+                        glTextureStorage2D(*texture, 1, GL_RGB8, width, height);
+                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image); //jpg
                     }
                     if (std::string::npos != std::string(path).find(".png", 0)) {
-                        glTextureStorage2D(*texture[0], 1, GL_RGBA8, width, height);
-                        glTextureSubImage2D(*texture[0], 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image); // problem
+                        glTextureStorage2D(*texture, 1, GL_RGBA8, width+1, height+1); // ?
+                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image); // problem
                     }
                     std::cout << "a" << std::endl;
                     stbi_image_free(image);
@@ -287,6 +285,18 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
         panel_config.theta -= 0.01;
     }
+    if (key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
+        panel_config.tr_x += 0.01;
+    }
+    if (key == GLFW_KEY_D && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
+        panel_config.tr_x -= 0.01;
+    }
+    if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
+        panel_config.tr_y += 0.01;
+    }
+    if (key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
+        panel_config.tr_y -= 0.01;
+    }
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
@@ -310,6 +320,8 @@ void proccess_node(AkNode* node) {
     
     float* world_transform = pr.setWorldTransform();
     float* transform = pr.setTransform();
+    pr.createSamplers();
+    pr.createTextures();
     ak_transformCombineWorld(node, world_transform);
     ak_transformCombine(node, transform);
     std::regex light_regex("^[Ll]ight.*");
@@ -346,10 +358,10 @@ void proccess_node(AkNode* node) {
                     AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
                     AkTechniqueFxCommon* tch = ef->profile->technique->common;
                     if (tch) {
-                        set_up_color(tch->ambient, prim, &pr.amb_sampler, &pr.amb_texture);
-                        set_up_color(tch->emission, prim, &pr.emi_sampler, &pr.emi_texture);
-                        set_up_color(tch->diffuse, prim, &pr.diff_sampler, &pr.diff_texture);
-                        set_up_color(tch->specular, prim, &pr.spec_sampler, &pr.spec_texture);
+                        set_up_color(tch->ambient, prim, &pr.samplers[AMBIENT], &pr.textures[AMBIENT], &pr.tex_type[AMBIENT]);
+                        set_up_color(tch->emission, prim, &pr.samplers[EMISIVE], &pr.textures[EMISIVE], &pr.tex_type[EMISIVE]);
+                        set_up_color(tch->diffuse, prim, &pr.samplers[DIFFUSE], &pr.textures[DIFFUSE], &pr.tex_type[DIFFUSE]);
+                        set_up_color(tch->specular, prim, &pr.samplers[SPECULAR], &pr.textures[SPECULAR], &pr.tex_type[SPECULAR]);
 
                         switch (tch->type) {
                         case AK_MATERIAL_METALLIC_ROUGHNESS: {
@@ -360,8 +372,8 @@ void proccess_node(AkNode* node) {
                             alb_cd.texture = mr->albedoTex;
                             mr_cd.color = &mr->albedo;//&mr->roughness;
                             mr_cd.texture = mr->metalRoughTex;
-                            set_up_color(&alb_cd, prim, &pr.alb_sampler, &pr.alb_texture);
-                            set_up_color(&mr_cd, prim, &pr.mr_sampler, &pr.mr_texture);
+                            set_up_color(&alb_cd, prim, &pr.samplers[ALBEDO], &pr.textures[ALBEDO], &pr.tex_type[ALBEDO]);
+                            set_up_color(&mr_cd, prim, &pr.samplers[MAT_ROUGH], &pr.textures[MAT_ROUGH], &pr.tex_type[MAT_ROUGH]);
                             break;
                         }
                             
@@ -373,8 +385,8 @@ void proccess_node(AkNode* node) {
                             sg_cd.texture = sg->specGlossTex;
                             dif_cd.color = &sg->diffuse;
                             dif_cd.texture = sg->diffuseTex;
-                            set_up_color(&sg_cd, prim, &pr.sg_sampler, &pr.sg_texture);
-                            set_up_color(&dif_cd, prim, &pr.dif_sampler, &pr.dif_texture);
+                            set_up_color(&sg_cd, prim, &pr.samplers[SP_GLOSSINESS], &pr.textures[SP_GLOSSINESS], &pr.tex_type[SP_GLOSSINESS]);
+                            set_up_color(&dif_cd, prim, &pr.samplers[SP_DIFFUSE], &pr.textures[SP_DIFFUSE], &pr.tex_type[SP_DIFFUSE]);
                             break;
                         }
                         };
@@ -585,6 +597,7 @@ int main(void)
         glAttachShader(program, vertex_shader);
         glAttachShader(program, fragment_shader);
         glLinkProgram(program);
+        //detach, delete
 
         GLint link_status;
         glGetProgramiv(program, GL_LINK_STATUS, &link_status);
@@ -657,6 +670,7 @@ int main(void)
     if (camera_mat) free(camera_mat);
     if (camera_proj) free(camera_proj);
 
+    // choose shaders from compiled set
     primitives[0].program = &program;
 
 
@@ -714,11 +728,11 @@ int main(void)
     tex_location = glGetAttribLocation(program, "vTex");
     is_tex_location = glGetUniformLocation(program, "isTexture");
 
-    glEnableVertexAttribArray(mvp_location);
-    glEnableVertexAttribArray(vpos_location);
-    if(norm_location != -1) glEnableVertexAttribArray(norm_location);
+    if (mvp_location != -1) glEnableVertexAttribArray(mvp_location);
+    if (vpos_location != -1) glEnableVertexAttribArray(vpos_location);
+    if (norm_location != -1) glEnableVertexAttribArray(norm_location);
     if (tex_location != -1) glEnableVertexAttribArray(tex_location);
-    glEnableVertexAttribArray(is_tex_location);
+    if (is_tex_location != -1) glEnableVertexAttribArray(is_tex_location);
 
    
     GLuint* buffers = (GLuint*) calloc(bufferViews.size(), sizeof(GLuint));
@@ -726,7 +740,7 @@ int main(void)
     for (auto &buffer : bufferViews) {
         unsigned int i = bufferViews[buffer.first];
         glNamedBufferData(buffers[i], ((AkBuffer*) buffer.first)->length, ((AkBuffer*) buffer.first)->data, GL_STATIC_DRAW);
-    } 
+    }
     
     for (int i = 0; i < primitives.size(); i++) {
         if (vpos_location != -1) formatAttribute(vpos_location, primitives[i].pos);
@@ -799,12 +813,13 @@ int main(void)
                 glVertexAttribBinding(tex_location, binding_point);
                 glBindVertexBuffer(binding_point, buffers[j], primitives[i].tex->byteOffset, primitives[i].tex->componentBytes);
             }
-            GLuint* sampler = primitives[i].alb_sampler;
-            GLuint* texture = primitives[i].alb_texture;
-            if (sampler && texture) {
-                glBindSampler(0, *sampler);
+            TextureType tex_type = ALBEDO;
+            GLuint sampler = primitives[i].samplers[tex_type];
+            GLuint texture = primitives[i].textures[tex_type];
+            if (sampler != -1 && texture != -1) {
+                glBindSampler(0, sampler); // + tex_type
                 glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, *texture);
+                glBindTexture(primitives[i].tex_type[ALBEDO], texture);
             }
             else {
                 glUniform1ui(is_tex_location, GL_FALSE);
@@ -839,67 +854,7 @@ int main(void)
     free(f_sh_buffer);
 
     for (auto& p : primitives) p.deleteTranforms();
-
-
-    for (auto& p : primitives) {
-        if (p.amb_sampler) {
-            glDeleteSamplers(1, p.amb_sampler);
-            free(p.amb_sampler);
-        }
-        if (p.emi_sampler) {
-            glDeleteSamplers(1, p.emi_sampler);
-            free(p.emi_sampler);
-        }
-        if (p.diff_sampler) {
-            glDeleteSamplers(1, p.diff_sampler);
-            free(p.diff_sampler);
-        }
-        if (p.spec_sampler) {
-            glDeleteSamplers(1, p.spec_sampler);
-            free(p.spec_sampler);
-        }
-        if (p.amb_texture) {
-            glDeleteTextures(1, p.amb_texture);
-            free(p.amb_texture);
-        }
-        if (p.emi_texture) {
-            glDeleteTextures(1, p.emi_texture);
-            free(p.emi_texture);
-        }
-        if (p.diff_texture) {
-            glDeleteTextures(1, p.diff_texture);
-           free(p.diff_texture);
-        }
-        if (p.spec_texture) {
-            glDeleteTextures(1, p.spec_texture);
-            free(p.spec_texture);
-        }
-        if (p.alb_sampler) {
-            free(p.alb_sampler);
-        }
-        if (p.alb_texture) {
-            free(p.alb_texture);
-        }
-        if (p.dif_sampler) {
-            free(p.dif_sampler);
-        }
-        if (p.sg_sampler) {
-            free(p.sg_sampler);
-        }
-        if (p.mr_sampler) {
-            free(p.mr_sampler);
-        }
-        if (p.dif_texture) {
-            free(p.dif_texture);
-        }
-        if (p.sg_texture) {
-            free(p.sg_texture);
-        }
-        if (p.mr_texture) {
-            free(p.mr_texture);
-        }
-    }
-        
+    for (auto& p : primitives) p.deleteTexturesAndSamplers();
     
     //glDeleteProgramPipelines(1, &pipeline);
 
