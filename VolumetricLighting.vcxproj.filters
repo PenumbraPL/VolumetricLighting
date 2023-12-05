@@ -340,6 +340,12 @@
     <None Include="res\shaders\metalic_r.glsl">
       <Filter>Resource Files\shaders</Filter>
     </None>
+    <None Include="res\fragment3.glsl">
+      <Filter>Resource Files\shaders\fragment</Filter>
+    </None>
+    <None Include="res\vertex3.glsl">
+      <Filter>Resource Files\shaders\vertex</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ship_in_clouds\textures\Cloud_3_emissive.jpeg">

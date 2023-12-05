@@ -201,48 +201,6 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint* sampler
     }
 }
 
-char* read_file(const char* file_name) {
-    FILE* fs;
-    fopen_s(&fs, file_name, "rb");
-
-    if (!fs) {
-        return nullptr;
-    }
-
-    fseek(fs, 0, SEEK_END);
-    int file_size = ftell(fs);
-    rewind(fs);
-
-    char* buffer = (char*)calloc(file_size + 1, 1);
-    if(buffer) fread(buffer, 1, file_size, fs);
-    fclose(fs);
-
-    return buffer;
-}
-
-GLint checkPipelineStatus(GLuint vertex_shader, GLuint fragment_shader) {
-    GLint v_comp_status, f_comp_status;
-    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &v_comp_status);
-    if (!v_comp_status) {
-        char comp_info[1024];
-        memset(comp_info, '\0', 1024);
-        //glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, NULL);
-        glGetShaderInfoLog(vertex_shader, 1024, NULL, comp_info);
-        std::cout << "Vertex Shader: ";
-        fwrite(comp_info, 1024, 1, stdout);
-    }
-    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &f_comp_status);
-    if (!f_comp_status) {
-        char comp_info[1024];
-        memset(comp_info, '\0', 1024);
-        //glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, NULL);
-        glGetShaderInfoLog(fragment_shader, 1024, NULL, comp_info);
-        std::cout << "Fragment Shader: ";
-        fwrite(comp_info, 1024, 1, stdout);
-    }
-    return (!v_comp_status || !f_comp_status) ? 0 : 1;
-}
-
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
@@ -286,16 +244,16 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         panel_config.theta -= 0.01;
     }
     if (key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.tr_x += 0.01;
+        panel_config.tr_z += 1;
     }
     if (key == GLFW_KEY_D && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.tr_x -= 0.01;
+        panel_config.tr_z -= 1;
     }
     if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.tr_y += 0.01;
+        panel_config.tr_x -= 1;
     }
     if (key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.tr_y -= 0.01;
+        panel_config.tr_x += 1;
     }
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -412,7 +370,9 @@ void proccess_node(AkNode* node) {
                 pr.nor = nor ? nor->accessor : nullptr;
                 pr.col = col ? col->accessor : nullptr;
                 pr.tan = tan ? tan->accessor : nullptr;
-                
+
+               pr.createPipeline();
+
                 primitives.push_back(pr);
             };
             break;
@@ -558,61 +518,16 @@ int main(void)
     }  else {
         std::cout << "========== [GLFW]: Debug context initialize unsuccessful =====================\n";
     }
-
-    
-    char* v_sh_buffer = read_file("res/vertex2.glsl");
-    if (!v_sh_buffer){
-        std::cout << "=================== Coulnt find res/vertex.glsl ==============================\n";
-    }
-    
-    char* f_sh_buffer = read_file("res/fragment2.glsl");
-    if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
     
 
-    GLuint vao, vertex_buffer, vertex_shader, fragment_shader, program;
+    GLuint vao, vertex_buffer;
     GLint mvp_location, vpos_location, vcol_location, norm_location, tex_location, is_tex_location;
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
-    vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glObjectLabel(GL_SHADER, vertex_shader, -1, "Vertex Shader");
-    glShaderSource(vertex_shader, 1, &v_sh_buffer, NULL);
-    glCompileShader(vertex_shader);
-
-    fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glObjectLabel(GL_SHADER, fragment_shader, -1, "Fragment Shader");
-    glShaderSource(fragment_shader, 1, &f_sh_buffer, NULL);
-    glCompileShader(fragment_shader);
 
 
-    /* ======================================================== */
-    GLint status = checkPipelineStatus(vertex_shader, fragment_shader);
-    /* ======================================================== */
-
-    program = glCreateProgram();
-    glObjectLabel(GL_PROGRAM, program, -1, "Volumetric lighting");
-    
-    if (status) {
-        glAttachShader(program, vertex_shader);
-        glAttachShader(program, fragment_shader);
-        glLinkProgram(program);
-        //detach, delete
-
-        GLint link_status;
-        glGetProgramiv(program, GL_LINK_STATUS, &link_status);
-        if (!link_status) {
-            GLchar comp_info[1024];
-            glGetProgramInfoLog(program, 1024, NULL, comp_info);
-
-            fwrite(comp_info, 1024, 1, stdout);
-        }
-    }
-
-    //GLuint pipeline;
-    //glGenProgramPipelines(1, &pipeline);
-    //glUseProgramStages(pipeline, GL_VERTEX_SHADER_BIT, fragment_shader);
-    //glUseProgramStages(pipeline, GL_FRAGMENT_SHADER_BIT, vertex_shader);
     
 
     /* ================================================ */
@@ -671,7 +586,7 @@ int main(void)
     if (camera_proj) free(camera_proj);
 
     // choose shaders from compiled set
-    primitives[0].program = &program;
+    //primitives[0].program = &program;
 
 
     int j;
@@ -722,17 +637,12 @@ int main(void)
 
     /* ======================================================== */
 
-    mvp_location = glGetUniformLocation(program, "MVP");
-    norm_location = glGetAttribLocation(program, "vNor");
-    vpos_location = glGetAttribLocation(program, "vPos");
-    tex_location = glGetAttribLocation(program, "vTex");
-    is_tex_location = glGetUniformLocation(program, "isTexture");
+    //mvp_location = glGetUniformLocation(program, "MVP");
+    //norm_location = glGetAttribLocation(program, "vNor");
+    //vpos_location = glGetAttribLocation(program, "vPos");
+    //tex_location = glGetAttribLocation(program, "vTex");
+    //is_tex_location = glGetUniformLocation(program, "isTexture");
 
-    if (mvp_location != -1) glEnableVertexAttribArray(mvp_location);
-    if (vpos_location != -1) glEnableVertexAttribArray(vpos_location);
-    if (norm_location != -1) glEnableVertexAttribArray(norm_location);
-    if (tex_location != -1) glEnableVertexAttribArray(tex_location);
-    if (is_tex_location != -1) glEnableVertexAttribArray(is_tex_location);
 
    
     GLuint* buffers = (GLuint*) calloc(bufferViews.size(), sizeof(GLuint));
@@ -743,6 +653,21 @@ int main(void)
     }
     
     for (int i = 0; i < primitives.size(); i++) {
+        GLuint& vertex_program = primitives[i].programs[VERTEX];
+        GLuint& fragment_program = primitives[i].programs[FRAGMENT];
+        // TO DO
+        mvp_location = glGetUniformLocation(vertex_program, "MVP");
+        norm_location = glGetAttribLocation(vertex_program, "vNor");
+        vpos_location = glGetAttribLocation(vertex_program, "vPos");
+        tex_location = glGetAttribLocation(vertex_program, "vTex");
+        is_tex_location = glGetUniformLocation(fragment_program, "isTexture");
+
+        if (mvp_location != -1) glEnableVertexAttribArray(mvp_location);
+        if (vpos_location != -1) glEnableVertexAttribArray(vpos_location);
+        if (norm_location != -1) glEnableVertexAttribArray(norm_location);
+        if (tex_location != -1) glEnableVertexAttribArray(tex_location);
+        if (is_tex_location != -1) glEnableVertexAttribArray(is_tex_location);
+
         if (vpos_location != -1) formatAttribute(vpos_location, primitives[i].pos);
         if (norm_location != -1) formatAttribute(norm_location, primitives[i].nor);
         if (tex_location  != -1) formatAttribute(tex_location, primitives[i].tex);
@@ -778,8 +703,7 @@ int main(void)
             glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
             glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
 
-            glUseProgram(*primitives[i].program);
-            //glBindProgramPipeline(pipeline);
+            glBindProgramPipeline(primitives[i].pipeline);
 
             glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
             if(!camera) Projection = glm::perspectiveFov((float) 3.14*panel_config.fov/180, (float) width, (float) height, panel_config.near_plane, panel_config.far_plane);
@@ -793,7 +717,8 @@ int main(void)
                                     rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
             glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
             glm::mat4 MVP = Projection * LookAt * View * Model;
-            glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
+            glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
+
 
             int j = bufferViews[primitives[i].pos->buffer];
             int binding_point = 0;
@@ -822,16 +747,15 @@ int main(void)
                 glBindTexture(primitives[i].tex_type[ALBEDO], texture);
             }
             else {
-                glUniform1ui(is_tex_location, GL_FALSE);
+                glProgramUniform1ui(primitives[i].programs[FRAGMENT], is_tex_location, GL_FALSE);
             }
 
             glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
         }
         
+        glBindProgramPipeline(0);
 
-        
 
-        //glBindProgramPipeline(0);
 
         // ImGui
         ImGui_ImplOpenGL3_NewFrame();
@@ -849,25 +773,16 @@ int main(void)
         glfwPollEvents();
     }
 
-    // Cleanup
-    free(v_sh_buffer);
-    free(f_sh_buffer);
 
-    for (auto& p : primitives) p.deleteTranforms();
+
+    for (auto& p : primitives) p.deleteTransforms();
     for (auto& p : primitives) p.deleteTexturesAndSamplers();
-    
-    //glDeleteProgramPipelines(1, &pipeline);
-
-    //GLuint buffers[] = {vertex_buffer};
+    for (auto& p : primitives) p.deletePipeline();
 
     glDeleteBuffers(bufferViews.size(), buffers);
     free(buffers);
     glDeleteVertexArrays(1, &vao);
 
-    glDeleteShader(vertex_shader);
-    glDeleteShader(fragment_shader);
-
-    glDeleteProgram(program);
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();

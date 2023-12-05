@@ -251,6 +251,7 @@ Shell32.lib
   <ItemGroup>
     <None Include="res\fragment.glsl" />
     <None Include="res\fragment2.glsl" />
+    <None Include="res\fragment3.glsl" />
     <None Include="res\sample.gltf" />
     <None Include="res\sample2\scene.bin" />
     <None Include="res\sample2\scene.gltf" />
@@ -274,6 +275,7 @@ Shell32.lib
     <None Include="res\ship_in_clouds\scene.gltf" />
     <None Include="res\vertex.glsl" />
     <None Include="res\vertex2.glsl" />
+    <None Include="res\vertex3.glsl" />
     <None Include="res\volkswagen\scene.bin" />
     <None Include="res\volkswagen\scene.gltf" />
   </ItemGroup>
