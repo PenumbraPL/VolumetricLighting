@@ -252,6 +252,9 @@ Shell32.lib
     <None Include="res\fragment.glsl" />
     <None Include="res\fragment2.glsl" />
     <None Include="res\fragment3.glsl" />
+    <None Include="res\lamp.gltf" />
+    <None Include="res\lamp_frag.glsl" />
+    <None Include="res\lamp_vec.glsl" />
     <None Include="res\sample.gltf" />
     <None Include="res\sample2\scene.bin" />
     <None Include="res\sample2\scene.gltf" />

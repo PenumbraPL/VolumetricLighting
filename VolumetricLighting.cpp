@@ -1,7 +1,7 @@
 // VolumetricLighting.cpp : This file contains the 'main' function. Program execution begins and ends there.
 #include "VolumetricLighting.h"
-#define PATH "./res/volkswagen/"
-#define FILE_NAME "scene.gltf"
+#define PATH "./res/"
+#define FILE_NAME "sample.gltf"
 
 WindowInfo windowConfig = {
     1900,
@@ -9,9 +9,7 @@ WindowInfo windowConfig = {
     "GLTF Viewer",
     0, 0, 0
 };
-ConfigContext panel_config{
-    100.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0
-};
+
 
 double xpos, ypos;
 float mouse_speed = 2.f;
@@ -31,52 +29,6 @@ void print_map(const std::map<void*, unsigned int>& m){
       for (const auto& n : m)
           std::cout << n.first << " = " << n.second << "; ";
     std::cout << '\n';
-}
-
-
-void formatAttribute(GLint attr_location, AkAccessor* acc) {
-    int comp_size;
-    int type;
-    GLuint normalize;
-    size_t offset;
-    int comp_stride;
-    size_t length;
-
-    comp_size = acc->componentSize;
-    type = acc->componentType;
-    normalize = acc->normalized ? GL_TRUE : GL_FALSE;
-    offset = acc->byteOffset;
-    comp_stride = acc->componentBytes;
-    length = acc->byteLength;
-
-
-    switch (comp_size) {
-    case AK_COMPONENT_SIZE_SCALAR:                comp_size = 1; break;
-    case AK_COMPONENT_SIZE_VEC2:                  comp_size = 2; break;
-    case AK_COMPONENT_SIZE_VEC3:                  comp_size = 3; break;
-    case AK_COMPONENT_SIZE_VEC4:                  comp_size = 4; break;
-    case AK_COMPONENT_SIZE_MAT2:                  comp_size = 4; break;
-    case AK_COMPONENT_SIZE_MAT3:                  comp_size = 9; break;
-    case AK_COMPONENT_SIZE_MAT4:                  comp_size = 16; break;
-    case AK_COMPONENT_SIZE_UNKNOWN:
-    default:                                      comp_size = 1; break;
-    }
-
-    switch (type) {
-    case AKT_FLOAT:						type = GL_FLOAT; break;
-    case AKT_UINT:						type = GL_UNSIGNED_INT; break;
-    case AKT_BYTE:						type = GL_BYTE; break;
-    case AKT_UBYTE:						type = GL_UNSIGNED_BYTE; break;
-    case AKT_SHORT:						type = GL_SHORT; break;
-    case AKT_USHORT:					type = GL_UNSIGNED_SHORT; break;
-    case AKT_UNKNOWN:
-    case AKT_NONE:
-    default:                            type = GL_INT; break;
-    };
-
-    std::cout << length << " " << comp_size << " " << type << " " << offset << " " << comp_stride << std::endl;
-
-    glVertexAttribFormat(attr_location, comp_size, type, normalize, 0);
 }
 
 
@@ -390,6 +342,7 @@ void proccess_node(AkNode* node) {
         free(transform);
         free(world_transform);
 
+        light.loadMesh();
         lights.push_back(light);
     }
 
@@ -676,6 +629,10 @@ int main(void)
         //glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
     }
 
+    for (auto& l : lights) {
+        l.createPipeline();
+    }
+
     glDepthFunc(GL_LEQUAL);
 
     std::cout << "===================== Main loop ==============================================\n";
@@ -754,7 +711,7 @@ int main(void)
 
             glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
         }
-        
+        for (auto& l : lights)     l.drawLight(width, height, Projection, camera);
 
         // ImGui
         ImGui_ImplOpenGL3_NewFrame();
@@ -778,6 +735,8 @@ int main(void)
     for (auto& p : primitives) p.deleteTransforms();
     for (auto& p : primitives) p.deleteTexturesAndSamplers();
     for (auto& p : primitives) p.deletePipeline();
+    for (auto& l : lights)     l.deletePipeline();
+
 
     glDeleteBuffers(bufferViews.size(), buffers); free(buffers);
     glDeleteVertexArrays(1, &vao);

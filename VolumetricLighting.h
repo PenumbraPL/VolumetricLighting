@@ -79,6 +79,56 @@ enum ShaderTypes {
     GEOMETRY
 };
 
+ConfigContext panel_config{
+    100.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0
+};
+
+void formatAttribute(GLint attr_location, AkAccessor* acc) {
+    int comp_size;
+    int type;
+    GLuint normalize;
+    size_t offset;
+    int comp_stride;
+    size_t length;
+
+    comp_size = acc->componentSize;
+    type = acc->componentType;
+    normalize = acc->normalized ? GL_TRUE : GL_FALSE;
+    offset = acc->byteOffset;
+    comp_stride = acc->componentBytes;
+    length = acc->byteLength;
+
+
+    switch (comp_size) {
+    case AK_COMPONENT_SIZE_SCALAR:                comp_size = 1; break;
+    case AK_COMPONENT_SIZE_VEC2:                  comp_size = 2; break;
+    case AK_COMPONENT_SIZE_VEC3:                  comp_size = 3; break;
+    case AK_COMPONENT_SIZE_VEC4:                  comp_size = 4; break;
+    case AK_COMPONENT_SIZE_MAT2:                  comp_size = 4; break;
+    case AK_COMPONENT_SIZE_MAT3:                  comp_size = 9; break;
+    case AK_COMPONENT_SIZE_MAT4:                  comp_size = 16; break;
+    case AK_COMPONENT_SIZE_UNKNOWN:
+    default:                                      comp_size = 1; break;
+    }
+
+    switch (type) {
+    case AKT_FLOAT:						type = GL_FLOAT; break;
+    case AKT_UINT:						type = GL_UNSIGNED_INT; break;
+    case AKT_BYTE:						type = GL_BYTE; break;
+    case AKT_UBYTE:						type = GL_UNSIGNED_BYTE; break;
+    case AKT_SHORT:						type = GL_SHORT; break;
+    case AKT_USHORT:					type = GL_UNSIGNED_SHORT; break;
+    case AKT_UNKNOWN:
+    case AKT_NONE:
+    default:                            type = GL_INT; break;
+    };
+
+    std::cout << length << " " << comp_size << " " << type << " " << offset << " " << comp_stride << std::endl;
+
+    glVertexAttribFormat(attr_location, comp_size, type, normalize, 0);
+}
+
+
 GLint checkPipelineStatus(GLuint vertex_shader, GLuint fragment_shader) {
     GLint v_comp_status, f_comp_status;
     glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &v_comp_status);
@@ -305,12 +355,167 @@ struct Primitive {
 };
 
 struct Light {
-    enum LightType {POSITIONAL, DIRECTIONAL, AREA} light_type;
+    enum LightType {POSITIONAL, DIRECTIONAL, AREA} light_type = POSITIONAL;
     glm::mat4x4 transform;
     glm::mat4x4 w_transform;
-    glm::vec4 direction;
-    glm::vec4 color;
-    int intensity;
+    glm::vec4 direction = glm::vec4(0,0,0,0);
+    glm::vec3 color = glm::vec3(1.0, 1.0, 1.0);
+    float intensity = 1.0;
+
+    uint32_t* ind = nullptr;
+    unsigned int ind_size;
+    AkInput* pos = nullptr;
+    AkInput* nor = nullptr;
+
+    GLuint vertex_program;
+    GLuint fragment_program;
+    GLuint pipeline;
+    GLuint mvp_location;
+
+    void createPipeline() {
+
+        char* v_sh_buffer = read_file("res/lamp_vec.glsl");
+        if (!v_sh_buffer) {
+            std::cout << "=================== Coulnt find res/vertex.glsl ==============================\n";
+        }
+
+        char* f_sh_buffer = read_file("res/lamp_frag.glsl");
+        if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
+
+
+        GLint status = 1;
+
+
+        vertex_program = glCreateShaderProgramv(GL_VERTEX_SHADER, 1, &v_sh_buffer);
+        fragment_program = glCreateShaderProgramv(GL_FRAGMENT_SHADER, 1, &f_sh_buffer);
+
+        free(v_sh_buffer);
+        free(f_sh_buffer);
+
+
+        if (status) {
+            GLint link_status;
+
+            glGetProgramiv(vertex_program, GL_LINK_STATUS, &link_status);
+            if (!link_status) {
+                GLchar comp_info[1024];
+                glGetProgramInfoLog(vertex_program, 1024, NULL, comp_info);
+
+                fwrite(comp_info, 1024, 1, stdout);
+            }
+            glGetProgramiv(fragment_program, GL_LINK_STATUS, &link_status);
+            if (!link_status) {
+                GLchar comp_info[1024];
+                glGetProgramInfoLog(fragment_program, 1024, NULL, comp_info);
+
+                fwrite(comp_info, 1024, 1, stdout);
+            }
+        }
+
+        glGenProgramPipelines(1, &pipeline);
+        glUseProgramStages(pipeline, GL_VERTEX_SHADER_BIT, vertex_program);
+        glUseProgramStages(pipeline, GL_FRAGMENT_SHADER_BIT, fragment_program);
+
+         
+    }
+
+    void deletePipeline() {
+        glDeleteProgram(vertex_program);
+        glDeleteProgram(fragment_program);
+        glBindProgramPipeline(0);
+        glDeleteProgramPipelines(1, &pipeline);
+    }
+
+    void loadMesh() {
+        AkDoc* doc;
+        AkVisualScene* scene;
+        AkInstanceGeometry* geometry;
+
+        std::string scene_path = "res/";
+        scene_path += "lamp.gltf";
+        if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
+            std::cout << "Light mesh couldn't be loaded\n";
+            return;
+        }
+        if (!doc->scene.visualScene) {
+            std::cout << "Light mesh couldn't be loaded\n";
+            return;
+        }
+        
+        scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
+        AkNode* node = ak_instanceObjectNode(scene->node);
+
+        if (node->geometry) {
+            AkGeometry* geometry = ak_instanceObjectGeom(node);
+            AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
+            if ((AkGeometryType)geometry->gdata->type) {
+                if (mesh) {
+                    AkMeshPrimitive* prim = mesh->primitive;
+
+                    if (prim->indices) {
+                        ind = (uint32_t*)prim->indices->items;
+                        ind_size = prim->indices->count;
+                    }
+
+                    int set = prim->input->set;
+                    pos = ak_meshInputGet(prim, "POSITION", set);
+                    nor = ak_meshInputGet(prim, "NORMAL", set);
+                };
+            }
+        }
+    }
+
+    void drawLight(int width, int height, glm::mat4 Proj, AkCamera* camera) {
+        mvp_location = glGetUniformLocation(vertex_program, "MVP");
+        GLuint vcol_location = glGetAttribLocation(vertex_program, "vCol");
+        GLuint vpos_location = glGetAttribLocation(vertex_program, "vPos");
+
+        if (vpos_location != -1) formatAttribute(vpos_location, pos->accessor);
+        if (vcol_location != -1) formatAttribute(vcol_location, nor->accessor);
+
+        if (mvp_location != -1) glEnableVertexAttribArray(mvp_location);
+        if (vpos_location != -1) glEnableVertexAttribArray(vpos_location);
+        if (vcol_location != -1) glEnableVertexAttribArray(vcol_location);
+
+        float r = 0.1 * panel_config.dist;
+        float phi = panel_config.phi;
+        float theta = panel_config.theta;
+
+        glm::mat4x4 Projection;
+
+        glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
+        eye = glm::vec3(eye.z, eye.y, eye.x);
+
+        glm::vec3 north = glm::vec3(0., 1., 0.);
+        float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
+        if (corrected_theta > 3.14 / 2. && corrected_theta < 3.14 * 3. / 2.) {
+            north = glm::vec3(0., -1., 0.);
+        }
+
+        glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
+        glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
+        
+        glBindProgramPipeline(0);
+        glBindProgramPipeline(pipeline);
+
+        glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
+        if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
+        else Projection = Proj;
+
+        glm::mat4 View = glm::rotate(
+            glm::rotate(
+                glm::translate(
+                    transform
+                    , translate)
+                , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+            rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
+        glm::mat4 MVP = Projection * LookAt * View * Model;
+        glProgramUniformMatrix4fv(vertex_program, mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
+
+        glDrawElements(GL_LINES, ind_size, GL_UNSIGNED_INT, ind);
+        glBindProgramPipeline(0);
+    }
 };
 
 struct Camera {
