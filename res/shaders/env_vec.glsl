@@ -1,21 +1,24 @@
 #version 450 core
 
-uniform mat4 mat_matrix;
-unifrom mat4 projection;
+uniform mat4 MVP;
+uniform mat4 PRJ;
 
-layout (location = 0) in vec4 position;
-layout (location = 1) in vec3 normal;
+layout (location = 0) in vec3 vPos;
+layout (location = 1) in vec2 vTex;
+
+out gl_PerVertex
+{
+  vec4 gl_Position;
+  float gl_PointSize;
+  float gl_ClipDistance[];
+};
 
 out VS_OUT
 {
-vec3 normal;
-vec3 view;
+vec2 texCoor;
 } vs_out;
 
 void main(void){
-vec4 pos_vs = mt_matrix * position;
-vs_out.normal = mat3(mv_matrix) * postion;
-vs_out.view = pos_vs.xyz;
-
-gl_Position = projection * pos_vs;
+gl_Position = MVP * vec4(vPos, 1.0);
+vs_out.texCoor = vTex;
 }

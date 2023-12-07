@@ -11,6 +11,7 @@ WindowInfo windowConfig = {
 };
 
 
+
 double xpos, ypos;
 float mouse_speed = 2.f;
 std::vector<glm::mat4x4*> mats;
@@ -32,30 +33,7 @@ void print_map(const std::map<void*, unsigned int>& m){
 }
 
 
-void*
-imageLoadFromFile(const char* __restrict path,
-    int* __restrict width,
-    int* __restrict height,
-    int* __restrict components) {
-    if (std::string::npos != std::string(path).find(".png", 0)) {
-        return stbi_load(path, width, height, components, STBI_rgb_alpha);
-    }
-    return stbi_load(path, width, height, components, 0);
-}
 
-void*
-imageLoadFromMemory(const char* __restrict data,
-    size_t                  len,
-    int* __restrict width,
-    int* __restrict height,
-    int* __restrict components) {
-    return stbi_load_from_memory((stbi_uc const*)data, (int)len, width, height, components, 0);
-}
-
-void
-imageFlipVerticallyOnLoad(bool flip) {
-    stbi_set_flip_vertically_on_load(flip);
-}
 
 
 GLuint wrap_mode(AkWrapMode& wrap) {
@@ -476,7 +454,7 @@ int main(void)
     
 
     GLuint vao, vertex_buffer;
-    GLint mvp_location, vpos_location, vcol_location, norm_location, tex_location, is_tex_location;
+    GLint mvp_location, vpos_location, vcol_location, norm_location, tex_location, is_tex_location, prj_location;
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -616,12 +594,14 @@ int main(void)
         vpos_location = glGetAttribLocation(vertex_program, "vPos");
         tex_location = glGetAttribLocation(vertex_program, "vTex");
         is_tex_location = glGetUniformLocation(fragment_program, "isTexture");
+        prj_location = glGetUniformLocation(vertex_program, "PRJ");
 
         if (mvp_location != -1) glEnableVertexAttribArray(mvp_location);
         if (vpos_location != -1) glEnableVertexAttribArray(vpos_location);
         if (norm_location != -1) glEnableVertexAttribArray(norm_location);
         if (tex_location != -1) glEnableVertexAttribArray(tex_location);
         if (is_tex_location != -1) glEnableVertexAttribArray(is_tex_location);
+        if (prj_location != -1) glEnableVertexAttribArray(prj_location);
 
         if (vpos_location != -1) formatAttribute(vpos_location, primitives[i].pos);
         if (norm_location != -1) formatAttribute(norm_location, primitives[i].nor);
@@ -629,9 +609,14 @@ int main(void)
         //glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
     }
 
+
     for (auto& l : lights) {
         l.createPipeline();
     }
+
+    Environment env;
+    env.loadMesh();
+    env.createPipeline();
 
     glDepthFunc(GL_LEQUAL);
 
@@ -644,6 +629,8 @@ int main(void)
         glEnable(GL_DEPTH_TEST);
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClearColor(0., 1., 1., 1.0);
+
 
         for (int i = 0; i < primitives.size(); i++) {
             float r     = 0.1 * panel_config.dist;
@@ -675,9 +662,12 @@ int main(void)
                                     , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
                                     rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
             glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
-            glm::mat4 MVP = Projection * LookAt * View * Model;
+            glm::mat4 MVP = LookAt * View * Model;
             glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
+            glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], prj_location, 1, GL_FALSE, glm::value_ptr(Projection));
 
+            if(!primitives[i].textures[ALBEDO])
+                glProgramUniform1ui(primitives[i].programs[FRAGMENT], is_tex_location, GL_FALSE);
 
             int j = bufferViews[primitives[i].pos->buffer];
             int binding_point = 0;
@@ -697,20 +687,24 @@ int main(void)
                 glVertexAttribBinding(tex_location, binding_point);
                 glBindVertexBuffer(binding_point, buffers[j], primitives[i].tex->byteOffset, primitives[i].tex->componentBytes);
             }
-            TextureType tex_type = ALBEDO;
-            GLuint sampler = primitives[i].samplers[tex_type];
-            GLuint texture = primitives[i].textures[tex_type];
-            if (sampler && texture) {
-                glBindSampler(0, sampler); // + tex_type
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(primitives[i].tex_type[tex_type], texture);
-            }
-            else {
-                glProgramUniform1ui(primitives[i].programs[FRAGMENT], is_tex_location, GL_FALSE);
+            for (unsigned int tex_type = AMBIENT; tex_type < SIZE; tex_type++) {
+                GLuint sampler = primitives[i].samplers[(TextureType) tex_type];
+                GLuint texture = primitives[i].textures[(TextureType) tex_type];
+                if (sampler && texture) {
+                    //glProgramUniform1ui(primitives[i].programs[FRAGMENT], is_tex_location, GL_TRUE);
+                    glBindSampler(tex_type, sampler);
+                    glActiveTexture(GL_TEXTURE0 + tex_type);
+                    glBindTexture(primitives[i].tex_type[tex_type], texture);
+                }/*
+                else {
+                    glProgramUniform1ui(primitives[i].programs[FRAGMENT], is_tex_location, GL_FALSE);
+                }*/
             }
 
             glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
         }
+        env.draw(width, height, Projection, camera);
+
         for (auto& l : lights)     l.drawLight(width, height, Projection, camera);
 
         // ImGui
@@ -730,7 +724,7 @@ int main(void)
     }
     glBindProgramPipeline(0);
 
-
+   // env.deletePipeline();
 
     for (auto& p : primitives) p.deleteTransforms();
     for (auto& p : primitives) p.deleteTexturesAndSamplers();
