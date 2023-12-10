@@ -252,12 +252,12 @@ struct Primitive {
 
     void createPipeline() {
 
-        char* v_sh_buffer = read_file("res/vertex3.glsl");
+        char* v_sh_buffer = read_file("res/vertex4.glsl");
         if (!v_sh_buffer) {
             std::cout << "=================== Coulnt find res/vertex.glsl ==============================\n";
         }
 
-        char* f_sh_buffer = read_file("res/fragment3.glsl");
+        char* f_sh_buffer = read_file("res/fragment4.glsl");
         if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
 
         createPrograms();

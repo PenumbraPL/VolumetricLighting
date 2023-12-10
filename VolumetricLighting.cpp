@@ -1,7 +1,7 @@
 // VolumetricLighting.cpp : This file contains the 'main' function. Program execution begins and ends there.
 #include "VolumetricLighting.h"
-#define PATH "./res/"
-#define FILE_NAME "sample.gltf"
+#define PATH "./res/DamagedHelmet/"
+#define FILE_NAME "DamagedHelmet.gltf"
 
 WindowInfo windowConfig = {
     1900,
@@ -454,7 +454,8 @@ int main(void)
     
 
     GLuint vao, vertex_buffer;
-    GLint mvp_location, vpos_location, vcol_location, norm_location, tex_location, is_tex_location, prj_location;
+    GLint mvp_location, vpos_location, vcol_location, 
+        norm_location, tex_location, is_tex_location, prj_location, camera_location;
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -595,6 +596,8 @@ int main(void)
         tex_location = glGetAttribLocation(vertex_program, "vTex");
         is_tex_location = glGetUniformLocation(fragment_program, "isTexture");
         prj_location = glGetUniformLocation(vertex_program, "PRJ");
+        camera_location = glGetUniformLocation(fragment_program, "camera");
+
 
         if (mvp_location != -1) glEnableVertexAttribArray(mvp_location);
         if (vpos_location != -1) glEnableVertexAttribArray(vpos_location);
@@ -602,6 +605,8 @@ int main(void)
         if (tex_location != -1) glEnableVertexAttribArray(tex_location);
         if (is_tex_location != -1) glEnableVertexAttribArray(is_tex_location);
         if (prj_location != -1) glEnableVertexAttribArray(prj_location);
+        if (camera_location != -1) glEnableVertexAttribArray(camera_location);
+
 
         if (vpos_location != -1) formatAttribute(vpos_location, primitives[i].pos);
         if (norm_location != -1) formatAttribute(norm_location, primitives[i].nor);
@@ -663,8 +668,11 @@ int main(void)
                                     rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
             glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
             glm::mat4 MVP = LookAt * View * Model;
+            glm::vec3 camera_view = glm::vec4(eye, 1.0);
             glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
             glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], prj_location, 1, GL_FALSE, glm::value_ptr(Projection));
+            glProgramUniform3fv(primitives[i].programs[FRAGMENT], camera_location, 1, glm::value_ptr(camera_view));
+
 
             if(!primitives[i].textures[ALBEDO])
                 glProgramUniform1ui(primitives[i].programs[FRAGMENT], is_tex_location, GL_FALSE);
@@ -695,7 +703,13 @@ int main(void)
                     glBindSampler(tex_type, sampler);
                     glActiveTexture(GL_TEXTURE0 + tex_type);
                     glBindTexture(primitives[i].tex_type[tex_type], texture);
-                }/*
+                }
+                else {
+                    glActiveTexture(GL_TEXTURE0 + tex_type);
+                    glBindTexture(GL_TEXTURE_2D, 0); // needs change
+                }
+                
+                /*
                 else {
                     glProgramUniform1ui(primitives[i].programs[FRAGMENT], is_tex_location, GL_FALSE);
                 }*/

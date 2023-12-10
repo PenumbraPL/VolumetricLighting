@@ -9,6 +9,7 @@ vec3 _normal;
 vec3 _color;
 vec2 _texCoor;
 vec3 _view;
+vec3 _position;
 }vs_out;
 
 out gl_PerVertex
@@ -26,6 +27,7 @@ void main()
     vs_out._texCoor = vTex;
     vec4 g = MVP * vec4(vNor, 0.);
     vs_out._normal = g.xyz;
+    vs_out._position = vPos;
     vs_out._view = vec4(MVP * vec4(vPos, 0.)).xyz;
     gl_Position =  PRJ * MVP * vec4(vPos, 1.0);
     vs_out._color = vec3(1.0, 1.0, 1.0);
