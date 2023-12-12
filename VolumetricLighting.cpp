@@ -1,7 +1,7 @@
 // VolumetricLighting.cpp : This file contains the 'main' function. Program execution begins and ends there.
 #include "VolumetricLighting.h"
-#define PATH "./res/DamagedHelmet/"
-#define FILE_NAME "DamagedHelmet.gltf"
+#define PATH "./res/Cube/"
+#define FILE_NAME "cube.gltf"
 
 WindowInfo windowConfig = {
     1900,
@@ -624,6 +624,7 @@ int main(void)
     env.createPipeline();
 
     glDepthFunc(GL_LEQUAL);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     std::cout << "===================== Main loop ==============================================\n";
     while (!glfwWindowShouldClose(window))
@@ -631,10 +632,17 @@ int main(void)
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
 
-        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_DEPTH_TEST); 
+        glEnable(GL_BLEND);
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0., 1., 1., 1.0);
+
+        if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
+
+        env.draw(width, height, Projection, camera);
+
+
 
 
         for (int i = 0; i < primitives.size(); i++) {
@@ -717,7 +725,6 @@ int main(void)
 
             glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
         }
-        env.draw(width, height, Projection, camera);
 
         for (auto& l : lights)     l.drawLight(width, height, Projection, camera);
 

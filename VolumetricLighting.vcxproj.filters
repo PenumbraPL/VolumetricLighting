@@ -361,6 +361,12 @@
     <None Include="res\vertex4.glsl">
       <Filter>Resource Files\shaders\vertex</Filter>
     </None>
+    <None Include="res\vertex5.glsl">
+      <Filter>Resource Files\shaders\vertex</Filter>
+    </None>
+    <None Include="res\fragment5.glsl">
+      <Filter>Resource Files\shaders\fragment</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ship_in_clouds\textures\Cloud_3_emissive.jpeg">
