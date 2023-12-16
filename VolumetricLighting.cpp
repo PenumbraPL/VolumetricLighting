@@ -464,9 +464,12 @@ int main(void)
 
     
 
+
     /* ================================================ */
 
     ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
+
+
 
     AkDoc* doc;
     AkVisualScene* scene;
