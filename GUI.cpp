@@ -1,10 +1,12 @@
 #include "GUI.h"
 
+
 void drawLeftPanel(ImGuiIO& io) {
     bool show_demo_window = false;
     static bool show_shader_dialog = false;
     bool show_another_window = true;
     static int e = 0;
+    static bool selected[3] = { false, false, false };
 
 
     {
@@ -28,21 +30,10 @@ void drawLeftPanel(ImGuiIO& io) {
                 ImGui::SameLine(); ImGui::RadioButton("radio a", &e, 0);
                 ImGui::Text("Option5: ");
                 ImGui::SameLine(); ImGui::SameLine();  ImGui::RadioButton("radio b", &e, 1);
-                // Combo Boxes are also called "Dropdown" in other systems
-            // Expose flags as checkbox for the demo
+
                 static ImGuiComboFlags flags = 0;
-                /*
-                ImGui::CheckboxFlags("ImGuiComboFlags_PopupAlignLeft", &flags, ImGuiComboFlags_PopupAlignLeft);
-                ImGui::SameLine();
-                if (ImGui::CheckboxFlags("ImGuiComboFlags_NoArrowButton", &flags, ImGuiComboFlags_NoArrowButton))
-                    flags &= ~ImGuiComboFlags_NoPreview;     // Clear the other flag, as we cannot combine both
-                if (ImGui::CheckboxFlags("ImGuiComboFlags_NoPreview", &flags, ImGuiComboFlags_NoPreview))
-                    flags &= ~ImGuiComboFlags_NoArrowButton; // Clear the other flag, as we cannot combine both
-                    */
-                    // Using the generic BeginCombo() API, you have full control over how to display the combo contents.
-                    // (your selection data could be an index, a pointer to the object, an id for the object, a flag intrusively
-                    // stored in the object itself, etc.)
-                const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ", "KKKK", "LLLLLLL", "MMMM", "OOOOOOO" };
+                const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", \
+                    "HHHH", "IIII", "JJJJ", "KKKK", "LLLLLLL", "MMMM", "OOOOOOO" };
                 static int item_current_idx = 0;
                 const char* combo_preview_value = items[item_current_idx];
                 if (ImGui::BeginCombo("combo 1", combo_preview_value, flags))
@@ -75,20 +66,18 @@ void drawLeftPanel(ImGuiIO& io) {
                     ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
                     ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
                     if (n == 0)
-                        ImGui::Text("The lazy dog is a good dog. This paragraph should fit within %.0f pixels. Testing a 1 character word. The quick brown fox jumps over the lazy dog.", wrap_width);
+                        ImGui::Text("The lazy dog is a good dog. This paragraph should \
+                            fit within %.0f pixels. Testing a 1 character word. \
+                            The quick brown fox jumps over the lazy dog.", wrap_width);
                     else
                         ImGui::Text("aaaaaaaa bbbbbbbb, c cccccccc,dddddddd. d eeeeeeee   ffffffff. gggggggg!hhhhhhhh");
 
-                    // Draw actual text bounding box, following by marker of our expected limit (should not overlap!)
                     draw_list->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
                     draw_list->AddRectFilled(marker_min, marker_max, IM_COL32(255, 0, 255, 255));
                     ImGui::PopTextWrapPos();
                 }
 
-                if (ImGui::TreeNode("Scrolling"))
-                {
-                    // Vertical scroll functions
-
+                if (ImGui::TreeNode("Scrolling")) {
                     static int track_item = 50;
                     static bool enable_track = true;
                     static bool enable_extra_decorations = false;
@@ -210,11 +199,10 @@ void drawLeftPanel(ImGuiIO& io) {
             }
             if (ImGui::BeginTabItem("Scene"))
             {
-                static bool selected[3] = { false, false, false };
                 ImGui::Selectable("Scene One", &selected[0]); ImGui::SameLine(300); ImGui::Text(" 2,345 bytes");
                 ImGui::Selectable("Scene Two", &selected[1]); ImGui::SameLine(300); ImGui::Text("12,345 bytes");
                 ImGui::Selectable("Scene Three", &selected[2]); ImGui::SameLine(300); ImGui::Text(" 2,345 bytes");
-                if (&selected[1])
+                if (selected[1])
                     show_shader_dialog = true;
                 else
                     show_shader_dialog = false;
@@ -238,7 +226,7 @@ void drawLeftPanel(ImGuiIO& io) {
         ImGui::End();
     }
     if (show_shader_dialog) {
-        ImGui::Begin("Shader", &show_shader_dialog);
+        bool opened = ImGui::Begin("Shader", &show_shader_dialog);
         static char text[1024 * 16] =
             "/*\n"
             " The Pentium F00F bug, shorthand for F0 0F C7 C8,\n"
@@ -260,6 +248,9 @@ void drawLeftPanel(ImGuiIO& io) {
         ImGui::SameLine(); ImGui::Button("Restore");
 
         ImGui::End();
+        if (!opened) {
+            selected[1] = false;
+        }
     }
 
 }
@@ -268,20 +259,20 @@ void drawLeftPanel(ImGuiIO& io) {
 void drawRightPanel(ImGuiIO& io, ConfigContext &config) {
     ImGui::Begin("Right Panel");
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-    ImGui::Text("Far plane:"); ImGui::SliderFloat("Fp", &config.far_plane, 0.1f, 500.0f);
-    ImGui::Text("Near plane:"); ImGui::SliderFloat("Np", &config.near_plane, 0.0f, 10.0f);
+    ImGui::Text("Far plane:"); ImGui::SliderFloat("Fp", &config.far_plane, 0.1f, 200.0f);
+    ImGui::Text("Near plane:"); ImGui::SliderFloat("Np", &config.near_plane, 0.0001f, 10.0f);
     ImGui::Text("fov:"); ImGui::SliderInt("fov", &config.fov, 10, 120);
 
     ImGui::Separator();
 
-    ImGui::SliderInt("Param1", &config.p1, -100, 100);
-    ImGui::SliderInt("Param2", &config.p2, -100, 100);
-    ImGui::SliderInt("Param3", &config.p3, -100, 100);
-    ImGui::SliderInt("Param4", &config.p4, 0, 360);
-    ImGui::SliderInt("Param5", &config.p5, 0, 360);
-    ImGui::SliderInt("Param6", &config.p6, 0, 360);
-    ImGui::SliderInt("Param7", &config.p7, 0, 360);
-    ImGui::SliderInt("Param8", &config.p8, 0, 360);
+    ImGui::SliderInt("Translation X", &config.tr_x, -100, 100);
+    ImGui::SliderInt("Translation Y", &config.tr_y, -100, 100);
+    ImGui::SliderInt("Translation Z", &config.tr_z, -100, 100);
+    ImGui::SliderInt("Rotation X", &config.rot_x, 0, 360);
+    ImGui::SliderInt("Rotation Y", &config.rot_y, 0, 360);
+    ImGui::SliderFloat("Camera distance", &config.dist, 0, 360);
+    ImGui::SliderAngle("Camera phi", &config.phi, 0, 360);
+    ImGui::SliderAngle("Camera theta", &config.theta, 0, 360);
 
     ImGui::Separator();
     ImGui::Button("Save Image");
