@@ -254,6 +254,7 @@ Shell32.lib
     <None Include="res\fragment3.glsl" />
     <None Include="res\fragment4.glsl" />
     <None Include="res\fragment5.glsl" />
+    <None Include="res\fragment6.glsl" />
     <None Include="res\lamp.gltf" />
     <None Include="res\lamp_frag.glsl" />
     <None Include="res\lamp_vec.glsl" />
@@ -262,12 +263,17 @@ Shell32.lib
     <None Include="res\sample2\scene.gltf" />
     <None Include="res\sample3.gltf" />
     <None Include="res\shaders\blinn.glsl" />
+    <None Include="res\shaders\clear_depth_frag.glsl" />
     <None Include="res\shaders\cube_frag.glsl" />
     <None Include="res\shaders\cube_vec.glsl" />
+    <None Include="res\shaders\depth2_ver.glsl" />
+    <None Include="res\shaders\depth_frag.glsl" />
+    <None Include="res\shaders\depth_ver.glsl" />
     <None Include="res\shaders\env_frag.glsl" />
     <None Include="res\shaders\env_vec.glsl" />
     <None Include="res\shaders\fog_frag.glsl" />
     <None Include="res\shaders\fog_vec.glsl" />
+    <None Include="res\shaders\init_depth_frag.glsl" />
     <None Include="res\shaders\metalic_r.glsl" />
     <None Include="res\shaders\gourand_frag.glsl" />
     <None Include="res\shaders\gourand_vec.glsl" />
@@ -283,6 +289,7 @@ Shell32.lib
     <None Include="res\vertex3.glsl" />
     <None Include="res\vertex4.glsl" />
     <None Include="res\vertex5.glsl" />
+    <None Include="res\vertex6.glsl" />
     <None Include="res\volkswagen\scene.bin" />
     <None Include="res\volkswagen\scene.gltf" />
   </ItemGroup>

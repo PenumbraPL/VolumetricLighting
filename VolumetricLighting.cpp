@@ -623,8 +623,16 @@ int main(void)
     env.loadMesh();
     env.createPipeline();
 
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    Cloud cld;
+    cld.loadMesh();
+    cld.createPipeline(width, height);
+
+
     glDepthFunc(GL_LEQUAL);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 
     std::cout << "===================== Main loop ==============================================\n";
     while (!glfwWindowShouldClose(window))
@@ -634,6 +642,7 @@ int main(void)
 
         glEnable(GL_DEPTH_TEST); 
         glEnable(GL_BLEND);
+
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0., 1., 1., 1.0);
@@ -641,8 +650,6 @@ int main(void)
         if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
 
         env.draw(width, height, Projection, camera);
-
-
 
 
         for (int i = 0; i < primitives.size(); i++) {
@@ -728,6 +735,9 @@ int main(void)
 
         for (auto& l : lights)     l.drawLight(width, height, Projection, camera);
 
+        //cld.draw(width, height, Projection, camera);
+
+
         // ImGui
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -745,7 +755,8 @@ int main(void)
     }
     glBindProgramPipeline(0);
 
-   // env.deletePipeline();
+    env.deletePipeline();
+    cld.deletePipeline();
 
     for (auto& p : primitives) p.deleteTransforms();
     for (auto& p : primitives) p.deleteTexturesAndSamplers();
