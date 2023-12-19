@@ -15,6 +15,14 @@ layout (binding = 1, std430) buffer list_item_block
 	list_item item[];
 };
 
+struct gl_DepthRangeParameters
+{
+    float near;
+    float far;
+    float diff;
+};
+
+
 in VS_OUT{
 vec3 _normal;
 vec3 _color;
@@ -26,6 +34,7 @@ vec3 _position;
 layout (location = 0) out vec4 color;
 
 void main(void){
+	
 	ivec2 P = ivec2(gl_FragCoord.xy);
 	uint index = atomicCounterIncrement(fill_counter);
 	uint old_head = imageAtomicExchange(head_pointer, P, index);
@@ -34,7 +43,10 @@ void main(void){
 	item[index].depth = gl_FragCoord.z;
 	item[index].facing = gl_FrontFacing ? 1 : 0;
 	item[index].next = old_head;
-
-	float v = gl_FragCoord.z / 0xFFFFFFFF;
+	
+	float v = 0.;
+	if(!gl_FrontFacing){
+		v = gl_FragCoord.z / (30*gl_FragCoord.w);
+	}
 	color = vec4(v,v,v,1.);
 };

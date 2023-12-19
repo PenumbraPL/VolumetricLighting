@@ -791,6 +791,7 @@ struct Cloud {
     glm::mat4 MVP;
     GLuint* buffer;
     GLuint mvp_location;
+    GLuint prj_location;
 
 
     GLuint depth_buffer;
@@ -974,6 +975,8 @@ struct Cloud {
 
     void draw(int width, int height, glm::mat4 Proj, AkCamera* camera) {
         mvp_location = glGetUniformLocation(vertex_program, "MVP");
+        prj_location = glGetUniformLocation(vertex_program, "PRJ");
+
         GLuint vtex_location = glGetAttribLocation(vertex_program, "vTex");
         GLuint vpos_location = glGetAttribLocation(vertex_program, "vPos");
 
@@ -1001,12 +1004,12 @@ struct Cloud {
 
         glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
         glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
-        
+   
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
         glBindTexture(GL_TEXTURE_2D, head_pointer_image);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-        glBindProgramPipeline(clear_pipeline);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        //glBindProgramPipeline(clear_pipeline);
+       // glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
  
         glBindProgramPipeline(init_pipeline);
 
@@ -1022,17 +1025,26 @@ struct Cloud {
                 , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
             rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
         glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
-        MVP = Projection * LookAt * View * Model;
+        MVP = LookAt * View * Model;
         glProgramUniformMatrix4fv(vertex_program, mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
+        glProgramUniformMatrix4fv(vertex_program, prj_location, 1, GL_FALSE, glm::value_ptr(Projection));
 
+
+        
         //static const unsigned int zero = 0;
         glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 2, atomic_buffer);
         glNamedBufferSubData(atomic_buffer, 0, sizeof(zero), &zero);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, depth_buffer);
         glBindImageTexture(0, head_pointer_image, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-       
+      
+
         //std::cout << "Zero: " << zero << std::endl;
+
+        for (unsigned int tex_type = AMBIENT; tex_type < SIZE; tex_type++) {
+                glActiveTexture(GL_TEXTURE0 + tex_type);
+                glBindTexture(GL_TEXTURE_2D, 0);
+        }
 
         int binding_point = 0;
         glVertexAttribBinding(vpos_location, binding_point);
@@ -1043,12 +1055,224 @@ struct Cloud {
         glBindVertexBuffer(binding_point, buffer[binding_point], tex->accessor->byteOffset, tex->accessor->componentBytes);
 
         glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
-    
+    /*
     
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
         glBindProgramPipeline(pipeline);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);*/
+    }
+};
+
+
+
+
+
+struct Cloud2 {
+    glm::mat4x4 transform = glm::mat4x4(0.);
+    glm::mat4x4 w_transform = glm::mat4x4(0.);
+
+    int width = 0;
+    int height = 0;
+
+    uint32_t* ind = nullptr;
+    unsigned int ind_size;
+    AkInput* pos = nullptr;
+    AkInput* tex = nullptr;
+
+    GLuint vertex_program;
+    GLuint fragment_program;
+    GLuint init_fragment_program;
+    GLuint clear_fragment_program;
+    GLuint vertex_plane_program;
+    GLuint pipeline;
+    GLuint init_pipeline;
+    GLuint clear_pipeline;
+
+    glm::mat4 MVP;
+    GLuint* buffer;
+    GLuint mvp_location;
+
+    GLuint prj_location;
+    GLuint depth_buffer;
+    GLuint atomic_buffer;
+    GLuint head_pointer_image;
+    unsigned int zero = 0;
+
+    void createPipeline(int width, int height) {
+        this->width = width;
+        this->height = height;
+
+        char* v_sh_buffer = read_file("res/shaders/depth_ver.glsl");
+        if (!v_sh_buffer)  std::cout << "=================== Coulnt find res/vertex.glsl ==============================\n";
+
+        char* f_sh_buffer = read_file("res/fragment.glsl");
+        if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
+
+
+        vertex_program = glCreateShaderProgramv(GL_VERTEX_SHADER, 1, &v_sh_buffer);
+        fragment_program = glCreateShaderProgramv(GL_FRAGMENT_SHADER, 1, &f_sh_buffer);
+        
+        free(v_sh_buffer);
+        free(f_sh_buffer);
+
+
+        GLint status = 1;
+        if (status) {
+            GLint link_status;
+
+            glGetProgramiv(vertex_program, GL_LINK_STATUS, &link_status);
+            if (!link_status) {
+                GLchar comp_info[1024];
+                glGetProgramInfoLog(vertex_program, 1024, NULL, comp_info);
+
+                fwrite(comp_info, 1024, 1, stdout);
+            }
+            glGetProgramiv(fragment_program, GL_LINK_STATUS, &link_status);
+            if (!link_status) {
+                GLchar comp_info[1024];
+                glGetProgramInfoLog(fragment_program, 1024, NULL, comp_info);
+
+                fwrite(comp_info, 1024, 1, stdout);
+            }
+
+        }
+
+
+        glGenProgramPipelines(1, &pipeline);
+        glUseProgramStages(pipeline, GL_VERTEX_SHADER_BIT, vertex_program);
+        glUseProgramStages(pipeline, GL_FRAGMENT_SHADER_BIT, fragment_program);
+
+    }
+
+    void deletePipeline() {
+        glDeleteProgram(vertex_program);
+        glDeleteProgram(fragment_program);
+        glDeleteBuffers(2, buffer);
+        free(buffer);
+        glBindProgramPipeline(0);
+        glDeleteProgramPipelines(1, &pipeline);
+    }
+
+    void loadMesh() {
+        AkDoc* doc;
+        AkVisualScene* scene;
+        AkInstanceGeometry* geometry;
+
+        std::string scene_path = "res/cube/";
+        scene_path += "Cube.gltf";
+        if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
+            std::cout << "Cloud mesh couldn't be loaded\n";
+            return;
+        }
+        if (!doc->scene.visualScene) {
+            std::cout << "Cloud mesh couldn't be loaded\n";
+            return;
+        }
+
+        scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
+        AkNode* node = ak_instanceObjectNode(scene->node);
+
+        float* t1 = (float*)calloc(16, sizeof(float));
+        float* t2 = (float*)calloc(16, sizeof(float));
+        ak_transformCombineWorld(node, t1);
+        ak_transformCombine(node, t2);
+        w_transform = glm::make_mat4x4(t1);
+        transform = glm::make_mat4x4(t2);
+        free(t1);
+        free(t2);
+
+        if (node->geometry) {
+            AkGeometry* geometry = ak_instanceObjectGeom(node);
+            AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
+            if ((AkGeometryType)geometry->gdata->type) {
+                if (mesh) {
+                    AkMeshPrimitive* prim = mesh->primitive;
+
+                    if (prim->indices) {
+                        ind = (uint32_t*)prim->indices->items;
+                        ind_size = prim->indices->count;
+                    }
+
+                    int set = prim->input->set;
+                    pos = ak_meshInputGet(prim, "POSITION", set);
+                    tex = ak_meshInputGet(prim, "TEXCOORD", set);
+
+                    buffer = (GLuint*)calloc(2, sizeof(GLuint));
+                    glCreateBuffers(2, buffer);
+                    glNamedBufferData(buffer[0], pos->accessor->buffer->length, pos->accessor->buffer->data, GL_STATIC_DRAW);
+                    glNamedBufferData(buffer[1], tex->accessor->buffer->length, tex->accessor->buffer->data, GL_STATIC_DRAW);
+                };
+            }
+        }
+    }
+
+    void draw(int width, int height, glm::mat4 Proj, AkCamera* camera) {
+        mvp_location = glGetUniformLocation(vertex_program, "MVP");
+        prj_location = glGetUniformLocation(vertex_program, "PRJ");
+
+        GLuint vtex_location = glGetAttribLocation(vertex_program, "vTex");
+        GLuint vpos_location = glGetAttribLocation(vertex_program, "vPos");
+
+        if (vpos_location != -1) formatAttribute(vpos_location, pos->accessor);
+        if (vtex_location != -1) formatAttribute(vtex_location, tex->accessor);
+
+        if (mvp_location != -1) glEnableVertexAttribArray(mvp_location);
+        if (prj_location != -1) glEnableVertexAttribArray(prj_location);
+        if (vpos_location != -1) glEnableVertexAttribArray(vpos_location);
+        if (vtex_location != -1) glEnableVertexAttribArray(vtex_location);
+
+        float r = 0.1 * panel_config.dist;
+        float phi = panel_config.phi;
+        float theta = panel_config.theta;
+
+        glm::mat4x4 Projection;
+
+        glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
+        eye = glm::vec3(eye.z, eye.y, eye.x);
+
+        glm::vec3 north = glm::vec3(0., 1., 0.);
+        float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
+        if (corrected_theta > 3.14 / 2. && corrected_theta < 3.14 * 3. / 2.) {
+            north = glm::vec3(0., -1., 0.);
+        }
+
+        glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
+        glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
+
+        glBindProgramPipeline(pipeline);
+
+        glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
+        if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
+        else Projection = Proj;
+
+        glm::mat4 View = glm::rotate(
+            glm::rotate(
+                glm::translate(
+                    transform
+                    , translate)
+                , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+            rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
+        MVP = LookAt * View * Model;
+        glProgramUniformMatrix4fv(vertex_program, mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
+        glProgramUniformMatrix4fv(vertex_program, prj_location, 1, GL_FALSE, glm::value_ptr(Projection));
+
+        for (unsigned int tex_type = AMBIENT; tex_type < SIZE; tex_type++) {
+            glActiveTexture(GL_TEXTURE0 + tex_type);
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
+
+        int binding_point = 0;
+        glVertexAttribBinding(vpos_location, binding_point);
+        glBindVertexBuffer(binding_point, buffer[binding_point], pos->accessor->byteOffset, pos->accessor->componentBytes);
+
+        binding_point = 1;
+        glVertexAttribBinding(vtex_location, binding_point);
+        glBindVertexBuffer(binding_point, buffer[binding_point], tex->accessor->byteOffset, tex->accessor->componentBytes);
+
+        glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
+
     }
 };

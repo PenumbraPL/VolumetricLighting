@@ -629,7 +629,7 @@ int main(void)
     cld.loadMesh();
     cld.createPipeline(width, height);
 
-
+    glDepthRange(panel_config.near_plane, panel_config.far_plane);
     glDepthFunc(GL_LEQUAL);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -650,6 +650,7 @@ int main(void)
         if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
 
         env.draw(width, height, Projection, camera);
+        cld.draw(width, height, Projection, camera);
 
 
         for (int i = 0; i < primitives.size(); i++) {
@@ -730,12 +731,11 @@ int main(void)
                 }*/
             }
 
-            glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
+            //glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
         }
 
-        for (auto& l : lights)     l.drawLight(width, height, Projection, camera);
+        //for (auto& l : lights)     l.drawLight(width, height, Projection, camera);
 
-        //cld.draw(width, height, Projection, camera);
 
 
         // ImGui
