@@ -15,13 +15,6 @@ layout (binding = 1, std430) buffer list_item_block
 	list_item item[];
 };
 
-struct gl_DepthRangeParameters
-{
-    float near;
-    float far;
-    float diff;
-};
-
 
 in VS_OUT{
 vec3 _normal;
@@ -44,9 +37,12 @@ void main(void){
 	item[index].facing = gl_FrontFacing ? 1 : 0;
 	item[index].next = old_head;
 	
-	float v = 0.;
+	//float v = 0.;
 	if(!gl_FrontFacing){
-		v = gl_FragCoord.z / (30*gl_FragCoord.w);
+		color.xyz -= gl_FragCoord.z / (30*gl_FragCoord.w);
+	}else{
+		color.xyz += gl_FragCoord.z / (30*gl_FragCoord.w);
 	}
-	color = vec4(v,v,v,1.);
+	color.w = 1;
+	//color = vec4(v,v,v,1.);
 };

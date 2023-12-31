@@ -792,11 +792,14 @@ struct Cloud {
     GLuint* buffer;
     GLuint mvp_location;
     GLuint prj_location;
+    GLuint img_location;
 
 
     GLuint depth_buffer;
     GLuint atomic_buffer;
     GLuint head_pointer_image;
+    GLuint depth_image;
+
     unsigned int zero = 0;
     
     void createPipeline(int width, int height) {
@@ -812,10 +815,10 @@ struct Cloud {
         char* f_sh_buffer = read_file("res/shaders/depth_frag.glsl");
         if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
         
-        char* if_sh_buffer = read_file("res/shaders/init_depth_frag.glsl");
+        char* if_sh_buffer = read_file("res/shaders/vol_frag.glsl");
         if (!if_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
 
-        char* cf_sh_buffer = read_file("res/shaders/clear_depth_frag.glsl");
+        char* cf_sh_buffer = read_file("res/shaders/clear_vol_frag.glsl");
         if (!cf_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
 
 
@@ -884,7 +887,7 @@ struct Cloud {
         glUseProgramStages(init_pipeline, GL_FRAGMENT_SHADER_BIT, init_fragment_program);
 
         glGenProgramPipelines(1, &clear_pipeline);
-        glUseProgramStages(clear_pipeline, GL_VERTEX_SHADER_BIT, vertex_plane_program);
+        glUseProgramStages(clear_pipeline, GL_VERTEX_SHADER_BIT, vertex_program);
         glUseProgramStages(clear_pipeline, GL_FRAGMENT_SHADER_BIT, clear_fragment_program);
 
 
@@ -894,13 +897,17 @@ struct Cloud {
         glNamedBufferData(atomic_buffer, sizeof(unsigned int), NULL, GL_DYNAMIC_COPY);
         
         glGenBuffers(1, &depth_buffer);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, atomic_buffer);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, depth_buffer);
         glNamedBufferData(depth_buffer, width*height*16, NULL, GL_DYNAMIC_COPY);
 
         //glTexImage2D(GL_TEXTURE_2D, 1, GL_R32UI, 1024, 1024, 0, GL_R32UI, image, pixels);
         glGenTextures(1, &head_pointer_image);
         glBindTexture(GL_TEXTURE_2D, head_pointer_image);
         glTexStorage2D(GL_TEXTURE_2D, 1, GL_R32UI, width, height);
+        
+        glGenTextures(1, &depth_image);
+        glBindTexture(GL_TEXTURE_2D, depth_image);
+        glTexStorage2D(GL_TEXTURE_2D, 1, GL_RG16F, width, height);
     }
 
     void deletePipeline() {
@@ -913,6 +920,7 @@ struct Cloud {
         glDeleteBuffers(1, &atomic_buffer);
         glDeleteBuffers(1, &depth_buffer);
         glDeleteTextures(1, &head_pointer_image);
+        glDeleteTextures(1, &depth_image);
         free(buffer);
         glBindProgramPipeline(0);
         glDeleteProgramPipelines(1, &pipeline);
@@ -976,6 +984,7 @@ struct Cloud {
     void draw(int width, int height, glm::mat4 Proj, AkCamera* camera) {
         mvp_location = glGetUniformLocation(vertex_program, "MVP");
         prj_location = glGetUniformLocation(vertex_program, "PRJ");
+        img_location = glGetUniformLocation(clear_fragment_program, "image");
 
         GLuint vtex_location = glGetAttribLocation(vertex_program, "vTex");
         GLuint vpos_location = glGetAttribLocation(vertex_program, "vPos");
@@ -984,6 +993,8 @@ struct Cloud {
         if (vtex_location != -1) formatAttribute(vtex_location, tex->accessor);
 
         if (mvp_location != -1) glEnableVertexAttribArray(mvp_location);
+        if (prj_location != -1) glEnableVertexAttribArray(prj_location);
+        if (img_location != -1) glEnableVertexAttribArray(img_location);
         if (vpos_location != -1) glEnableVertexAttribArray(vpos_location);
         if (vtex_location != -1) glEnableVertexAttribArray(vtex_location);
 
@@ -1005,12 +1016,17 @@ struct Cloud {
         glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
         glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
    
+        //glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+        //glBindTexture(GL_TEXTURE_2D, head_pointer_image);
+        //glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+        
+        glBindImageTexture(img_location, depth_image, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RG16F);
+        glBindProgramPipeline(clear_pipeline);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-        glBindTexture(GL_TEXTURE_2D, head_pointer_image);
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-        //glBindProgramPipeline(clear_pipeline);
-       // glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
- 
+
+        img_location = glGetUniformLocation(init_fragment_program, "image");
+        glBindImageTexture(img_location, depth_image, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RG16F);
         glBindProgramPipeline(init_pipeline);
 
         glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
@@ -1032,11 +1048,11 @@ struct Cloud {
 
         
         //static const unsigned int zero = 0;
-        glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 2, atomic_buffer);
-        glNamedBufferSubData(atomic_buffer, 0, sizeof(zero), &zero);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, depth_buffer);
-        glBindImageTexture(0, head_pointer_image, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+        //glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 2, atomic_buffer);
+        //glNamedBufferSubData(atomic_buffer, 0, sizeof(zero), &zero);
+        //glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, depth_buffer);
+        //glBindImageTexture(0, head_pointer_image, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
+        //glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
       
 
         //std::cout << "Zero: " << zero << std::endl;

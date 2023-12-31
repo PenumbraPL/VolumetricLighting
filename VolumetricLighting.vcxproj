@@ -264,6 +264,7 @@ Shell32.lib
     <None Include="res\sample3.gltf" />
     <None Include="res\shaders\blinn.glsl" />
     <None Include="res\shaders\clear_depth_frag.glsl" />
+    <None Include="res\shaders\clear_vol_frag.glsl" />
     <None Include="res\shaders\cube_frag.glsl" />
     <None Include="res\shaders\cube_vec.glsl" />
     <None Include="res\shaders\depth2_ver.glsl" />
@@ -282,6 +283,8 @@ Shell32.lib
     <None Include="res\shaders\ph_vec.glsl" />
     <None Include="res\shaders\skybox_frag.glsl" />
     <None Include="res\shaders\skybox_vec.glsl" />
+    <None Include="res\shaders\vol_frag.glsl" />
+    <None Include="res\shaders\vol_vec.glsl" />
     <None Include="res\ship_in_clouds\scene.bin" />
     <None Include="res\ship_in_clouds\scene.gltf" />
     <None Include="res\vertex.glsl" />
