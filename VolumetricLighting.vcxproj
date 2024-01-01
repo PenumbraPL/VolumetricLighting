@@ -255,6 +255,7 @@ Shell32.lib
     <None Include="res\fragment4.glsl" />
     <None Include="res\fragment5.glsl" />
     <None Include="res\fragment6.glsl" />
+    <None Include="res\fragment7.glsl" />
     <None Include="res\lamp.gltf" />
     <None Include="res\lamp_frag.glsl" />
     <None Include="res\lamp_vec.glsl" />
@@ -293,6 +294,7 @@ Shell32.lib
     <None Include="res\vertex4.glsl" />
     <None Include="res\vertex5.glsl" />
     <None Include="res\vertex6.glsl" />
+    <None Include="res\vertex7.glsl" />
     <None Include="res\volkswagen\scene.bin" />
     <None Include="res\volkswagen\scene.gltf" />
   </ItemGroup>

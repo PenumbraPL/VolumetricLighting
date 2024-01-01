@@ -397,6 +397,12 @@
     <None Include="res\shaders\clear_vol_frag.glsl">
       <Filter>Resource Files\shaders\fragment</Filter>
     </None>
+    <None Include="res\fragment7.glsl">
+      <Filter>Resource Files\shaders\fragment</Filter>
+    </None>
+    <None Include="res\vertex7.glsl">
+      <Filter>Resource Files\shaders\vertex</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ship_in_clouds\textures\Cloud_3_emissive.jpeg">
