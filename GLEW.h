@@ -10,28 +10,26 @@ void initializeGLEW(void) {
     }
     std::cout << "========== [GLEW]: Using GLEW " << glewGetString(GLEW_VERSION) << " =========================================\n";
 
-    // glewIsSupported supported from version 1.3
-    if (GLEW_VERSION_1_3)
+   
+    if (GLEW_VERSION_1_3) // glewIsSupported supported from version 1.3
     {
-        if (glewIsSupported("GL_VERSION_4_5  GL_ARB_point_sprite"))
-        {
-            std::cout << "========== [GLEW]: Version 4.5 of OpenGL is supported ========================\n";
-            std::cout << "========== [GLEW]: Extention GL_ARB_point_sprite is supported \n";
+        std::string versionName = "GL_VERSION_4_5";
+        std::string extensionList[] = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shader_image_load_store",
+            "GL_ARB_texture_storage",
+            "GL_ARB_vertex_attrib_binding",
+            "GL_ARB_vertex_attrib_64bit",
+            "GL_KHR_debug"
+        };
+        for (auto& ext : extensionList) {
+            if (!glewIsSupported((versionName + " " + ext).c_str()))
+            {
+                std::cout << "========== [GLEW]: For " + versionName + " extension " + ext + " isn't supported \n";
+            }
         }
-        if (glewIsSupported("GL_VERSION_4_5  GL_KHR_debug"))
-        {
-            std::cout << "========== [GLEW]: Version 4.5 of OpenGL is supported ========================\n";
-            std::cout << "========== [GLEW]: Extention GL_KHR_debug is supported =======================\n";
-        }
-        /*
-    GL_ARB_buffer_storage
-    GL_ARB_clear_buffer_object
-    GL_ARB_clear_texture
-    GL_ARB_clip_control
-    GL_ARB_multi_bind
-    GL_ARB_sampler_objects
-    GL_ARB_texture_storage
-    GL_ARB_vertex_attrib_binding
-    */
+    }
+    else {
+        std::cout << "========== [GLEW]: OpenGL's extensions support haven't been verified! ============================\n";
     }
 }
