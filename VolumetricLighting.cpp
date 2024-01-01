@@ -420,7 +420,7 @@ int main(void)
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
     
     glfwSetKeyCallback(window, key_callback);
-    glfwSetErrorCallback(error_callback);
+    glfwSetErrorCallback(glew_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetCursorPosCallback(window, cursor_position_callback);
@@ -446,8 +446,8 @@ int main(void)
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
         std::cout << "========== [GLFW]: Debug context initialize successful =======================\n";
         std::vector<DEBUGPROC> callbacks;
-        callback_list(callbacks);
-        debug_init(callbacks);
+        gl_fill_callback_list(callbacks);
+        gl_debug_init(callbacks);
     }  else {
         std::cout << "========== [GLFW]: Debug context initialize unsuccessful =====================\n";
     }
