@@ -25,7 +25,7 @@ uniform float G = 0.f;
 
 uint width = 1900;
 uint height = 1000;
-vec2 size = vec2(width, height);
+vec2 size = vec2(1, 1);
 float stepSize = (imageLoad(image, ivec2(size*gl_FragCoord.xy)).y - imageLoad(image, ivec2(size*gl_FragCoord.xy)).x)/NUM_STEPS_INT;
 
 in VS_OUT {

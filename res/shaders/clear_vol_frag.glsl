@@ -12,7 +12,9 @@ vec3 _position;
 
 uint width = 1900;
 uint height = 1000;
-vec2 size = vec2(width, height);
+vec2 size = vec2(1, 1);
+
+layout (location = 0) out vec4 color;
 
 void main(){
 	if(gl_FrontFacing)

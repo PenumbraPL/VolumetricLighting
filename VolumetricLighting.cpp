@@ -625,9 +625,9 @@ int main(void)
 
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
-    Cloud cld;
-    cld.loadMesh();
-    cld.createPipeline(width, height);
+    //Cloud cld;
+    //cld.loadMesh();
+    //cld.createPipeline(width, height);
 
 
     //glDepthRange(panel_config.near_plane, panel_config.far_plane);
@@ -732,10 +732,10 @@ int main(void)
                 }*/
             }
 
-            //glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
+            glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
         }
 
-        cld.draw(width, height, Projection, camera);
+        //cld.draw(width, height, Projection, camera);
         for (auto& l : lights)     l.drawLight(width, height, Projection, camera);
 
 
@@ -758,7 +758,7 @@ int main(void)
     glBindProgramPipeline(0);
 
     env.deletePipeline();
-    cld.deletePipeline();
+    //cld.deletePipeline();
 
     for (auto& p : primitives) p.deleteTransforms();
     for (auto& p : primitives) p.deleteTexturesAndSamplers();

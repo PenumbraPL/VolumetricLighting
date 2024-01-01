@@ -998,6 +998,10 @@ struct Cloud {
         if (vpos_location != -1) glEnableVertexAttribArray(vpos_location);
         if (vtex_location != -1) glEnableVertexAttribArray(vtex_location);
 
+
+        glClearTexImage(depth_image, 0, GL_RG, GL_FLOAT, NULL);
+        //glTextureSubImage2D(depth_image, 0, 0, 0, width, height, GL_RG, GL_FLOAT, NULL);
+
         float r = 0.1 * panel_config.dist;
         float phi = panel_config.phi;
         float theta = panel_config.theta;
@@ -1022,7 +1026,11 @@ struct Cloud {
         
         glBindImageTexture(img_location, depth_image, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RG16F);
         glBindProgramPipeline(clear_pipeline);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        int binding_point = 0;
+        glVertexAttribBinding(vpos_location, binding_point);
+        glBindVertexBuffer(binding_point, buffer[binding_point], pos->accessor->byteOffset, pos->accessor->componentBytes);
+        //glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 
         img_location = glGetUniformLocation(init_fragment_program, "image");
@@ -1062,7 +1070,7 @@ struct Cloud {
                 glBindTexture(GL_TEXTURE_2D, 0);
         }
 
-        int binding_point = 0;
+        binding_point = 0;
         glVertexAttribBinding(vpos_location, binding_point);
         glBindVertexBuffer(binding_point, buffer[binding_point], pos->accessor->byteOffset, pos->accessor->componentBytes);
 
