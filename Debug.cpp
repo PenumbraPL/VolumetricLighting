@@ -1,6 +1,7 @@
 #include "GL/glew.h"
 #include "Debug.h"
 #include "iostream"
+#include "spdlog/sinks/basic_file_sink.h"
 
 
 void turn_on_everything(bool without_notif) {
@@ -87,6 +88,17 @@ void glew_callback(int code, const char* description)
 	std::cout << code << " " << description << std::endl;
 }
 
+void basic_logfile_example()
+{
+	try
+	{
+		auto logger = spdlog::basic_logger_mt("basic_logger", "logs/basic-log.txt");
+	}
+	catch (const spdlog::spdlog_ex& ex)
+	{
+		std::cout << "Log init failed: " << ex.what() << std::endl;
+	}
+}
 
 /* ================================================ */
 
@@ -101,4 +113,6 @@ void gl_debug_init(std::vector<DEBUGPROC>& callback_list) {
 	gl_display_logs();
 	turn_on_only_errors();
 	//turn_on_everything();
+	basic_logfile_example();
 }
+
