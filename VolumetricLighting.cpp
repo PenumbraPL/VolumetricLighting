@@ -32,8 +32,22 @@ void print_map(const std::map<void*, unsigned int>& m){
     std::cout << '\n';
 }
 
+namespace fs = std::filesystem;
 
-
+void folder_content(std::string& path, std::vector<std::string> content) {
+    for (const auto& entry : fs::directory_iterator(path)) {
+        if (entry.is_regular_file()) {
+            std::cout << entry.path().filename().extension() << std::endl;
+            if (entry.path().filename().extension() == ".gltf") {}
+                content.push_back(entry.path().generic_string());
+        }else if (entry.is_directory()) {
+            std::string subpath = entry.path().generic_string();
+            content.push_back(subpath);
+            std::cout << "============\n";
+            folder_content(subpath, content);
+        }
+    }
+}
 
 
 GLuint wrap_mode(AkWrapMode& wrap) {
@@ -455,14 +469,21 @@ int main(void)
 
     GLuint vao, vertex_buffer;
     GLint mvp_location, vpos_location, vcol_location, 
-        norm_location, tex_location, is_tex_location, prj_location, camera_location;
+        norm_location, tex_location, is_tex_location, prj_location, camera_location, g_location;
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
 
-
+    std::string path = "res";
+    std::vector<std::string> tree;
+    //std::map < std::string, std::string> tree;
+    folder_content(path, tree);
+    insert_tree(panel_config, tree);
     
+
+
+
 
     /* ================================================ */
 
@@ -597,6 +618,7 @@ int main(void)
         is_tex_location = glGetUniformLocation(fragment_program, "isTexture");
         prj_location = glGetUniformLocation(vertex_program, "PRJ");
         camera_location = glGetUniformLocation(fragment_program, "camera");
+        g_location = glGetUniformLocation(fragment_program, "G");
 
 
         if (mvp_location != -1) glEnableVertexAttribArray(mvp_location);
@@ -633,6 +655,27 @@ int main(void)
     //glDepthRange(panel_config.near_plane, panel_config.far_plane);
     glDepthFunc(GL_LEQUAL);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   
+    GLuint lights_buffer;
+    glGenBuffers(1, &lights_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, lights_buffer);
+
+    init_lights();
+     
+
+    struct LightsList {
+        unsigned int size;
+        unsigned int dummy[3];
+        PointLight list[2];
+    }  lightbuffer{
+        lights_list.size(),
+        { 0 },
+        {lights_list.data()[0], lights_list.data()[1]}
+    };
+
+   // malloc(offsetof(LightsList, list) + N * PointLight);
+
+    glNamedBufferData(lights_buffer, sizeof(LightsList), &lightbuffer, GL_DYNAMIC_COPY);
 
 
     std::cout << "===================== Main loop ==============================================\n";
@@ -648,6 +691,19 @@ int main(void)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0., 1., 1., 1.0);
 
+        
+        glm::vec3 ambient = { panel_config.light_ambient[0], panel_config.light_ambient[1], panel_config.light_ambient[2]};
+        glm::vec3 diffuse = { panel_config.light_diffuse[0], panel_config.light_diffuse[1], panel_config.light_diffuse[2] };
+        glm::vec3 specular = { panel_config.light_specular[0], panel_config.light_specular[1], panel_config.light_specular[2] };
+        glm::vec3 position = { panel_config.position[0], panel_config.position[1], panel_config.position[2] };
+        PointLight new_light = {position, panel_config.c, panel_config.l, panel_config.q, ambient, diffuse, specular};
+        
+        if (compare_lights(lights_list.data()[1], new_light)) {
+            lights_list.data()[1] = new_light;
+            glNamedBufferSubData(lights_buffer, offsetof(LightsList, list), sizeof(PointLight), &lights_list);
+        }
+        
+        
         if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
 
         env.draw(width, height, Projection, camera);
@@ -672,6 +728,7 @@ int main(void)
             glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
 
             glBindProgramPipeline(primitives[i].pipeline);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lights_buffer);
 
             glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
             if(!camera) Projection = glm::perspectiveFov((float) 3.14*panel_config.fov/180, (float) width, (float) height, panel_config.near_plane, panel_config.far_plane);
@@ -689,7 +746,7 @@ int main(void)
             glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
             glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], prj_location, 1, GL_FALSE, glm::value_ptr(Projection));
             glProgramUniform3fv(primitives[i].programs[FRAGMENT], camera_location, 1, glm::value_ptr(camera_view));
-
+            glProgramUniform1f(primitives[i].programs[FRAGMENT], g_location, panel_config.g);
 
             if(!primitives[i].textures[ALBEDO])
                 glProgramUniform1ui(primitives[i].programs[FRAGMENT], is_tex_location, GL_FALSE);
@@ -745,7 +802,7 @@ int main(void)
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        drawLeftPanel(io);
+        drawLeftPanel(io, panel_config);
         drawRightPanel(io, panel_config);
         
         // Rendering

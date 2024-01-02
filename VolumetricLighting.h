@@ -20,6 +20,8 @@
 #include "glm/gtx/common.hpp"
 #include "Draw.h"
 #include "ds/forward-list-common.h"
+#include <filesystem>
+#include <map>
 
 //#define AK_STATIC 1
 #include "ak/assetkit.h"
@@ -82,8 +84,14 @@ enum ShaderTypes {
 };
 
 ConfigContext panel_config{
-    500.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0
+    500.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0, { 0.4f, 0.7f, 0.0f, 0.5f }, { 0.4f, 0.7f, 0.0f, 0.5f },{ 0.4f, 0.7f, 0.0f, 0.5f }, { 0.0f, 0.0f, 0.0f }, 0.1, 0.5, 0.5
 };
+
+
+void insert_tree(ConfigContext& context, std::vector<std::string> & tree) {
+    context.directory = &tree;
+}
+
 
 void formatAttribute(GLint attr_location, AkAccessor* acc) {
     int comp_size       = acc->componentSize;;
@@ -1300,3 +1308,30 @@ struct Cloud2 {
 
     }
 };
+
+
+
+struct PointLight {
+    glm::vec3 position;
+
+    float constant;
+    float linear;
+    float quadratic;
+
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
+};
+
+std::vector<PointLight> lights_list;
+
+
+void init_lights(void) {
+    lights_list.push_back({ glm::vec3(1.5, 1.5, 1.5), 0.1, 0.5, 0.5, glm::vec3(1., 1., 1.), glm::vec3(1., 1., 1.), glm::vec3(1., 1., 1.) });
+    lights_list.push_back({ glm::vec3(-1.5, -1.5, 1.5), 0.1, 0.5, 0.5, glm::vec3(1., .9, .8), glm::vec3(.7, .5, .4), glm::vec3(.3, .2, .1) });
+}
+
+bool compare_lights(PointLight& old_light, PointLight& new_light) {
+    return memcmp(&old_light, &new_light, sizeof(PointLight));
+}
+

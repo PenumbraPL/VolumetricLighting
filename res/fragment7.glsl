@@ -1,4 +1,5 @@
 #version 450 core
+//#extension GL_NV_shader_buffer_load : enable
 
 layout (binding = 0) uniform sampler2D amb_tex;
 layout (binding = 1) uniform sampler2D emi_tex;
@@ -45,9 +46,12 @@ struct PointLight {
     vec3 diffuse;
     vec3 specular;
 };  
-#define NR_POINT_LIGHTS 1
-uniform PointLight pointLights[NR_POINT_LIGHTS] = {{vec3(1.5, 1.5, 1.5), 0.1, 0.5, 0.5, vec3(1., 1., 1.), vec3(1., 1., 1.), vec3(1., 1., 1.)}};
 
+// offset
+layout (binding = 0) buffer lights{
+    uint size;
+    PointLight list[];
+};
 
 
 float CalcScattering(float cosTheta, float G)
@@ -96,6 +100,8 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     return (ambient + diffuse + specular + volumetric);
 }
 
+    //PointLight l[1]= list;
+   
 
 
 void main()
@@ -103,8 +109,8 @@ void main()
     vec3 norm = normalize(fs_in._normal);
     vec3 viewDir = normalize(camera - fs_in._position);
     vec3 result = vec3(0., 0., 0.);
-    for(int i = 0; i < NR_POINT_LIGHTS; i++)
-            result += CalcPointLight(pointLights[i], norm, fs_in._position, viewDir);
+    for(int i = 0; i < size; i++)
+        result += CalcPointLight(list[i], norm, fs_in._position, viewDir);
 
     color = vec4(result, 1.0);
 }

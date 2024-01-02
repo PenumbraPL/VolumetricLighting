@@ -20,7 +20,8 @@ void initializeGLEW(void) {
             "GL_ARB_texture_storage",
             "GL_ARB_vertex_attrib_binding",
             "GL_ARB_vertex_attrib_64bit",
-            "GL_KHR_debug"
+            "GL_KHR_debug",
+            "GL_NV_shader_buffer_load"
         };
         for (auto& ext : extensionList) {
             if (!glewIsSupported((versionName + " " + ext).c_str()))
