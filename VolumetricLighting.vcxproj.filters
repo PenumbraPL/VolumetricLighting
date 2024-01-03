@@ -733,6 +733,9 @@
     <None Include="src\spdlog-1.x\include\spdlog\fmt\bundled\fmt.license.rst">
       <Filter>Header Files\spdlog\fmt\bundled</Filter>
     </None>
+    <None Include="res\shaders\depth_frag2.glsl">
+      <Filter>Resource Files\shaders\fragment</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ship_in_clouds\textures\Cloud_3_emissive.jpeg">

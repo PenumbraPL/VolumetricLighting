@@ -48,7 +48,7 @@ struct PointLight {
 };  
 
 // offset
-layout (binding = 0) buffer lights{
+layout (binding = 0, std430) buffer lights{
     uint size;
     PointLight list[];
 };

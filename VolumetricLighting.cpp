@@ -666,7 +666,7 @@ int main(void)
 
     struct LightsList {
         unsigned int size;
-        unsigned int dummy[3];
+        float dummy[3];
         PointLight list[2];
     }  lightbuffer{
         lights_list.size(),
@@ -676,7 +676,7 @@ int main(void)
 
    // malloc(offsetof(LightsList, list) + N * PointLight);
 
-    glNamedBufferData(lights_buffer, sizeof(LightsList), &lightbuffer, GL_DYNAMIC_COPY);
+    glNamedBufferData(lights_buffer, 2*sizeof(LightsList), &lightbuffer, GL_DYNAMIC_DRAW);
 
 
     std::cout << "===================== Main loop ==============================================\n";
@@ -686,22 +686,42 @@ int main(void)
         glfwGetFramebufferSize(window, &width, &height);
 
         glEnable(GL_DEPTH_TEST); 
-        glEnable(GL_BLEND);
+        //glEnable(GL_BLEND);
 
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0., 1., 1., 1.0);
 
+
+        float r = 0.1 * panel_config.dist;
+        float phi = panel_config.phi;
+        float theta = panel_config.theta;
+
+        glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
+        eye = glm::vec3(eye.z, eye.y, eye.x);
+
+        glm::vec3 north = glm::vec3(0., 1., 0.);
+        float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
+        if (corrected_theta > 3.14 / 2. && corrected_theta < 3.14 * 3. / 2.) {
+            north = glm::vec3(0., -1., 0.);
+        }
+        glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
+        if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
         
         glm::vec3 ambient = { panel_config.light_ambient[0], panel_config.light_ambient[1], panel_config.light_ambient[2]};
-        glm::vec3 diffuse = { panel_config.light_diffuse[0], panel_config.light_diffuse[1], panel_config.light_diffuse[2] };
-        glm::vec3 specular = { panel_config.light_specular[0], panel_config.light_specular[1], panel_config.light_specular[2] };
+        glm::vec3 diffuse = { panel_config.light_diffuse[0], panel_config.light_diffuse[1], panel_config.light_diffuse[2]};
+        glm::vec3 specular = { panel_config.light_specular[0], panel_config.light_specular[1], panel_config.light_specular[2]};
         glm::vec3 position = { panel_config.position[0], panel_config.position[1], panel_config.position[2] };
-        PointLight new_light = {position, panel_config.c, panel_config.l, panel_config.q, ambient, diffuse, specular};
-        
+        PointLight new_light = {position, panel_config.c, panel_config.l, panel_config.q, {0,0}, ambient, {0}, diffuse, {0}, specular, {0} };
+
+        //glNamedBufferSubData(lights_buffer, offsetof(LightsList, list[1]), sizeof(PointLight), &lights_list);
+
         if (compare_lights(lights_list.data()[1], new_light)) {
             lights_list.data()[1] = new_light;
-            glNamedBufferSubData(lights_buffer, offsetof(LightsList, list), sizeof(PointLight), &lights_list);
+            //glNamedBufferSubData(lights_buffer, offsetof(LightsList, list[1]), sizeof(PointLight), &lights_list);
+            LightsList* ptr = (LightsList*) glMapNamedBuffer(lights_buffer, GL_WRITE_ONLY);
+            memcpy_s((void*)&ptr->list[1], sizeof(PointLight), &new_light, sizeof(PointLight));
+            glUnmapNamedBuffer(lights_buffer);
         }
         
         
@@ -712,27 +732,13 @@ int main(void)
 
 
         for (int i = 0; i < primitives.size(); i++) {
-            float r     = 0.1 * panel_config.dist;
-            float phi   = panel_config.phi;
-            float theta = panel_config.theta;
-
-            glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
-            eye = glm::vec3(eye.z, eye.y, eye.x);
-            
-            glm::vec3 north = glm::vec3(0., 1., 0.);
-            float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
-            if (corrected_theta > 3.14/2. && corrected_theta < 3.14 * 3./2.) {
-                north = glm::vec3(0., -1., 0.);
-            }
-            
+          
             glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
             glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
 
             glBindProgramPipeline(primitives[i].pipeline);
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lights_buffer);
-
-            glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
-            if(!camera) Projection = glm::perspectiveFov((float) 3.14*panel_config.fov/180, (float) width, (float) height, panel_config.near_plane, panel_config.far_plane);
 
             glm::mat4 View =  glm::rotate(
                                 glm::rotate(
@@ -794,6 +800,7 @@ int main(void)
         }
 
         cld.draw(width, height, Projection, camera);
+        //cld.draw(width, height, Projection, eye, lights_buffer);
         for (auto& l : lights)     l.drawLight(width, height, Projection, camera);
 
 

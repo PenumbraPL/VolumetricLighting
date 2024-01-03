@@ -1,25 +1,11 @@
 #version 450 core
-//#extension GL_NV_shader_buffer_load : enable
 
-layout (binding = 0) uniform sampler2D amb_tex;
-layout (binding = 1) uniform sampler2D emi_tex;
-layout (binding = 2) uniform sampler2D dif_tex;
-layout (binding = 3) uniform sampler2D sp_tex;
-layout (binding = 4) uniform sampler2D sp_gl_tex;
-layout (binding = 5) uniform sampler2D mr_tex;
-layout (binding = 6) uniform sampler2D alb_tex;
-layout (binding = 7) uniform sampler2D sp_dif_tex;
-layout (binding = 8) uniform sampler2D tex_envmap;
-
-uniform bool isTexture = true;
 uniform vec3 camera;
-
 
 const float PI = 3.14159265359f;
 uniform int NUM_STEPS_INT = 15;
 uniform float SPECULAR_FACTOR = 16.0f;
 uniform float G = -0.8f;
-
 
 float stepSize = (gl_FragCoord.z - 0.001f) / NUM_STEPS_INT;
 
@@ -48,7 +34,7 @@ struct PointLight {
 };  
 
 // offset
-layout (binding = 0, std140) buffer lights{
+layout (binding = 0, std430) buffer lights{
     uint size;
     PointLight list[];
 };
@@ -71,7 +57,7 @@ vec3 CalcVolumeScattering(vec3 viewDir, PointLight light, float G, vec3 color, v
         volumetric += CalcScattering(dot(lightDir, viewDir), G) * color;
         position += step;
     }
-    volumetric /= float(NUM_STEPS_INT);
+   // volumetric /= float(NUM_STEPS_INT);
     return volumetric;
 }
 
@@ -82,9 +68,9 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     float diff = max(dot(normal, lightDir), 0.0);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
 
-    vec3 ambient  = light.ambient  * vec3(texture(alb_tex, fs_in._texCoor));
-    vec3 diffuse  = light.diffuse  * diff * vec3(texture(sp_dif_tex, fs_in._texCoor));
-    vec3 specular = light.specular * spec * vec3(texture(mr_tex, fs_in._texCoor));
+    vec3 ambient  = light.ambient  * 0.5;//vec3(texture(alb_tex, fs_in._texCoor));
+    vec3 diffuse  = light.diffuse  * diff * 0.5;//vec3(texture(sp_dif_tex, fs_in._texCoor));
+    vec3 specular = light.specular * spec * 0.5;//vec3(texture(mr_tex, fs_in._texCoor));
 
     vec3 volumetric = CalcVolumeScattering(viewDir, light, G, vec3(1.f, 1.f, 1.f), fragPos);
     float density = 1.f;
@@ -93,15 +79,13 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 
     float distance    = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + 
-  			     light.quadratic * (distance * distance));    
+  			     light.quadratic * (distance * distance));
+    attenuation *= 0;
     ambient  *= attenuation;
     diffuse  *= attenuation;
     specular *= attenuation;
     return (ambient + diffuse + specular + volumetric);
 }
-
-    //PointLight l[1]= list;
-   
 
 
 void main()
@@ -112,5 +96,5 @@ void main()
     for(int i = 0; i < size; i++)
         result += CalcPointLight(list[i], norm, fs_in._position, viewDir);
 
-    color = vec4(result, 1.0);
+    color = vec4(vec3(1.f, 1.f, 1.f), result.x);
 }

@@ -377,6 +377,7 @@ Shell32.lib
     <None Include="res\shaders\cube_vec.glsl" />
     <None Include="res\shaders\depth2_ver.glsl" />
     <None Include="res\shaders\depth_frag.glsl" />
+    <None Include="res\shaders\depth_frag2.glsl" />
     <None Include="res\shaders\depth_ver.glsl" />
     <None Include="res\shaders\env_frag.glsl" />
     <None Include="res\shaders\env_vec.glsl" />
