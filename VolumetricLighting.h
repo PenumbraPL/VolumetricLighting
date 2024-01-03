@@ -887,7 +887,7 @@ struct Cloud {
 
 
         glGenProgramPipelines(1, &pipeline);
-        glUseProgramStages(pipeline, GL_VERTEX_SHADER_BIT, vertex_plane_program);
+        glUseProgramStages(pipeline, GL_VERTEX_SHADER_BIT, vertex_program);
         glUseProgramStages(pipeline, GL_FRAGMENT_SHADER_BIT, fragment_program);
 
         glGenProgramPipelines(1, &init_pipeline);
@@ -1032,18 +1032,20 @@ struct Cloud {
         //glBindTexture(GL_TEXTURE_2D, head_pointer_image);
         //glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
         
-        glBindImageTexture(img_location, depth_image, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RG16F);
-        glBindProgramPipeline(clear_pipeline);
+        //glBindImageTexture(img_location, depth_image, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RG16F);
+        //glBindProgramPipeline(clear_pipeline);
         int binding_point = 0;
         glVertexAttribBinding(vpos_location, binding_point);
         glBindVertexBuffer(binding_point, buffer[binding_point], pos->accessor->byteOffset, pos->accessor->componentBytes);
         //glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+        //glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
+        //glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 
-        img_location = glGetUniformLocation(init_fragment_program, "image");
-        glBindImageTexture(img_location, depth_image, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RG16F);
-        glBindProgramPipeline(init_pipeline);
+        //img_location = glGetUniformLocation(init_fragment_program, "image");
+        //glBindImageTexture(img_location, depth_image, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RG16F);
+//        glBindProgramPipeline(init_pipeline);
+        glBindProgramPipeline(pipeline);
+
 
         glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
         if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
@@ -1085,9 +1087,13 @@ struct Cloud {
         binding_point = 1;
         glVertexAttribBinding(vtex_location, binding_point);
         glBindVertexBuffer(binding_point, buffer[binding_point], tex->accessor->byteOffset, tex->accessor->componentBytes);
-
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        glFrontFace(GL_CW);
         glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
-    /*
+        glDisable(GL_CULL_FACE);
+        glFrontFace(GL_CCW);
+        /*
     
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
         glBindProgramPipeline(pipeline);
