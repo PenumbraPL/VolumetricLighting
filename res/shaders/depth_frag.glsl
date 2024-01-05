@@ -48,7 +48,7 @@ struct PointLight {
 };  
 
 // offset
-layout (binding = 0, std430) buffer lights{
+layout (binding = 0, std140) buffer lights{
     uint size;
     PointLight list[];
 };
@@ -82,9 +82,9 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     float diff = max(dot(normal, lightDir), 0.0);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
 
-    vec3 ambient  = light.ambient  * 0.5;//vec3(texture(alb_tex, fs_in._texCoor));
-    vec3 diffuse  = light.diffuse  * diff * 0.5;//vec3(texture(sp_dif_tex, fs_in._texCoor));
-    vec3 specular = light.specular * spec * 0.5;//vec3(texture(mr_tex, fs_in._texCoor));
+    vec3 ambient  = light.ambient  * 0.1;//vec3(texture(alb_tex, fs_in._texCoor));
+    vec3 diffuse  = light.diffuse  * diff * 0.1;//vec3(texture(sp_dif_tex, fs_in._texCoor));
+    vec3 specular = light.specular * spec * 0.1;//vec3(texture(mr_tex, fs_in._texCoor));
 
     vec3 volumetric = CalcVolumeScattering(viewDir, light, G, vec3(1.f, 1.f, 1.f), fragPos);
     float density = 1.f;
@@ -94,7 +94,7 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     float distance    = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + 
   			     light.quadratic * (distance * distance));
-    attenuation *= 0;
+    //attenuation *= 0;
     ambient  *= attenuation;
     diffuse  *= attenuation;
     specular *= attenuation;
@@ -110,5 +110,5 @@ void main()
     for(int i = 0; i < size; i++)
         result += CalcPointLight(list[i], norm, fs_in._position, viewDir);
 
-    color = vec4(vec3(1.f, 1.f, 1.f), result.x);
+    color = vec4(result, 0.6);
 }

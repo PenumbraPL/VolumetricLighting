@@ -88,6 +88,43 @@ ConfigContext panel_config{
 };
 
 
+
+struct PointLight {
+    glm::vec3 position;
+
+    float constant;
+    float linear;
+    float quadratic;
+    float dummy[2];
+    glm::vec3 ambient;
+    float dummy2[1];
+    glm::vec3 diffuse;
+    float dummy3[1];
+    glm::vec3 specular;
+    float dummy4[1];
+};
+struct LightsList {
+    unsigned int size;
+    float dummy[3];
+    PointLight list[2];
+};
+
+std::vector<PointLight> lights_list;
+
+
+void init_lights(void) {
+    lights_list.push_back({ glm::vec3(1.5, 1.5, 1.5), 0.1, 0.5, 0.5, {0,0}, glm::vec3(1., 1., 1.), {0}, glm::vec3(1., 1., 1.), {0}, glm::vec3(1., 1., 1.), { 0 } });
+    lights_list.push_back({ glm::vec3(-1.5, -1.5, 1.5), 0.1, 0.5, 0.5, {0,0}, glm::vec3(1., .9, .8), {0}, glm::vec3(.7, .5, .4), {0}, glm::vec3(.3, .2, .1), {0} });
+}
+
+bool compare_lights(PointLight& old_light, PointLight& new_light) {
+    return memcmp(&old_light, &new_light, sizeof(PointLight));
+}
+
+
+
+
+
 void insert_tree(ConfigContext& context, std::vector<std::string> & tree) {
     context.directory = &tree;
 }
@@ -265,7 +302,7 @@ struct Primitive {
             std::cout << "=================== Coulnt find res/vertex.glsl ==============================\n";
         }
 
-        char* f_sh_buffer = read_file("res/fragment7.glsl");
+        char* f_sh_buffer = read_file("res/fragment3.glsl");
         if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
 
         createPrograms();
@@ -989,10 +1026,12 @@ struct Cloud {
         }
     }
 
-    void draw(int width, int height, glm::mat4 Proj, AkCamera* camera) {
+    void draw(int width, int height, glm::mat4 Proj, AkCamera* camera, float& g, GLuint lightbuffer) {
         mvp_location = glGetUniformLocation(vertex_program, "MVP");
         prj_location = glGetUniformLocation(vertex_program, "PRJ");
         img_location = glGetUniformLocation(clear_fragment_program, "image");
+        GLuint g_location = glGetUniformLocation(fragment_program, "G");
+        GLuint camera_location = glGetUniformLocation(fragment_program, "camera");
 
         GLuint vtex_location = glGetAttribLocation(vertex_program, "vTex");
         GLuint vpos_location = glGetAttribLocation(vertex_program, "vPos");
@@ -1046,6 +1085,10 @@ struct Cloud {
 //        glBindProgramPipeline(init_pipeline);
         glBindProgramPipeline(pipeline);
 
+        glProgramUniform1f(fragment_program, g_location, g);
+        glProgramUniform3fv(fragment_program, camera_location, 1, glm::value_ptr(eye));
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightbuffer);
 
         glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
         if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
@@ -1058,7 +1101,7 @@ struct Cloud {
                     , translate)
                 , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
             rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
+        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(5.f));
         MVP = LookAt * View * Model;
         glProgramUniformMatrix4fv(vertex_program, mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
         glProgramUniformMatrix4fv(vertex_program, prj_location, 1, GL_FALSE, glm::value_ptr(Projection));
@@ -1088,11 +1131,14 @@ struct Cloud {
         glVertexAttribBinding(vtex_location, binding_point);
         glBindVertexBuffer(binding_point, buffer[binding_point], tex->accessor->byteOffset, tex->accessor->componentBytes);
         glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-        glFrontFace(GL_CW);
+        //glCullFace(GL_BACK);
+        glEnable(GL_BLEND);
+        //glFrontFace(GL_CW);
+       // glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
+        //glFrontFace(GL_CCW);
         glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
+        glDisable(GL_BLEND);
         glDisable(GL_CULL_FACE);
-        glFrontFace(GL_CCW);
         /*
     
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
@@ -1248,33 +1294,3 @@ struct Cloud2 {
 
     }
 };
-
-
-
-struct PointLight {
-    glm::vec3 position;
-
-    float constant;
-    float linear;
-    float quadratic;
-    float dummy[2];
-    glm::vec3 ambient;
-    float dummy2[1];
-    glm::vec3 diffuse;
-    float dummy3[1];
-    glm::vec3 specular;
-    float dummy4[1];
-};
-
-std::vector<PointLight> lights_list;
-
-
-void init_lights(void) {
-    lights_list.push_back({ glm::vec3(1.5, 1.5, 1.5), 0.1, 0.5, 0.5, {0,0}, glm::vec3(1., 1., 1.), {0}, glm::vec3(1., 1., 1.), {0}, glm::vec3(1., 1., 1.), { 0 } });
-    lights_list.push_back({ glm::vec3(-1.5, -1.5, 1.5), 0.1, 0.5, 0.5, {0,0}, glm::vec3(1., .9, .8), {0}, glm::vec3(.7, .5, .4), {0}, glm::vec3(.3, .2, .1), {0} });
-}
-
-bool compare_lights(PointLight& old_light, PointLight& new_light) {
-    return memcmp(&old_light, &new_light, sizeof(PointLight));
-}
-

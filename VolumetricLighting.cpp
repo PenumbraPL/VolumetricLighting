@@ -664,11 +664,7 @@ int main(void)
     init_lights();
      
 
-    struct LightsList {
-        unsigned int size;
-        float dummy[3];
-        PointLight list[2];
-    }  lightbuffer{
+   LightsList lightbuffer{
         lights_list.size(),
         { 0 },
         {lights_list.data()[0], lights_list.data()[1]}
@@ -714,11 +710,9 @@ int main(void)
         glm::vec3 position = { panel_config.position[0], panel_config.position[1], panel_config.position[2] };
         PointLight new_light = {position, panel_config.c, panel_config.l, panel_config.q, {0,0}, ambient, {0}, diffuse, {0}, specular, {0} };
 
-        //glNamedBufferSubData(lights_buffer, offsetof(LightsList, list[1]), sizeof(PointLight), &lights_list);
 
         if (compare_lights(lights_list.data()[1], new_light)) {
             lights_list.data()[1] = new_light;
-            //glNamedBufferSubData(lights_buffer, offsetof(LightsList, list[1]), sizeof(PointLight), &lights_list);
             LightsList* ptr = (LightsList*) glMapNamedBuffer(lights_buffer, GL_WRITE_ONLY);
             memcpy_s((void*)&ptr->list[1], sizeof(PointLight), &new_light, sizeof(PointLight));
             glUnmapNamedBuffer(lights_buffer);
@@ -799,7 +793,7 @@ int main(void)
             glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
         }
 
-        cld.draw(width, height, Projection, camera);
+        cld.draw(width, height, Projection, camera, panel_config.g, lights_buffer);
         //cld.draw(width, height, Projection, eye, lights_buffer);
         for (auto& l : lights)     l.drawLight(width, height, Projection, camera);
 
