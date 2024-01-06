@@ -302,7 +302,7 @@ struct Primitive {
             std::cout << "=================== Coulnt find res/vertex.glsl ==============================\n";
         }
 
-        char* f_sh_buffer = read_file("res/fragment3.glsl");
+        char* f_sh_buffer = read_file("res/fragment7.glsl");
         if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
 
         createPrograms();
@@ -1101,7 +1101,7 @@ struct Cloud {
                     , translate)
                 , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
             rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(5.f));
+        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
         MVP = LookAt * View * Model;
         glProgramUniformMatrix4fv(vertex_program, mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
         glProgramUniformMatrix4fv(vertex_program, prj_location, 1, GL_FALSE, glm::value_ptr(Projection));

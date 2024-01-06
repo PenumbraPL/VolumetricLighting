@@ -469,7 +469,7 @@ int main(void)
 
     GLuint vao, vertex_buffer;
     GLint mvp_location, vpos_location, vcol_location, 
-        norm_location, tex_location, is_tex_location, prj_location, camera_location, g_location;
+        norm_location, tex_location, is_tex_location, prj_location, camera_location, g_location, dir_location;
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -619,7 +619,7 @@ int main(void)
         prj_location = glGetUniformLocation(vertex_program, "PRJ");
         camera_location = glGetUniformLocation(fragment_program, "camera");
         g_location = glGetUniformLocation(fragment_program, "G");
-
+        dir_location = glGetUniformLocation(fragment_program, "direction");
 
         if (mvp_location != -1) glEnableVertexAttribArray(mvp_location);
         if (vpos_location != -1) glEnableVertexAttribArray(vpos_location);
@@ -665,9 +665,9 @@ int main(void)
      
 
    LightsList lightbuffer{
-        lights_list.size(),
+        lights_list.size()-1,
         { 0 },
-        {lights_list.data()[0], lights_list.data()[1]}
+        {lights_list.data()[0]}
     };
 
    // malloc(offsetof(LightsList, list) + N * PointLight);
@@ -711,10 +711,10 @@ int main(void)
         PointLight new_light = {position, panel_config.c, panel_config.l, panel_config.q, {0,0}, ambient, {0}, diffuse, {0}, specular, {0} };
 
 
-        if (compare_lights(lights_list.data()[1], new_light)) {
-            lights_list.data()[1] = new_light;
+        if (compare_lights(lights_list.data()[0], new_light)) {
+            lights_list.data()[0] = new_light;
             LightsList* ptr = (LightsList*) glMapNamedBuffer(lights_buffer, GL_WRITE_ONLY);
-            memcpy_s((void*)&ptr->list[1], sizeof(PointLight), &new_light, sizeof(PointLight));
+            memcpy_s((void*)&ptr->list[0], sizeof(PointLight), &new_light, sizeof(PointLight));
             glUnmapNamedBuffer(lights_buffer);
         }
         
@@ -744,10 +744,12 @@ int main(void)
             glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
             glm::mat4 MVP = LookAt * View * Model;
             glm::vec3 camera_view = glm::vec4(eye, 1.0);
+            glm::vec3 camera_dir = glm::vec3(0.) - eye;
             glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
             glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], prj_location, 1, GL_FALSE, glm::value_ptr(Projection));
             glProgramUniform3fv(primitives[i].programs[FRAGMENT], camera_location, 1, glm::value_ptr(camera_view));
             glProgramUniform1f(primitives[i].programs[FRAGMENT], g_location, panel_config.g);
+            glProgramUniform3fv(primitives[i].programs[FRAGMENT], dir_location, 1, glm::value_ptr(camera_dir));
 
             if(!primitives[i].textures[ALBEDO])
                 glProgramUniform1ui(primitives[i].programs[FRAGMENT], is_tex_location, GL_FALSE);
