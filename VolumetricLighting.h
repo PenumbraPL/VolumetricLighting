@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include "GUI.h"
 #include "Debug.h"
+#include "IO.h"
 #include <glm/gtc/type_ptr.hpp>
 #include "glm/gtx/string_cast.hpp"
 #include "glm/gtx/common.hpp"
@@ -254,7 +255,7 @@ struct Primitive {
             std::cout << "=================== Coulnt find res/vertex.glsl ==============================\n";
         }
 
-        char* f_sh_buffer = read_file("res/std_with_ext_light_frag.glsl");
+        char* f_sh_buffer = read_file("res/shaders/std_with_ext_light_frag.glsl");
         if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
 
         createPrograms();
@@ -356,12 +357,12 @@ struct Light {
 
     void createPipeline() {
 
-        char* v_sh_buffer = read_file("res/lamp_vec.glsl");
+        char* v_sh_buffer = read_file("res/shaders/lamp_vec.glsl");
         if (!v_sh_buffer) {
             std::cout << "=================== Coulnt find res/vertex.glsl ==============================\n";
         }
 
-        char* f_sh_buffer = read_file("res/lamp_frag.glsl");
+        char* f_sh_buffer = read_file("res/shaders/lamp_frag.glsl");
         if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
 
 
@@ -409,7 +410,7 @@ struct Light {
         AkVisualScene* scene;
         AkInstanceGeometry* geometry;
 
-        std::string scene_path = "res/";
+        std::string scene_path = "res/modeles/";
         scene_path += "lamp.gltf";
         if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
             std::cout << "Light mesh couldn't be loaded\n";
@@ -591,7 +592,7 @@ struct Environment {
         AkVisualScene* scene;
         AkInstanceGeometry* geometry;
 
-        std::string scene_path = "res/environment/";
+        std::string scene_path = "res/models/environment/";
         scene_path += "env_sphere.gltf";
         if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
             std::cout << "Environment mesh couldn't be loaded\n";
@@ -640,7 +641,7 @@ struct Environment {
 
         glCreateTextures(GL_TEXTURE_2D, 1, &skybox);
         int width, height, comp;
-        char* skybox_image = (char*)imageLoadFromFile("res/environment/Environment.jpg", &width, &height, &comp);
+        char* skybox_image = (char*)imageLoadFromFile("res/models/environment/Environment.jpg", &width, &height, &comp);
         glTextureStorage2D(skybox, 1, GL_RGB8, width, height);
         glTextureSubImage2D(skybox, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, skybox_image);
 
@@ -807,7 +808,7 @@ struct Cloud {
         AkVisualScene* scene;
         AkInstanceGeometry* geometry;
 
-        std::string scene_path = "res/cube/";
+        std::string scene_path = "res/models/cube/";
         scene_path += "Cube.gltf";
         if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
             std::cout << "Cloud mesh couldn't be loaded\n";

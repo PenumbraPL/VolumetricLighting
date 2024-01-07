@@ -1,7 +1,7 @@
 // VolumetricLighting.cpp : This file contains the 'main' function. Program execution begins and ends there.
 #include "VolumetricLighting.h"
-#define PATH "./res/Cube/"
-#define FILE_NAME "cube.gltf"
+#define PATH "./res/models/DamagedHelmet/"
+#define FILE_NAME "DamagedHelmet.gltf"
 
 WindowInfo windowConfig = {
     1900,
@@ -9,8 +9,6 @@ WindowInfo windowConfig = {
     "GLTF Viewer",
     0, 0, 0
 };
-
-
 
 double xpos, ypos;
 float mouse_speed = 2.f;
@@ -24,23 +22,18 @@ std::vector<Primitive> primitives;
 std::vector<Light> lights;
 std::vector<Camera> cameras;
 
-/* ============================================================================= */
-
-void print_map(const std::map<void*, unsigned int>& m){
-      for (const auto& n : m)
-          std::cout << n.first << " = " << n.second << "; ";
-    std::cout << '\n';
-}
-
 namespace fs = std::filesystem;
+
+/* ============================================================================= */
 
 void folder_content(std::string& path, std::vector<std::string> content) {
     for (const auto& entry : fs::directory_iterator(path)) {
         if (entry.is_regular_file()) {
             std::cout << entry.path().filename().extension() << std::endl;
             if (entry.path().filename().extension() == ".gltf") {}
-                content.push_back(entry.path().generic_string());
-        }else if (entry.is_directory()) {
+            content.push_back(entry.path().generic_string());
+        }
+        else if (entry.is_directory()) {
             std::string subpath = entry.path().generic_string();
             content.push_back(subpath);
             std::cout << "============\n";
@@ -48,7 +41,6 @@ void folder_content(std::string& path, std::vector<std::string> content) {
         }
     }
 }
-
 
 GLuint wrap_mode(AkWrapMode& wrap) {
     GLuint wrap_m = GL_REPEAT;
@@ -124,7 +116,7 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint* sampler
                 const char* f_path = tex->texture->image->initFrom->ref;
                 memcpy_s(path + strlen(path), 128 - strlen(path), f_path, strlen(f_path));
                 char* image = (char*)imageLoadFromFile(path, &width, &height, &components);
-               
+
                 if (image) {
                     glCreateTextures(texture_type, 1, texture);
                     *tex_type = texture_type;
@@ -132,7 +124,7 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint* sampler
                         glTextureStorage2D(*texture, 1, GL_RGB8, width, height);
                         glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
                     }
-                    if(std::string::npos != std::string(path).find(".jpeg", 0)){
+                    if (std::string::npos != std::string(path).find(".jpeg", 0)) {
                         glTextureStorage2D(*texture, 1, GL_RGB8, width, height);
                         glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
                     }
@@ -147,71 +139,6 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint* sampler
     }
 }
 
-
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-    panel_config.dist += yoffset * panel_config.dist / -6.;
-}
-
-static void cursor_position_callback(GLFWwindow* window, double new_xpos, double new_ypos)
-{
-    int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
-    if (state != GLFW_RELEASE)
-    {
-        double nx = (mouse_speed / windowConfig.width) * (new_xpos - xpos);
-        double ny = (mouse_speed / windowConfig.height) * (new_ypos - ypos);
-        panel_config.phi += nx;
-        panel_config.theta += ny;
-        
-        xpos = new_xpos;
-        ypos = new_ypos;
-    }
-}
-
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
-{
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-        glfwGetCursorPos(window, &xpos, &ypos);
-    }
-}
-
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-    if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.phi += 0.01;
-    }
-    if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.phi -= 0.01;
-    }
-    if (key == GLFW_KEY_UP && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.theta += 0.01;
-    }
-    if (key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.theta -= 0.01;
-    }
-    if (key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.tr_z += 1;
-    }
-    if (key == GLFW_KEY_D && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.tr_z -= 1;
-    }
-    if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.tr_x -= 1;
-    }
-    if (key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.tr_x += 1;
-    }
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-    }
-    if (key == GLFW_KEY_H && action == GLFW_PRESS) {
-        int mode[2] = { GLFW_CURSOR_DISABLED, GLFW_CURSOR_NORMAL };
-        windowConfig.cursor_mode += 1;
-        windowConfig.cursor_mode %= 2;
-        glfwSetInputMode(window, GLFW_CURSOR, mode[windowConfig.cursor_mode % (sizeof(mode)/sizeof(int))]);
-    }
-}
-
 void proccess_node(AkNode* node) {
     int offset = 0;
     int comp_stride = 0;
@@ -221,7 +148,7 @@ void proccess_node(AkNode* node) {
 
     Primitive pr;
     std::string geo_type;
-    
+
     float* world_transform = pr.setWorldTransform();
     float* transform = pr.setTransform();
     pr.createSamplers();
@@ -280,8 +207,8 @@ void proccess_node(AkNode* node) {
                             set_up_color(&mr_cd, prim, &pr.samplers[MAT_ROUGH], &pr.textures[MAT_ROUGH], &pr.tex_type[MAT_ROUGH]);
                             break;
                         }
-                            
-                        case AK_MATERIAL_SPECULAR_GLOSSINES:{
+
+                        case AK_MATERIAL_SPECULAR_GLOSSINES: {
                             AkSpecularGlossiness* sg = (AkSpecularGlossiness*)tch;
                             AkColorDesc sg_cd;
                             AkColorDesc dif_cd;
@@ -308,7 +235,7 @@ void proccess_node(AkNode* node) {
                 AkInput* tan = ak_meshInputGet(prim, "TANGENT", set);
 
                 //std::cout << ak_meshInputCount(mesh) << std::endl;
-                
+
                 pr.wgs = wgs ? wgs->accessor : nullptr;
                 pr.jts = jts ? jts->accessor : nullptr;
                 pr.pos = pos ? pos->accessor : nullptr;
@@ -317,7 +244,7 @@ void proccess_node(AkNode* node) {
                 pr.col = col ? col->accessor : nullptr;
                 pr.tan = tan ? tan->accessor : nullptr;
 
-               pr.createPipeline();
+                pr.createPipeline();
 
                 primitives.push_back(pr);
             };
@@ -340,7 +267,7 @@ void proccess_node(AkNode* node) {
 
     std::cout << "Node name: " << node->name << std::endl;
     std::cout << "Node type: " << geo_type << std::endl;
-   
+
     if (node->next) {
         node = node->next;
         proccess_node(node);
@@ -359,12 +286,12 @@ std::string printCoordSys(AkCoordSys* coord) {
         coord->cameraOrientation.fwd,
         coord->cameraOrientation.right,
         coord->cameraOrientation.up };
-        std::string ax_name[] = { "axis FW:" ,"axis RH:" ,"axis UP:", "camera FW:", "camera RH:", "camera UP : "};
+        std::string ax_name[] = { "axis FW:" ,"axis RH:" ,"axis UP:", "camera FW:", "camera RH:", "camera UP : " };
 
         AkAxisRotDirection axis_dir = coord->rotDirection;
         std::string coordString;
 
-        for (int i = 0; i < sizeof(axis)/sizeof(AkAxis); i++) {
+        for (int i = 0; i < sizeof(axis) / sizeof(AkAxis); i++) {
             std::string st;
             switch (axis[i]) {
             case AK_AXIS_NEGATIVE_X: st = "NEGATIVE_X"; break;
@@ -393,13 +320,14 @@ std::string printInf(AkDocInf* inf, AkUnit* unit) {
         infString += "\nPath: " + std::string(inf->name);
         infString += "\nFlip Image: ";
         infString += inf->flipImage ? "True" : "False";
-        infString+= "\n";
+        infString += "\n";
         if (AK_FILE_TYPE_GLTF == inf->ftype) {
             infString += "Type: GLTF\n";
-        }else {
+        }
+        else {
             infString += "Unknown type\n";
         }
-        
+
         return infString;
     }
     return "AkDocInf or AkUnit is nullptr!\n";
@@ -586,7 +514,6 @@ int main(void)
         for (auto& u : bufferViews) {
             u.second = j++;
         }
-        print_map(bufferViews);
     }
 
 
