@@ -39,29 +39,6 @@ struct WindowInfo {
     int mbutton;
 };
 
-static const struct
-{
-    float x, y;
-    float r, g, b;
-} vertices[3] =
-{
-    { -0.6f, -0.4f, 1.f, 0.f, 0.f },
-    {  0.6f, -0.4f, 0.f, 1.f, 0.f },
-    {   0.f,  0.6f, 0.f, 0.f, 1.f }
-};
-struct {
-    float x, y, z;
-}cube[8] = {
-    -0.25f, -0.25f, -0.25f,
-    -0.25f, 0.25f, -0.25f,
-    0.25f, -0.25f, -0.25f,
-    0.25f, 0.25f, -0.25f,
-    0.25f, -0.25f, 0.25f,
-    0.25f, 0.25f, 0.25f,
-    -0.25f, -0.25f, 0.25f,
-    -0.25f, 0.25f, 0.25f,
-};
-
 enum TextureType {
     AMBIENT,
     EMISIVE,
@@ -86,8 +63,6 @@ enum ShaderTypes {
 ConfigContext panel_config{
     500.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0, { 0.4f, 0.7f, 0.0f, 0.5f }, { 0.4f, 0.7f, 0.0f, 0.5f },{ 0.4f, 0.7f, 0.0f, 0.5f }, { 0.0f, 0.0f, 0.0f }, 0.1, 0.5, 0.5
 };
-
-
 
 struct PointLight {
     glm::vec3 position;
@@ -120,9 +95,6 @@ void init_lights(void) {
 bool compare_lights(PointLight& old_light, PointLight& new_light) {
     return memcmp(&old_light, &new_light, sizeof(PointLight));
 }
-
-
-
 
 
 void insert_tree(ConfigContext& context, std::vector<std::string> & tree) {
@@ -214,6 +186,7 @@ GLint checkPipelineStatus(GLuint vertex_shader, GLuint fragment_shader) {
     return (!v_comp_status || !f_comp_status) ? 0 : 1;
 }
 
+
 char* read_file(const char* file_name) {
     FILE* fs;
     fopen_s(&fs, file_name, "rb");
@@ -233,40 +206,19 @@ char* read_file(const char* file_name) {
     return buffer;
 }
 
+
 struct Primitive {
     float* transform;
     float* w_transform;
 
     uint32_t* ind;
     unsigned int ind_size;
-    GLuint* programs; // shaders or pipeline
+    GLuint* programs;
     GLuint pipeline;
 
     GLuint* textures = nullptr;
     GLuint* tex_type = nullptr;
     GLuint* samplers = nullptr;
-
-
-
-    //struct Tex{
-    //    Primitive* p;
-    //    Tex(Primitive* p) : p(p) {}
-    //    GLuint* operator[](enum TextureType t) {
-    //        return  &p->textures[t];
-    //    }
-    //} te = Primitive::Tex(this);
-
-
-    //struct Samp {
-    //    Primitive* p;
-    //    Samp(Primitive* p): p(p) {}
-    //    GLuint* operator[](enum TextureType t) {
-    //        return &p->samplers[t];
-    //    }
-    //} samp = Primitive::Samp(this);
-
-    //friend Primitive::Tex;
-    //friend Primitive::Samp;
 
     AkAccessor* wgs;
     AkAccessor* jts;
@@ -297,60 +249,28 @@ struct Primitive {
 
     void createPipeline() {
 
-        char* v_sh_buffer = read_file("res/vertex7.glsl");
+        char* v_sh_buffer = read_file("res/shaders/standard_vec.glsl");
         if (!v_sh_buffer) {
             std::cout << "=================== Coulnt find res/vertex.glsl ==============================\n";
         }
 
-        char* f_sh_buffer = read_file("res/fragment7.glsl");
+        char* f_sh_buffer = read_file("res/std_with_ext_light_frag.glsl");
         if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
 
         createPrograms();
-        //GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-        //glObjectLabel(GL_SHADER, vertex_shader, -1, "Vertex Shader");
-        //glShaderSource(vertex_shader, 1, &v_sh_buffer, NULL);
-        //glCompileShader(vertex_shader);
-
-        //GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-        //glObjectLabel(GL_SHADER, fragment_shader, -1, "Fragment Shader");
-        //glShaderSource(fragment_shader, 1, &f_sh_buffer, NULL);
-        //glCompileShader(fragment_shader);
-
-        GLint status = 1;
-        ///* ======================================================== */
-        //GLint status = checkPipelineStatus(vertex_shader, fragment_shader);
-        ///* ======================================================== */
-
-        //program = glCreateProgram();
-        //glObjectLabel(GL_PROGRAM, program, -1, "Volumetric lighting");
-
+  
         programs[VERTEX] = glCreateShaderProgramv(GL_VERTEX_SHADER, 1, &v_sh_buffer);
         programs[FRAGMENT] = glCreateShaderProgramv(GL_FRAGMENT_SHADER, 1, &f_sh_buffer);
-       
-        // Cleanup
+        //glObjectLabel(GL_PROGRAM, vertex_shader, -1, "Primitive Vertex Shader");
+        //glObjectLabel(GL_PROGRAM, fragment_shader, -1, "Primitive Fragment Shader");
+
         free(v_sh_buffer);
         free(f_sh_buffer);
+        GLint status = 1;
 
-        //GetProgramPipelineInfoLog
-        //ValidateProgramPipeline
         if (status) {
-            //glAttachShader(program, vertex_shader);
-            //glAttachShader(program, fragment_shader);
-            //glLinkProgram(program);
-            //glDetachShader(program, vertex_shader);
-            //glDetachShader(program, fragment_shader);
-
-
-
-
             GLint link_status;
-            //glGetProgramiv(program, GL_LINK_STATUS, &link_status);
-            //if (!link_status) {
-            //    GLchar comp_info[1024];
-            //    glGetProgramInfoLog(program, 1024, NULL, comp_info);
 
-            //    fwrite(comp_info, 1024, 1, stdout);
-            //}
             glGetProgramiv(programs[VERTEX], GL_LINK_STATUS, &link_status);
             if (!link_status) {
                 GLchar comp_info[1024];
@@ -366,17 +286,15 @@ struct Primitive {
                 fwrite(comp_info, 1024, 1, stdout);
             }
         }
-        //glDeleteShader(vertex_shader);
-        //glDeleteShader(fragment_shader);
 
         glGenProgramPipelines(1, &pipeline);
         glUseProgramStages(pipeline, GL_VERTEX_SHADER_BIT, programs[VERTEX]);
         glUseProgramStages(pipeline, GL_FRAGMENT_SHADER_BIT, programs[FRAGMENT]);
+        //glObjectLabel(GL_PROGRAM_PIPELINE, fragment_shader, -1, "Primitive Pipeline");
     }
     void deletePipeline() {
         glBindProgramPipeline(0);
         glDeleteProgramPipelines(1, &pipeline);
-        //glDeleteProgram(program);
 
         deletePrograms();
     }
@@ -416,6 +334,7 @@ struct Primitive {
     }
 };
 
+
 struct Light {
     enum LightType {POSITIONAL, DIRECTIONAL, AREA} light_type = POSITIONAL;
     glm::mat4x4 transform;
@@ -446,15 +365,11 @@ struct Light {
         if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
 
 
-        GLint status = 1;
-
-
         vertex_program = glCreateShaderProgramv(GL_VERTEX_SHADER, 1, &v_sh_buffer);
         fragment_program = glCreateShaderProgramv(GL_FRAGMENT_SHADER, 1, &f_sh_buffer);
-
         free(v_sh_buffer);
         free(f_sh_buffer);
-
+        GLint status = 1;
 
         if (status) {
             GLint link_status;
@@ -478,8 +393,7 @@ struct Light {
         glGenProgramPipelines(1, &pipeline);
         glUseProgramStages(pipeline, GL_VERTEX_SHADER_BIT, vertex_program);
         glUseProgramStages(pipeline, GL_FRAGMENT_SHADER_BIT, fragment_program);
-
-         
+  
     }
 
     void deletePipeline() {
@@ -590,6 +504,7 @@ struct Light {
     }
 };
 
+
 struct Camera {
     glm::mat4x4 transform;
     glm::mat4x4 w_transform;
@@ -598,8 +513,6 @@ struct Camera {
     float zFar;
     int fov;
 };
-
-
 
 
 struct Environment {
@@ -622,24 +535,20 @@ struct Environment {
 
     void createPipeline() {
 
-        char* v_sh_buffer = read_file("res/shaders/env_vec.glsl");
+        char* v_sh_buffer = read_file("res/shaders/environment_vec.glsl");
         if (!v_sh_buffer) {
             std::cout << "=================== Coulnt find res/vertex.glsl ==============================\n";
         }
 
-        char* f_sh_buffer = read_file("res/shaders/env_frag.glsl");
+        char* f_sh_buffer = read_file("res/shaders/environment_frag.glsl");
         if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
-
-
-        GLint status = 1;
 
 
         vertex_program = glCreateShaderProgramv(GL_VERTEX_SHADER, 1, &v_sh_buffer);
         fragment_program = glCreateShaderProgramv(GL_FRAGMENT_SHADER, 1, &f_sh_buffer);
-
         free(v_sh_buffer);
         free(f_sh_buffer);
-
+        GLint status = 1;
 
         if (status) {
             GLint link_status;
@@ -663,7 +572,6 @@ struct Environment {
         glGenProgramPipelines(1, &pipeline);
         glUseProgramStages(pipeline, GL_VERTEX_SHADER_BIT, vertex_program);
         glUseProgramStages(pipeline, GL_FRAGMENT_SHADER_BIT, fragment_program);
-
 
     }
 
@@ -802,7 +710,6 @@ struct Environment {
         glBindVertexBuffer(binding_point, buffer[binding_point], tex->accessor->byteOffset, tex->accessor->componentBytes);
 
 
-
         glBindSampler(0, env_sampler);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, skybox);
@@ -826,62 +733,34 @@ struct Cloud {
 
     GLuint vertex_program;
     GLuint fragment_program;
-    GLuint init_fragment_program;
-    GLuint clear_fragment_program;
-    GLuint vertex_plane_program;
     GLuint pipeline;
-    GLuint init_pipeline;
-    GLuint clear_pipeline;
 
     glm::mat4 MVP;
     GLuint* buffer;
     GLuint mvp_location;
     GLuint prj_location;
-    GLuint img_location;
-
 
     GLuint depth_buffer;
-    GLuint atomic_buffer;
-    GLuint head_pointer_image;
-    GLuint depth_image;
-
     unsigned int zero = 0;
-    
+   
+
     void createPipeline(int width, int height) {
         this->width = width;
         this->height = height;
 
-        char* v_sh_buffer = read_file("res/shaders/depth_ver.glsl");
+        char* v_sh_buffer = read_file("res/shaders/standard_vec.glsl");
         if (!v_sh_buffer)  std::cout << "=================== Coulnt find res/vertex.glsl ==============================\n";
-        
-        char* vd_sh_buffer = read_file("res/shaders/depth2_ver.glsl");
-        if (!vd_sh_buffer)  std::cout << "=================== Coulnt find res/vertex.glsl ==============================\n";
-
+       
         char* f_sh_buffer = read_file("res/shaders/depth_frag.glsl");
         if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
-        
-        char* if_sh_buffer = read_file("res/shaders/vol_frag.glsl");
-        if (!if_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
-
-        char* cf_sh_buffer = read_file("res/shaders/clear_vol_frag.glsl");
-        if (!cf_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
 
 
         vertex_program = glCreateShaderProgramv(GL_VERTEX_SHADER, 1, &v_sh_buffer);
-        vertex_plane_program = glCreateShaderProgramv(GL_VERTEX_SHADER, 1, &vd_sh_buffer);
         fragment_program = glCreateShaderProgramv(GL_FRAGMENT_SHADER, 1, &f_sh_buffer);
-        init_fragment_program = glCreateShaderProgramv(GL_FRAGMENT_SHADER, 1, &if_sh_buffer);
-        clear_fragment_program = glCreateShaderProgramv(GL_FRAGMENT_SHADER, 1, &cf_sh_buffer);
-
-
         free(v_sh_buffer);
-        free(vd_sh_buffer);
         free(f_sh_buffer);
-        free(if_sh_buffer);
-        free(cf_sh_buffer);
-
-
         GLint status = 1;
+
         if (status) {
             GLint link_status;
 
@@ -892,31 +771,11 @@ struct Cloud {
 
                 fwrite(comp_info, 1024, 1, stdout);
             }
-            glGetProgramiv(vertex_plane_program, GL_LINK_STATUS, &link_status);
-            if (!link_status) {
-                GLchar comp_info[1024];
-                glGetProgramInfoLog(vertex_plane_program, 1024, NULL, comp_info);
 
-                fwrite(comp_info, 1024, 1, stdout);
-            }
             glGetProgramiv(fragment_program, GL_LINK_STATUS, &link_status);
             if (!link_status) {
                 GLchar comp_info[1024];
                 glGetProgramInfoLog(fragment_program, 1024, NULL, comp_info);
-
-                fwrite(comp_info, 1024, 1, stdout);
-            }
-            glGetProgramiv(init_fragment_program, GL_LINK_STATUS, &link_status);
-            if (!link_status) {
-                GLchar comp_info[1024];
-                glGetProgramInfoLog(init_fragment_program, 1024, NULL, comp_info);
-
-                fwrite(comp_info, 1024, 1, stdout);
-            }
-            glGetProgramiv(clear_fragment_program, GL_LINK_STATUS, &link_status);
-            if (!link_status) {
-                GLchar comp_info[1024];
-                glGetProgramInfoLog(clear_fragment_program, 1024, NULL, comp_info);
 
                 fwrite(comp_info, 1024, 1, stdout);
             }
@@ -927,50 +786,20 @@ struct Cloud {
         glUseProgramStages(pipeline, GL_VERTEX_SHADER_BIT, vertex_program);
         glUseProgramStages(pipeline, GL_FRAGMENT_SHADER_BIT, fragment_program);
 
-        glGenProgramPipelines(1, &init_pipeline);
-        glUseProgramStages(init_pipeline, GL_VERTEX_SHADER_BIT, vertex_program);
-        glUseProgramStages(init_pipeline, GL_FRAGMENT_SHADER_BIT, init_fragment_program);
-
-        glGenProgramPipelines(1, &clear_pipeline);
-        glUseProgramStages(clear_pipeline, GL_VERTEX_SHADER_BIT, vertex_program);
-        glUseProgramStages(clear_pipeline, GL_FRAGMENT_SHADER_BIT, clear_fragment_program);
-
-
-        
-        glGenBuffers(1, &atomic_buffer);
-        glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomic_buffer);
-        glNamedBufferData(atomic_buffer, sizeof(unsigned int), NULL, GL_DYNAMIC_COPY);
-        
         glGenBuffers(1, &depth_buffer);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, depth_buffer);
         glNamedBufferData(depth_buffer, width*height*16, NULL, GL_DYNAMIC_COPY);
 
-        //glTexImage2D(GL_TEXTURE_2D, 1, GL_R32UI, 1024, 1024, 0, GL_R32UI, image, pixels);
-        glGenTextures(1, &head_pointer_image);
-        glBindTexture(GL_TEXTURE_2D, head_pointer_image);
-        glTexStorage2D(GL_TEXTURE_2D, 1, GL_R32UI, width, height);
-        
-        glGenTextures(1, &depth_image);
-        glBindTexture(GL_TEXTURE_2D, depth_image);
-        glTexStorage2D(GL_TEXTURE_2D, 1, GL_RG16F, width, height);
     }
 
     void deletePipeline() {
         glDeleteProgram(vertex_program);
         glDeleteProgram(fragment_program);
-        glDeleteProgram(vertex_plane_program);
-        glDeleteProgram(init_fragment_program);
-        glDeleteProgram(clear_fragment_program);
         glDeleteBuffers(2, buffer);
-        glDeleteBuffers(1, &atomic_buffer);
         glDeleteBuffers(1, &depth_buffer);
-        glDeleteTextures(1, &head_pointer_image);
-        glDeleteTextures(1, &depth_image);
         free(buffer);
         glBindProgramPipeline(0);
         glDeleteProgramPipelines(1, &pipeline);
-        glDeleteProgramPipelines(1, &init_pipeline);
-        glDeleteProgramPipelines(1, &clear_pipeline);
     }
 
     void loadMesh() {
@@ -1029,7 +858,6 @@ struct Cloud {
     void draw(int width, int height, glm::mat4 Proj, AkCamera* camera, float& g, GLuint lightbuffer) {
         mvp_location = glGetUniformLocation(vertex_program, "MVP");
         prj_location = glGetUniformLocation(vertex_program, "PRJ");
-        img_location = glGetUniformLocation(clear_fragment_program, "image");
         GLuint g_location = glGetUniformLocation(fragment_program, "G");
         GLuint camera_location = glGetUniformLocation(fragment_program, "camera");
 
@@ -1041,13 +869,8 @@ struct Cloud {
 
         if (mvp_location != -1) glEnableVertexAttribArray(mvp_location);
         if (prj_location != -1) glEnableVertexAttribArray(prj_location);
-        if (img_location != -1) glEnableVertexAttribArray(img_location);
         if (vpos_location != -1) glEnableVertexAttribArray(vpos_location);
         if (vtex_location != -1) glEnableVertexAttribArray(vtex_location);
-
-
-        glClearTexImage(depth_image, 0, GL_RG, GL_FLOAT, NULL);
-        //glTextureSubImage2D(depth_image, 0, 0, 0, width, height, GL_RG, GL_FLOAT, NULL);
 
         float r = 0.1 * panel_config.dist;
         float phi = panel_config.phi;
@@ -1067,22 +890,10 @@ struct Cloud {
         glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
         glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
    
-        //glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-        //glBindTexture(GL_TEXTURE_2D, head_pointer_image);
-        //glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-        
-        //glBindImageTexture(img_location, depth_image, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RG16F);
-        //glBindProgramPipeline(clear_pipeline);
         int binding_point = 0;
         glVertexAttribBinding(vpos_location, binding_point);
         glBindVertexBuffer(binding_point, buffer[binding_point], pos->accessor->byteOffset, pos->accessor->componentBytes);
-        //glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        //glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
-        //glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 
-        //img_location = glGetUniformLocation(init_fragment_program, "image");
-        //glBindImageTexture(img_location, depth_image, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RG16F);
-//        glBindProgramPipeline(init_pipeline);
         glBindProgramPipeline(pipeline);
 
         glProgramUniform1f(fragment_program, g_location, g);
@@ -1106,18 +917,6 @@ struct Cloud {
         glProgramUniformMatrix4fv(vertex_program, mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
         glProgramUniformMatrix4fv(vertex_program, prj_location, 1, GL_FALSE, glm::value_ptr(Projection));
 
-
-        
-        //static const unsigned int zero = 0;
-        //glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 2, atomic_buffer);
-        //glNamedBufferSubData(atomic_buffer, 0, sizeof(zero), &zero);
-        //glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, depth_buffer);
-        //glBindImageTexture(0, head_pointer_image, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
-        //glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-      
-
-        //std::cout << "Zero: " << zero << std::endl;
-
         for (unsigned int tex_type = AMBIENT; tex_type < SIZE; tex_type++) {
                 glActiveTexture(GL_TEXTURE0 + tex_type);
                 glBindTexture(GL_TEXTURE_2D, 0);
@@ -1130,167 +929,11 @@ struct Cloud {
         binding_point = 1;
         glVertexAttribBinding(vtex_location, binding_point);
         glBindVertexBuffer(binding_point, buffer[binding_point], tex->accessor->byteOffset, tex->accessor->componentBytes);
+      
         glEnable(GL_CULL_FACE);
-        //glCullFace(GL_BACK);
         glEnable(GL_BLEND);
-        //glFrontFace(GL_CW);
-       // glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
-        //glFrontFace(GL_CCW);
         glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
         glDisable(GL_BLEND);
         glDisable(GL_CULL_FACE);
-        /*
-    
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-        glBindProgramPipeline(pipeline);
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);*/
-    }
-};
-
-
-
-
-
-struct Cloud2 {
-    glm::mat4x4 transform = glm::mat4x4(0.);
-    glm::mat4x4 w_transform = glm::mat4x4(0.);
-
-    int width = 0;
-    int height = 0;
-
-    uint32_t* ind = nullptr;
-    unsigned int ind_size;
-    AkInput* pos = nullptr;
-    AkInput* tex = nullptr;
-
-    GLuint vertex_program;
-    GLuint fragment_program;
-    GLuint init_fragment_program;
-    GLuint clear_fragment_program;
-    GLuint vertex_plane_program;
-    GLuint pipeline;
-    GLuint init_pipeline;
-    GLuint clear_pipeline;
-
-    glm::mat4 MVP;
-    GLuint* buffer;
-    GLuint camera_location;
-
-    GLuint g_location;
-    GLuint depth_buffer;
-    GLuint atomic_buffer;
-    GLuint head_pointer_image;
-    unsigned int zero = 0;
-
-    void createPipeline(int width, int height) {
-        this->width = width;
-        this->height = height;
-
-        char* f_sh_buffer = read_file("res/shaders/depth_frag2.glsl");
-        if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
-
-
-        fragment_program = glCreateShaderProgramv(GL_FRAGMENT_SHADER, 1, &f_sh_buffer);
-        
-        free(f_sh_buffer);
-
-
-        GLint status = 1;
-        if (status) {
-            GLint link_status;
-
-
-            glGetProgramiv(fragment_program, GL_LINK_STATUS, &link_status);
-            if (!link_status) {
-                GLchar comp_info[1024];
-                glGetProgramInfoLog(fragment_program, 1024, NULL, comp_info);
-
-                fwrite(comp_info, 1024, 1, stdout);
-            }
-
-        }
-
-
-        glGenProgramPipelines(1, &pipeline);
-        glUseProgramStages(pipeline, GL_FRAGMENT_SHADER_BIT, fragment_program);
-
-    }
-
-    void deletePipeline() {
-        glDeleteProgram(fragment_program);
-        //glDeleteBuffers(2, buffer);
-        //free(buffer);
-        glBindProgramPipeline(0);
-        glDeleteProgramPipelines(1, &pipeline);
-    }
-
-
-    void draw(int width, int height, glm::mat4 Proj, glm::vec3& camera, GLuint lights_buffer) {
-        camera_location = glGetUniformLocation(fragment_program, "camera");
-        g_location = glGetUniformLocation(fragment_program, "G");
-        if (camera_location != -1) glEnableVertexAttribArray(camera_location);
-
-        /*float r = 0.1 * panel_config.dist;
-        float phi = panel_config.phi;
-        float theta = panel_config.theta;
-
-        glm::mat4x4 Projection;
-
-        glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
-        eye = glm::vec3(eye.z, eye.y, eye.x);
-
-        glm::vec3 north = glm::vec3(0., 1., 0.);
-        float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
-        if (corrected_theta > 3.14 / 2. && corrected_theta < 3.14 * 3. / 2.) {
-            north = glm::vec3(0., -1., 0.);
-        }
-
-        glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
-        glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);*/
-
-        glBindProgramPipeline(pipeline);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lights_buffer);
-        glProgramUniform3fv(fragment_program, camera_location, 1, glm::value_ptr(camera));
-        glProgramUniform1f(fragment_program, g_location, panel_config.g);
-        /*
-        glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
-        if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
-        else Projection = Proj;
-
-        glm::mat4 View = glm::rotate(
-            glm::rotate(
-                glm::translate(
-                    transform
-                    , translate)
-                , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
-            rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
-        MVP = LookAt * View * Model;
-        glProgramUniformMatrix4fv(vertex_program, mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
-        glProgramUniformMatrix4fv(vertex_program, prj_location, 1, GL_FALSE, glm::value_ptr(Projection));
-
-        for (unsigned int tex_type = AMBIENT; tex_type < SIZE; tex_type++) {
-            glActiveTexture(GL_TEXTURE0 + tex_type);
-            glBindTexture(GL_TEXTURE_2D, 0);
-        }
-
-        int binding_point = 0;
-        glVertexAttribBinding(vpos_location, binding_point);
-        glBindVertexBuffer(binding_point, buffer[binding_point], pos->accessor->byteOffset, pos->accessor->componentBytes);
-
-        binding_point = 1;
-        glVertexAttribBinding(vtex_location, binding_point);
-        glBindVertexBuffer(binding_point, buffer[binding_point], tex->accessor->byteOffset, tex->accessor->componentBytes);*/
-
-        //glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
-        glDisable(GL_DEPTH_TEST);
-        //glFrontFace(GL_CCW);
-        //glEnable(GL_BLEND);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        //glFrontFace(GL_CW);
-        glEnable(GL_DEPTH_TEST);
-
     }
 };

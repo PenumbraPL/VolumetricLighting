@@ -28,26 +28,8 @@
     <Filter Include="Resource Files\shaders\vertex">
       <UniqueIdentifier>{59f7ff6f-d05d-487c-b59e-65695b0e567f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resource Files\shaders\fragment">
-      <UniqueIdentifier>{8e116d15-54f5-43da-a554-47f5067104de}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Resource Files\ship_in_clouds">
-      <UniqueIdentifier>{0c8221a0-68dd-4ddb-9f65-404bd3362bc7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Resource Files\ship_in_clouds\textures">
-      <UniqueIdentifier>{9a8e2ba5-7066-4f67-a800-a5c3cabb84bd}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Resource Files\volkswagen">
-      <UniqueIdentifier>{d31ad1e9-a5ce-4b93-b566-7353860d49a0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Resource Files\volkswagen\textures">
-      <UniqueIdentifier>{0024b537-e3c1-4387-9824-1d9b27ed32a3}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\ds">
       <UniqueIdentifier>{ee78a6cd-a909-47e0-bc52-196fde750da5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Resource Files\sample2">
-      <UniqueIdentifier>{a9530890-2fde-40ff-b6f0-1565434cf603}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\spdlog">
       <UniqueIdentifier>{176e3a4f-2c61-44e1-8fe0-d2dc6b50688e}</UniqueIdentifier>
@@ -66,6 +48,27 @@
     </Filter>
     <Filter Include="Header Files\spdlog\fmt\bundled">
       <UniqueIdentifier>{b975358a-c0e2-4a78-84fa-3e5b252a0951}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\models">
+      <UniqueIdentifier>{9077801d-00b3-4ccd-ba29-887ce9db439b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\models\ship_in_clouds">
+      <UniqueIdentifier>{0c8221a0-68dd-4ddb-9f65-404bd3362bc7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\models\ship_in_clouds\textures">
+      <UniqueIdentifier>{9a8e2ba5-7066-4f67-a800-a5c3cabb84bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\models\volkswagen">
+      <UniqueIdentifier>{d31ad1e9-a5ce-4b93-b566-7353860d49a0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\models\volkswagen\textures">
+      <UniqueIdentifier>{0024b537-e3c1-4387-9824-1d9b27ed32a3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\models\sample2">
+      <UniqueIdentifier>{a9530890-2fde-40ff-b6f0-1565434cf603}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\shaders\fragment">
+      <UniqueIdentifier>{8e116d15-54f5-43da-a554-47f5067104de}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -586,92 +589,32 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\sample.gltf">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="res\shaders\blinn.glsl">
-      <Filter>Resource Files\shaders</Filter>
-    </None>
-    <None Include="res\shaders\phong.glsl">
-      <Filter>Resource Files\shaders</Filter>
-    </None>
-    <None Include="res\shaders\cube_frag.glsl">
+    <None Include="res\shaders\environment_frag.glsl">
       <Filter>Resource Files\shaders\fragment</Filter>
     </None>
-    <None Include="res\shaders\env_frag.glsl">
-      <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\shaders\fog_frag.glsl">
-      <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\fragment2.glsl">
-      <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\fragment.glsl">
-      <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\shaders\gourand_frag.glsl">
-      <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\shaders\skybox_frag.glsl">
-      <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\vertex2.glsl">
-      <Filter>Resource Files\shaders\vertex</Filter>
-    </None>
-    <None Include="res\shaders\skybox_vec.glsl">
-      <Filter>Resource Files\shaders\vertex</Filter>
-    </None>
-    <None Include="res\vertex.glsl">
-      <Filter>Resource Files\shaders\vertex</Filter>
-    </None>
-    <None Include="res\shaders\ph_vec.glsl">
-      <Filter>Resource Files\shaders\vertex</Filter>
-    </None>
-    <None Include="res\shaders\ph_frag.glsl">
-      <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\shaders\gourand_vec.glsl">
-      <Filter>Resource Files\shaders\vertex</Filter>
-    </None>
-    <None Include="res\shaders\cube_vec.glsl">
-      <Filter>Resource Files\shaders\vertex</Filter>
-    </None>
-    <None Include="res\shaders\env_vec.glsl">
-      <Filter>Resource Files\shaders\vertex</Filter>
-    </None>
-    <None Include="res\shaders\fog_vec.glsl">
+    <None Include="res\shaders\environment_vec.glsl">
       <Filter>Resource Files\shaders\vertex</Filter>
     </None>
     <None Include="res\ship_in_clouds\scene.bin">
-      <Filter>Resource Files\ship_in_clouds</Filter>
+      <Filter>Resource Files\models\ship_in_clouds</Filter>
     </None>
     <None Include="res\ship_in_clouds\scene.gltf">
-      <Filter>Resource Files\ship_in_clouds</Filter>
+      <Filter>Resource Files\models\ship_in_clouds</Filter>
     </None>
     <None Include="res\volkswagen\scene.bin">
-      <Filter>Resource Files\volkswagen</Filter>
+      <Filter>Resource Files\models\volkswagen</Filter>
     </None>
     <None Include="res\volkswagen\scene.gltf">
-      <Filter>Resource Files\volkswagen</Filter>
-    </None>
-    <None Include="res\sample3.gltf">
-      <Filter>Resource Files</Filter>
+      <Filter>Resource Files\models\volkswagen</Filter>
     </None>
     <None Include="res\sample2\scene.bin">
-      <Filter>Resource Files\sample2</Filter>
+      <Filter>Resource Files\models\sample2</Filter>
     </None>
     <None Include="res\sample2\scene.gltf">
-      <Filter>Resource Files\sample2</Filter>
+      <Filter>Resource Files\models\sample2</Filter>
     </None>
-    <None Include="res\shaders\metalic_r.glsl">
-      <Filter>Resource Files\shaders</Filter>
-    </None>
-    <None Include="res\fragment3.glsl">
+    <None Include="res\standard_frag.glsl">
       <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\vertex3.glsl">
-      <Filter>Resource Files\shaders\vertex</Filter>
     </None>
     <None Include="res\lamp_vec.glsl">
       <Filter>Resource Files\shaders\vertex</Filter>
@@ -679,94 +622,64 @@
     <None Include="res\lamp_frag.glsl">
       <Filter>Resource Files\shaders\fragment</Filter>
     </None>
-    <None Include="res\lamp.gltf">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="res\fragment4.glsl">
+    <None Include="res\pbr_frag.glsl">
       <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\vertex4.glsl">
-      <Filter>Resource Files\shaders\vertex</Filter>
-    </None>
-    <None Include="res\vertex5.glsl">
-      <Filter>Resource Files\shaders\vertex</Filter>
-    </None>
-    <None Include="res\fragment5.glsl">
-      <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\fragment6.glsl">
-      <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\vertex6.glsl">
-      <Filter>Resource Files\shaders\vertex</Filter>
     </None>
     <None Include="res\shaders\depth_frag.glsl">
       <Filter>Resource Files\shaders\fragment</Filter>
     </None>
-    <None Include="res\shaders\init_depth_frag.glsl">
-      <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\shaders\depth_ver.glsl">
+    <None Include="res\shaders\square_ver.glsl">
       <Filter>Resource Files\shaders\vertex</Filter>
     </None>
-    <None Include="res\shaders\clear_depth_frag.glsl">
-      <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\shaders\depth2_ver.glsl">
+    <None Include="res\shaders\standard_vec.glsl">
       <Filter>Resource Files\shaders\vertex</Filter>
     </None>
-    <None Include="res\shaders\vol_frag.glsl">
+    <None Include="res\std_with_ext_light_frag.glsl">
       <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\shaders\vol_vec.glsl">
-      <Filter>Resource Files\shaders\vertex</Filter>
-    </None>
-    <None Include="res\shaders\clear_vol_frag.glsl">
-      <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\fragment7.glsl">
-      <Filter>Resource Files\shaders\fragment</Filter>
-    </None>
-    <None Include="res\vertex7.glsl">
-      <Filter>Resource Files\shaders\vertex</Filter>
     </None>
     <None Include="src\spdlog-1.x\include\spdlog\fmt\bundled\fmt.license.rst">
       <Filter>Header Files\spdlog\fmt\bundled</Filter>
     </None>
-    <None Include="res\shaders\depth_frag2.glsl">
-      <Filter>Resource Files\shaders\fragment</Filter>
+    <None Include="res\sample3.gltf">
+      <Filter>Resource Files\models</Filter>
+    </None>
+    <None Include="res\lamp.gltf">
+      <Filter>Resource Files\models</Filter>
+    </None>
+    <None Include="res\sample.gltf">
+      <Filter>Resource Files\models</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ship_in_clouds\textures\Cloud_3_emissive.jpeg">
-      <Filter>Resource Files\ship_in_clouds\textures</Filter>
+      <Filter>Resource Files\models\ship_in_clouds\textures</Filter>
     </Image>
     <Image Include="res\ship_in_clouds\textures\material_emissive.jpeg">
-      <Filter>Resource Files\ship_in_clouds\textures</Filter>
+      <Filter>Resource Files\models\ship_in_clouds\textures</Filter>
     </Image>
     <Image Include="res\ship_in_clouds\textures\Poly_emissive.jpeg">
-      <Filter>Resource Files\ship_in_clouds\textures</Filter>
+      <Filter>Resource Files\models\ship_in_clouds\textures</Filter>
     </Image>
     <Image Include="res\ship_in_clouds\textures\Boot_Finaal_emissive.jpeg">
-      <Filter>Resource Files\ship_in_clouds\textures</Filter>
+      <Filter>Resource Files\models\ship_in_clouds\textures</Filter>
     </Image>
     <Image Include="res\ship_in_clouds\textures\Cloud_1_baseColor.png">
-      <Filter>Resource Files\ship_in_clouds\textures</Filter>
+      <Filter>Resource Files\models\ship_in_clouds\textures</Filter>
     </Image>
     <Image Include="res\ship_in_clouds\textures\Cloud_1_emissive.jpeg">
-      <Filter>Resource Files\ship_in_clouds\textures</Filter>
+      <Filter>Resource Files\models\ship_in_clouds\textures</Filter>
     </Image>
     <Image Include="res\ship_in_clouds\textures\Cloud_2_emissive.jpeg">
-      <Filter>Resource Files\ship_in_clouds\textures</Filter>
+      <Filter>Resource Files\models\ship_in_clouds\textures</Filter>
     </Image>
     <Image Include="res\ship_in_clouds\textures\Cloud_3_baseColor.png">
-      <Filter>Resource Files\ship_in_clouds\textures</Filter>
+      <Filter>Resource Files\models\ship_in_clouds\textures</Filter>
     </Image>
     <Image Include="res\volkswagen\textures\Grates_baseColor.png">
-      <Filter>Resource Files\volkswagen\textures</Filter>
+      <Filter>Resource Files\models\volkswagen\textures</Filter>
     </Image>
     <Image Include="res\sample2\Untitled.png">
-      <Filter>Resource Files\sample2</Filter>
+      <Filter>Resource Files\models\sample2</Filter>
     </Image>
   </ItemGroup>
 </Project>

@@ -1,8 +1,8 @@
 #version 450
 
-uniform mat4 MVP;
 in vec3 vCol;
 in vec3 vPos;
+uniform mat4 MVP;
 
 out vec3 _color;
 

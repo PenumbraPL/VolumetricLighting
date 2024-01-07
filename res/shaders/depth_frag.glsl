@@ -7,6 +7,7 @@ uniform float G = -0.8f;
 uniform vec3 bb_min = vec3(-2., -2., -2.);
 uniform vec3 bb_max = vec3(2., 2., 2.);
 //uniform vec3 direction;
+float d = 1.43 * 4;
 
 const float PI = 3.14159265359f;
 float shininess = 1.;
@@ -80,7 +81,7 @@ vec4 CalcVolumeScattering(vec3 viewDir, PointLight light, float G, vec3 color, v
     vec3 step = -viewDir * stepSize;
     float density = 1.f;
     float inscattering = exp(0.f);
-    float k = .05f;
+    float k = 2.f;
 
     vec3 position = origin - viewDir * dst_to;
     vec3 volumetric = vec3(0.0f);
@@ -90,13 +91,11 @@ vec4 CalcVolumeScattering(vec3 viewDir, PointLight light, float G, vec3 color, v
         vec3 lightDir = normalize(light.position - position);
      
          float distance    = length(light.position - position);
-    float attenuation = 1.0 / (light.constant + light.linear * distance + 
+        float attenuation = 1.0 / (light.constant + light.linear * distance + 
   			     light.quadratic * (distance * distance));
 
-     //volumetric += density * (CalcScattering(dot(lightDir, viewDir), G)) * color;// + CalcRayleighScattering(dot(lightDir, viewDir)) * vec3(0, 0, 1.));// * exp(k*-length(camera-position));     
-     volumetric += density * ((CalcScattering(dot(lightDir, viewDir), G)) * color + CalcRayleighScattering(dot(lightDir, viewDir)) * vec3(0, 0, 1.))/2.f;// * exp(k*-length(camera-position));
-     //volumetric *= attenuation;
-        alpha += density * k * exp(-length(step));
+        volumetric += density * ((CalcScattering(dot(lightDir, viewDir), G)) * color + CalcRayleighScattering(dot(lightDir, viewDir)) * vec3(0, 0, 1.))/2.f;
+         //volumetric *= attenuation;
 
         position += step;
     }
@@ -104,6 +103,8 @@ vec4 CalcVolumeScattering(vec3 viewDir, PointLight light, float G, vec3 color, v
     volumetric /= float(NUM_STEPS_INT);
     volumetric *= inscattering;
     
+    alpha = density * k * exp(-length(dst_through/d));
+
     return vec4(volumetric, alpha);
 }
 
@@ -129,7 +130,6 @@ vec4 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     specular *= attenuation;
     
     vec4 color = vec4(ambient + diffuse + specular + volumetric.xyz * 0.25, volumetric.w);
-    //vec4 color = volumetric;
 
     return vec4(color.xyz, color.w);
 }
