@@ -366,6 +366,7 @@ int main(void)
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetCursorPosCallback(window, cursor_position_callback);
+    glfwSetWindowFocusCallback(window, focus_callback);
 
     initializeGLEW();
     
@@ -375,6 +376,7 @@ int main(void)
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    io.ConfigWindowsMoveFromTitleBarOnly = true;
 
     ImGui::StyleColorsDark();
 
@@ -593,7 +595,7 @@ int main(void)
 
    LightsList lightbuffer{
         lights_list.size()-1,
-        { 0 },
+      //  { 0 },
         {lights_list.data()[0]}
     };
 
@@ -631,19 +633,7 @@ int main(void)
         glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
         if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
         
-        glm::vec3 ambient = { panel_config.light_ambient[0], panel_config.light_ambient[1], panel_config.light_ambient[2]};
-        glm::vec3 diffuse = { panel_config.light_diffuse[0], panel_config.light_diffuse[1], panel_config.light_diffuse[2]};
-        glm::vec3 specular = { panel_config.light_specular[0], panel_config.light_specular[1], panel_config.light_specular[2]};
-        glm::vec3 position = { panel_config.position[0], panel_config.position[1], panel_config.position[2] };
-        PointLight new_light = {position, panel_config.c, panel_config.l, panel_config.q, {0,0}, ambient, {0}, diffuse, {0}, specular, {0} };
 
-
-        if (compare_lights(lights_list.data()[0], new_light)) {
-            lights_list.data()[0] = new_light;
-            LightsList* ptr = (LightsList*) glMapNamedBuffer(lights_buffer, GL_WRITE_ONLY);
-            memcpy_s((void*)&ptr->list[0], sizeof(PointLight), &new_light, sizeof(PointLight));
-            glUnmapNamedBuffer(lights_buffer);
-        }
         
         
         if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
@@ -651,11 +641,42 @@ int main(void)
         env.draw(width, height, Projection, camera);
         //cld.draw(width, height, Projection, camera);
 
+        glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.02, panel_config.tr_y * 0.02, panel_config.tr_z * 0.02);
+        glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
+
+        glm::vec3 ambient = { panel_config.light_ambient[0], panel_config.light_ambient[1], panel_config.light_ambient[2] };
+        glm::vec3 diffuse = { panel_config.light_diffuse[0], panel_config.light_diffuse[1], panel_config.light_diffuse[2] };
+        glm::vec3 specular = { panel_config.light_specular[0], panel_config.light_specular[1], panel_config.light_specular[2] };
+        glm::vec4 position = { panel_config.position[0], panel_config.position[1], panel_config.position[2], 1. };
+
+        float l_position[16] = {};
+        l_position[0] = 1.;
+        l_position[5] = 1.;
+        l_position[10] = 1.;
+        l_position[15] = 1.;
+
+        glm::mat4 View = glm::rotate(
+            glm::rotate(
+                glm::translate(
+                    glm::make_mat4x4(l_position)
+                    , translate)
+                , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+            rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
+        glm::mat4 MVP = Projection * LookAt * View * Model;
+        
+        glm::vec4 new_position = position;
+        PointLight new_light = { new_position, panel_config.c, panel_config.l, panel_config.q, ambient, diffuse, specular };
+
+
+        if (compare_lights(lights_list.data()[0], new_light)) {
+            lights_list.data()[0] = new_light;
+            LightsList* ptr = (LightsList*)glMapNamedBuffer(lights_buffer, GL_WRITE_ONLY);
+            memcpy_s((void*)&ptr->list[0], sizeof(PointLight), &new_light, sizeof(PointLight));
+            glUnmapNamedBuffer(lights_buffer);
+        }
 
         for (int i = 0; i < primitives.size(); i++) {
-          
-            glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
-            glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
 
             glBindProgramPipeline(primitives[i].pipeline);
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -672,6 +693,7 @@ int main(void)
             glm::mat4 MVP = LookAt * View * Model;
             glm::vec3 camera_view = glm::vec4(eye, 1.0);
             glm::vec3 camera_dir = glm::vec3(0.) - eye;
+
             glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
             glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], prj_location, 1, GL_FALSE, glm::value_ptr(Projection));
             glProgramUniform3fv(primitives[i].programs[FRAGMENT], camera_location, 1, glm::value_ptr(camera_view));

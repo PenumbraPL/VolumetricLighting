@@ -18,6 +18,9 @@ struct ConfigContext{
      float phi;
      float theta;
      
+     bool focused1;
+     bool focused2;
+
      float light_ambient[4];
      float light_diffuse[4];
      float light_specular[4];

@@ -3,28 +3,27 @@
 
 namespace fs = std::filesystem;
 
-void folder_content(std::string& path, std::vector<std::string>& content, int& i, int& selected2) {
+void folder_content(std::string& path, std::vector<int>& content, int& i, int& selected2) {
     for (const auto& entry : fs::directory_iterator(path)) {
         if (entry.is_regular_file()) {
-            std::cout << entry.path().filename().extension() << std::endl;
+            //std::cout << entry.path().filename().extension() << std::endl;
             if (entry.path().filename().extension() == ".gltf") {
-                ImGui::Selectable(entry.path().filename().generic_string().c_str(), selected2 == i);
+                content.push_back(0);
+                
+                ImGui::Selectable(entry.path().filename().generic_string().c_str(), content.at(content.size() - 1) == i);
                 ImGui::SameLine(200); ImGui::Text(entry.path().generic_string().c_str());
-                content.push_back(entry.path().generic_string());
             }
-
         }
         else if (entry.is_directory()) {
             std::string subpath = entry.path().generic_string();
-            content.push_back(subpath);
-            std::cout << "============\n";
+            //content.push_back(subpath);
+            //std::cout << "============\n";
             if (ImGui::TreeNode((void*)(intptr_t)i, entry.path().filename().generic_string().c_str()))
             {
                 folder_content(subpath, content, i, selected2);
                 ImGui::TreePop();
             }
         }
-
     }
 }
 
@@ -38,27 +37,31 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
     static float g = 0.123f;
 
 
+
+    if(ImGui::Begin("Control"))
     {
+        config.focused1 = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow) ? true : false;
+
         static float f = 0.0f;
         static int counter = 0;
 
-        ImGui::Begin("Control");
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
 
         if (ImGui::BeginTabBar("LeftPanelBar", tab_bar_flags))
         {
+
             if (ImGui::BeginTabItem("Config"))
             {
-                ImGui::ColorEdit3("ambient light 2", config.light_ambient);
-                ImGui::ColorEdit3("diffuse light 2", config.light_diffuse);
-                ImGui::ColorEdit3("specular light 2", config.light_specular);
+                ImGui::ColorEdit3("ambient light", config.light_ambient);
+                ImGui::ColorEdit3("diffuse light", config.light_diffuse);
+                ImGui::ColorEdit3("specular light", config.light_specular);
                 /*ImGui::SameLine();*/ ImGui::SliderFloat("const", &config.c, 0.0f, 1.0f);
                 ImGui::SliderFloat("linear", &config.l, 0.0f, 1.0f);
                 ImGui::SliderFloat("quad", &config.q, 0.0f, 1.0f);
                 ImGui::SliderFloat("g const", &config.g, -0.99999f, 0.99999f, "ratio = %.3f");
-                /*ImGui::SameLine();*/ ImGui::SliderFloat("x", &config.position[0], 0.0f, 1.0f);
-                ImGui::SliderFloat("y", &config.position[1], 0.0f, 1.0f);
-                ImGui::SliderFloat("z", &config.position[2], 0.0f, 1.0f);
+                /*ImGui::SameLine();*/ ImGui::SliderFloat("x", &config.position[0], -1.0f, 1.0f);
+                ImGui::SliderFloat("y", &config.position[1], -1.0f, 1.0f);
+                ImGui::SliderFloat("z", &config.position[2], -1.0f, 1.0f);
 
 
                 ImGui::EndTabItem();
@@ -75,9 +78,13 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
                     ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
                     ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
                     if (n == 0)
-                        ImGui::Text("The lazy dog is a good dog. This paragraph should \
-                            fit within %.0f pixels. Testing a 1 character word. \
-                            The quick brown fox jumps over the lazy dog.", wrap_width);
+                        ImGui::Text("========== Initialization started ============================================\
+                            ==========[GLEW]: Using GLEW 2.1.0 ========================================\
+                            ==========[GLFW] : Debug context initialize successful ======================\
+                            ===================== Main loop ==============================================\
+                            ==========[GLFW]: Terminated ================================================\
+                            ==================== = Exit succeeded ========================================\
+                            ", wrap_width);
                     else
                         ImGui::Text("aaaaaaaa bbbbbbbb, c cccccccc,dddddddd. d eeeeeeee   ffffffff. gggggggg!hhhhhhhh");
 
@@ -140,8 +147,8 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
             {
                 if (config.directory) {
                     int i = 0;
-                    std::string path = "res";
-                    std::vector<std::string> tree;
+                    std::string path = "res/models/";
+                    std::vector<int> tree;
                     /*    if (i == 0)
                             ImGui::SetNextItemOpen(true, ImGuiCond_Once);*/
                     folder_content(path, tree, i, selected2);
@@ -201,9 +208,11 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
             if (ImGui::BeginTabItem("Lights"))
             {
                 static bool selected[3] = { false, false, false };
-                ImGui::Selectable("Scene One", &selected[0]); ImGui::SameLine(300); ImGui::Text(" 2,345 bytes");
-                ImGui::Selectable("Scene Two", &selected[1]); ImGui::SameLine(300); ImGui::Text("12,345 bytes");
-                ImGui::Selectable("Scene Three", &selected[2]); ImGui::SameLine(300); ImGui::Text(" 2,345 bytes");                ImGui::EndTabItem();
+                ImGui::Selectable("Light 1", &selected[0]);
+                ImGui::Separator();
+                ImGui::Button("Add Light"); ImGui::SameLine(300);
+                ImGui::Button("Delete Light");
+                ImGui::EndTabItem();
             }
             ImGui::EndTabBar();
         }
@@ -242,25 +251,29 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
 
 
 void drawRightPanel(ImGuiIO& io, ConfigContext &config) {
-    ImGui::Begin("View");
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-    ImGui::Text("Far plane:"); ImGui::SliderFloat("Fp", &config.far_plane, 0.1f, 200.0f);
-    ImGui::Text("Near plane:"); ImGui::SliderFloat("Np", &config.near_plane, 0.0001f, 10.0f);
-    ImGui::Text("fov:"); ImGui::SliderInt("fov", &config.fov, 10, 120);
+    if (ImGui::Begin("View")) {
+        config.focused2 = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow) ? true : false;
 
-    ImGui::Separator();
+        
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+        ImGui::Text("Far plane:"); ImGui::SliderFloat("Fp", &config.far_plane, 0.1f, 200.0f);
+        ImGui::Text("Near plane:"); ImGui::SliderFloat("Np", &config.near_plane, 0.0001f, 10.0f);
+        ImGui::Text("fov:"); ImGui::SliderInt("fov", &config.fov, 10, 120);
 
-    ImGui::SliderInt("Translation X", &config.tr_x, -100, 100);
-    ImGui::SliderInt("Translation Y", &config.tr_y, -100, 100);
-    ImGui::SliderInt("Translation Z", &config.tr_z, -100, 100);
-    ImGui::SliderInt("Rotation X", &config.rot_x, 0, 360);
-    ImGui::SliderInt("Rotation Y", &config.rot_y, 0, 360);
-    ImGui::SliderFloat("Camera distance", &config.dist, 0, 360);
-    ImGui::SliderAngle("Camera phi", &config.phi, 0, 360);
-    ImGui::SliderAngle("Camera theta", &config.theta, 0, 360);
+        ImGui::Separator();
 
-    ImGui::Separator();
-    ImGui::Button("Save Image");
-    ImGui::SameLine(); ImGui::Button("Save Clip");
-    ImGui::End();
+        ImGui::SliderInt("Translation X", &config.tr_x, -100, 100);
+        ImGui::SliderInt("Translation Y", &config.tr_y, -100, 100);
+        ImGui::SliderInt("Translation Z", &config.tr_z, -100, 100);
+        ImGui::SliderInt("Rotation X", &config.rot_x, 0, 360);
+        ImGui::SliderInt("Rotation Y", &config.rot_y, 0, 360);
+        ImGui::SliderFloat("Camera distance", &config.dist, 0, 360);
+        ImGui::SliderAngle("Camera phi", &config.phi, 0, 360);
+        ImGui::SliderAngle("Camera theta", &config.theta, 0, 360);
+
+        ImGui::Separator();
+        ImGui::Button("Save Image");
+        ImGui::SameLine(); ImGui::Button("Save Clip");
+        ImGui::End();
+    }
 }

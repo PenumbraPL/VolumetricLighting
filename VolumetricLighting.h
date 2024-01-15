@@ -62,35 +62,31 @@ enum ShaderTypes {
 };
 
 ConfigContext panel_config{
-    500.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0, { 0.4f, 0.7f, 0.0f, 0.5f }, { 0.4f, 0.7f, 0.0f, 0.5f },{ 0.4f, 0.7f, 0.0f, 0.5f }, { 0.0f, 0.0f, 0.0f }, 0.1, 0.5, 0.5
+    500.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0, false, false, { 0.4f, 0.7f, 0.0f, 0.5f }, { 0.4f, 0.7f, 0.0f, 0.5f },{ 0.4f, 0.7f, 0.0f, 0.5f }, { 0.0f, 0.0f, 0.0f }, 0.1, 0.5, 0.5
 };
 
 struct PointLight {
-    glm::vec3 position;
+    alignas(16) glm::vec3 position;
 
     float constant;
     float linear;
     float quadratic;
-    float dummy[2];
-    glm::vec3 ambient;
-    float dummy2[1];
-    glm::vec3 diffuse;
-    float dummy3[1];
-    glm::vec3 specular;
-    float dummy4[1];
+
+    alignas(16) glm::vec3 ambient;
+    alignas(16) glm::vec3 diffuse;
+    alignas(16) glm::vec3 specular;
 };
 struct LightsList {
     unsigned int size;
-    float dummy[3];
-    PointLight list[2];
+    alignas(16) PointLight list[2];
 };
 
 std::vector<PointLight> lights_list;
 
 
 void init_lights(void) {
-    lights_list.push_back({ glm::vec3(1.5, 1.5, 1.5), 0.1, 0.5, 0.5, {0,0}, glm::vec3(1., 1., 1.), {0}, glm::vec3(1., 1., 1.), {0}, glm::vec3(1., 1., 1.), { 0 } });
-    lights_list.push_back({ glm::vec3(-1.5, -1.5, 1.5), 0.1, 0.5, 0.5, {0,0}, glm::vec3(1., .9, .8), {0}, glm::vec3(.7, .5, .4), {0}, glm::vec3(.3, .2, .1), {0} });
+    lights_list.push_back({ glm::vec3(1.5, 1.5, 1.5), 0.1, 0.5, 0.5, glm::vec3(1., 1., 1.), glm::vec3(1., 1., 1.), glm::vec3(1., 1., 1.) });
+    lights_list.push_back({ glm::vec3(-1.5, -1.5, 1.5), 0.1, 0.5, 0.5, glm::vec3(1., .9, .8), glm::vec3(.7, .5, .4), glm::vec3(.3, .2, .1)});
 }
 
 bool compare_lights(PointLight& old_light, PointLight& new_light) {
@@ -255,7 +251,7 @@ struct Primitive {
             std::cout << "=================== Coulnt find res/vertex.glsl ==============================\n";
         }
 
-        char* f_sh_buffer = read_file("res/shaders/std_with_ext_light_frag.glsl");
+        char* f_sh_buffer = read_file("res/shaders/pbr_with_ext_light_frag.glsl");
         if (!f_sh_buffer)  std::cout << "=================== Coulnt find res/fragment.glsl ============================\n";
 
         createPrograms();
@@ -682,8 +678,8 @@ struct Environment {
             north = glm::vec3(0., -1., 0.);
         }
 
-        glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
-        glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
+        glm::vec3 translate = glm::vec3(0., 0., 0.);// glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
+        glm::vec3 rotate = glm::vec3(0., 0., 0.);//glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
 
         glBindProgramPipeline(pipeline);
 
@@ -888,8 +884,8 @@ struct Cloud {
             north = glm::vec3(0., -1., 0.);
         }
 
-        glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
-        glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
+        glm::vec3 translate = glm::vec3(0., 0., 0.);// glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
+        glm::vec3 rotate = glm::vec3(0., 0., 0.);//glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
    
         int binding_point = 0;
         glVertexAttribBinding(vpos_location, binding_point);
@@ -913,7 +909,7 @@ struct Cloud {
                     , translate)
                 , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
             rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
+        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f));
         MVP = LookAt * View * Model;
         glProgramUniformMatrix4fv(vertex_program, mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
         glProgramUniformMatrix4fv(vertex_program, prj_location, 1, GL_FALSE, glm::value_ptr(Projection));

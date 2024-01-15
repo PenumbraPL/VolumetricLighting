@@ -12,17 +12,17 @@ layout (binding = 8) uniform sampler2D tex_envmap;
 
 
 in VS_OUT{
-vec3 _normal;
-vec3 _color;
-vec2 _texCoords;
-vec3 _view;
-vec3 _position;
+    vec3 _normal;
+    vec3 _color;
+    vec2 _texCoords;
+    vec3 _view;
+    vec3 _position;
 } fs_in;
 
 
 out vec4 color;
 
-uniform float ao;
+uniform float ao = 1.;
 
 #define NR_POINT_LIGHTS 1
 
@@ -37,18 +37,16 @@ struct PointLight {
     vec3 diffuse;
     vec3 specular;
 };
-layout (binding = 0) uniform lights{
+layout (binding = 0, std140) buffer lights{
     uint size;
-    PointLight list[1];
-} lights {1, {vec3(1.0, 1.0, 1.0), 0.5, 0.5, 0.5, vec3(1.0, 1.0, 1.0), vec3(1.0, 1.0, 1.0), vec3(1.0, 1.0, 1.0)}};
-//uniform vec3 lightPositions[LIGHTS] = {vec3(1.0, 1.0, 1.0)};
-//uniform vec3 lightColors[LIGHTS] = {vec3(1., 1., 1.)};
+    PointLight list[];
+};
 uniform vec3 camera;
 
 
 const float PI = 3.14159265359;
 
-vec3 fresnelSchlick(float cosTheta, vec3 F0)
+vec3 Fresnel(float cosTheta, vec3 F0)
 {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
@@ -78,7 +76,7 @@ float GeometrySchlickGGX(float NdotV, float roughness)
     return num / denom;
 }
 
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+float Geometry(vec3 N, vec3 V, vec3 L, float roughness)
 {
     float NdotV = max(dot(N, V), 0.0);
     float NdotL = max(dot(N, L), 0.0);
@@ -92,39 +90,38 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 
 void main()
 {		
-    vec3 albedo = pow(texture(alb_tex, fs_in._texCoords).rgb, vec3(2.2, 2.2, 2.2));
-    float metallic = texture(mr_tex, fs_in._texCoords).g;
-    float roughness = texture(mr_tex, fs_in._texCoords).r;
-    float ao;
+    float met_color = texture(mr_tex, fs_in._texCoords).g;
+    float rough_color = texture(mr_tex, fs_in._texCoords).r;
+    vec3 alb_color = pow(texture(alb_tex, fs_in._texCoords).rgb, vec3(2.2, 2.2, 2.2));
 
     vec3 N = normalize(fs_in._normal);
     vec3 V = normalize(camera - fs_in._position);
 
     vec3 F0 = vec3(0.04); 
-    F0 = mix(F0, albedo, metallic);
+    F0 = mix(F0, alb_color, met_color);
 	           
     vec3 Lo = vec3(0.0);
-    for(int i = 0; i < lights.size; ++i) 
+    for(int i = 0; i < size; ++i) 
     {
-        PointLight light = lights.list[i];
+        PointLight light = list[i];
         vec3 L = normalize(light.position - fs_in._position);
         vec3 H = normalize(V + L);
         float distance    = length(light.position - fs_in._position);
         float attenuation = 1.0 / (light.constant + light.linear * distance +  light.quadratic * (distance * distance));
         vec3 radiance     = light.diffuse * attenuation;        
         
-        float NDF = DistributionGGX(N, H, roughness);        
-        float G   = GeometrySmith(N, V, L, roughness);      
-        vec3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);       
+        vec3 Fresnel             = Fresnel(max(dot(H, V), 0.0), F0);     
+        float NDF                = DistributionGGX(N, H, rough_color);        
+        float GeometryFunction   = Geometry(N, V, L, rough_color);      
         
-        vec3 k = (vec3(1.0) - F)*(1.0 - metallic);        
-        vec3 specular     = NDF * G * F / (4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001);
-            
-        float NdotL = max(dot(N, L), 0.0);                
-        Lo += (k * albedo / PI + specular) * radiance * NdotL; 
+        vec3 k = (vec3(1.0) - Fresnel) * (1.0 - met_color);        
+        vec3 specular     = (Fresnel * NDF * GeometryFunction) / (4.0 * max(dot(N, L), 0.0) * max(dot(N, V), 0.0) + 0.0001);
+
+        float NdotL = max(dot(N, L), 0.0);
+        Lo += (k * alb_color / PI + specular) * radiance * NdotL; 
     }   
   
-    vec3 ambient = vec3(0.03) * albedo * ao;
+    vec3 ambient = alb_color * vec3(0.04) * ao;
     vec3 col = ambient + Lo;
 	
     col /= (col + vec3(1.0));

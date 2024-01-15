@@ -24,11 +24,11 @@ uniform float G = -0.8f;
 float stepSize = (gl_FragCoord.z - 0.001f) / NUM_STEPS_INT;
 
 in VS_OUT {
-vec3 _normal;
-vec3 _color;
-vec2 _texCoor;
-vec3 _view;
-vec3 _position;
+    vec3 _normal;
+    vec3 _color;
+    vec2 _texCoor;
+    vec3 _view;
+    vec3 _position;
 }fs_in;
 
 float shininess = 1.;

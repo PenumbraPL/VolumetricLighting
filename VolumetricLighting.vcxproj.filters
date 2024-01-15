@@ -676,6 +676,27 @@
     <None Include="res\models\volkswagen\scene.gltf">
       <Filter>Resource Files\models\Volkswagen</Filter>
     </None>
+    <None Include="res\shaders\lamp_vec.glsl">
+      <Filter>Resource Files\shaders\vertex</Filter>
+    </None>
+    <None Include="res\shaders\lamp_frag.glsl">
+      <Filter>Resource Files\shaders\fragment</Filter>
+    </None>
+    <None Include="res\shaders\pbr_frag.glsl">
+      <Filter>Resource Files\shaders\fragment</Filter>
+    </None>
+    <None Include="res\shaders\standard_frag.glsl">
+      <Filter>Resource Files\shaders\fragment</Filter>
+    </None>
+    <None Include="res\shaders\std_with_ext_light_frag.glsl">
+      <Filter>Resource Files\shaders\fragment</Filter>
+    </None>
+    <None Include="res\shaders\depth_ver.glsl">
+      <Filter>Resource Files\shaders\vertex</Filter>
+    </None>
+    <None Include="res\shaders\pbr_with_ext_light_frag.glsl">
+      <Filter>Resource Files\shaders\fragment</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\models\cube\Cube_MetallicRoughness.png">

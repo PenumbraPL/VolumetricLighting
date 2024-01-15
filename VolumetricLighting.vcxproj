@@ -377,11 +377,18 @@ Shell32.lib
     <None Include="res\models\ship_in_clouds\scene.gltf" />
     <None Include="res\models\volkswagen\scene.bin" />
     <None Include="res\models\volkswagen\scene.gltf" />
+    <None Include="res\shaders\depth_ver.glsl" />
+    <None Include="res\shaders\lamp_frag.glsl" />
+    <None Include="res\shaders\lamp_vec.glsl" />
+    <None Include="res\shaders\pbr_frag.glsl" />
+    <None Include="res\shaders\pbr_with_ext_light_frag.glsl" />
     <None Include="res\shaders\square_ver.glsl" />
     <None Include="res\shaders\depth_frag.glsl" />
     <None Include="res\shaders\environment_frag.glsl" />
     <None Include="res\shaders\environment_vec.glsl" />
+    <None Include="res\shaders\standard_frag.glsl" />
     <None Include="res\shaders\standard_vec.glsl" />
+    <None Include="res\shaders\std_with_ext_light_frag.glsl" />
     <None Include="src\spdlog-1.x\include\spdlog\fmt\bundled\fmt.license.rst" />
   </ItemGroup>
   <ItemGroup>

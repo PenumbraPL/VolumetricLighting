@@ -4,13 +4,12 @@ uniform vec3 camera;
 uniform int NUM_STEPS_INT = 20;
 uniform float SPECULAR_FACTOR = 16.0f;
 uniform float G = -0.8f;
-uniform vec3 bb_min = vec3(-2., -2., -2.);
-uniform vec3 bb_max = vec3(2., 2., 2.);
+uniform vec3 bb_min = vec3(-1., -1., -1.);
+uniform vec3 bb_max = vec3(1., 1., 1.);
 //uniform vec3 direction;
-float d = 1.43 * 4;
+float d = 2;//length(bb_max-bb_min);
 
 const float PI = 3.14159265359f;
-float shininess = 1.;
 
 out vec4 color;
 
@@ -43,32 +42,32 @@ layout (binding = 0, std140) buffer lights{
 
 
 
-vec2 ray_box_intersect(vec3 ro, vec3 rd) {
-  vec3 t0 = (bb_min - ro) / rd;
-  vec3 t1 = (bb_max - ro) / rd;
+vec2 ray_box_intersect(vec3 origin, vec3 direction) {
+  vec3 t0 = (bb_min - origin) / direction;
+  vec3 t1 = (bb_max - origin) / direction;
   vec3 tmin = min(t0, t1);
   vec3 tmax = max(t0, t1);
  
-  float dst_a = max(max(tmin.x, tmin.y), tmin.z);
-  float dst_b = min(tmax.x, min(tmax.y, tmax.z));
+  float dist_a = max(max(tmin.x, tmin.y), tmin.z);
+  float dist_b = min(tmax.x, min(tmax.y, tmax.z));
  
-  float dst_to_box = max(0., dst_a);
-  float dst_through_box = max(0., dst_b - dst_to_box);
+  float dist_to = max(0., dist_a);
+  float dist_through = max(0., dist_b - dist_to);
  
-  return vec2(dst_to_box, dst_through_box);
+  return vec2(dist_to, dist_through);
 }
 
-float CalcScattering(float cosTheta, float G)
+float CalcMieScatter(float cosTheta, float G)
 {
     return 3.f * (1.f - G * G) * (1.f + cosTheta * cosTheta) / (2.f *  (2 + G * G) * pow(1.f + G * G - 2.f * G * cosTheta, 1.5));
 }
 
-float CalcRayleighScattering(float cosTheta)
+float CalcRayleighScatter(float cosTheta)
 {
     return 3.f * (1.f + cosTheta * cosTheta) / (4.f);
 }
 
-vec4 CalcVolumeScattering(vec3 viewDir, PointLight light, float G, vec3 color, vec3 fragPos)
+vec4 CalcVolumeScatter(vec3 viewDir, PointLight light, float G, vec3 color, vec3 fragPos)
 {
     vec3 origin = camera;
     float depth = 1000.;
@@ -81,7 +80,7 @@ vec4 CalcVolumeScattering(vec3 viewDir, PointLight light, float G, vec3 color, v
     vec3 step = -viewDir * stepSize;
     float density = 1.f;
     float inscattering = exp(0.f);
-    float k = 2.f;
+    float k = 1.f;
 
     vec3 position = origin - viewDir * dst_to;
     vec3 volumetric = vec3(0.0f);
@@ -94,7 +93,7 @@ vec4 CalcVolumeScattering(vec3 viewDir, PointLight light, float G, vec3 color, v
         float attenuation = 1.0 / (light.constant + light.linear * distance + 
   			     light.quadratic * (distance * distance));
 
-        volumetric += density * ((CalcScattering(dot(lightDir, viewDir), G)) * color + CalcRayleighScattering(dot(lightDir, viewDir)) * vec3(0, 0, 1.))/2.f;
+        volumetric += density * ((CalcMieScatter(dot(lightDir, viewDir), G)) * color + CalcRayleighScatter(dot(lightDir, viewDir)) * vec3(1., 1., 1.))/2.f;
          //volumetric *= attenuation;
 
         position += step;
@@ -103,33 +102,34 @@ vec4 CalcVolumeScattering(vec3 viewDir, PointLight light, float G, vec3 color, v
     volumetric /= float(NUM_STEPS_INT);
     volumetric *= inscattering;
     
-    alpha = density * k * exp(-length(dst_through/d));
+    alpha = density * k * (1.3-1.3*exp(-dst_through/d));
 
     return vec4(volumetric, alpha);
 }
 
-vec4 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
+vec4 CalcLight(PointLight light, vec3 N, vec3 fragPos, vec3 V_dir)
 {
-    vec3 lightDir = normalize(light.position - fragPos);
-    vec3 reflectDir = reflect(-lightDir, normal);
-    float diff = max(dot(normal, lightDir), 0.0);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+    vec3 L_dir = normalize(light.position - fragPos);
+    vec3 R_dir = reflect(-L_dir, N);
 
-    vec3 ambient  = light.ambient * 0.25;
-    vec3 diffuse  = light.diffuse  * diff * 0.25;
-    vec3 specular = light.specular * spec * 0.25;
+    float d = max(dot(N, L_dir), 0.0);
+    const int shininess = 0;
+    float s = pow(max(dot(V_dir, R_dir), 0.0), shininess);
+
+    vec3 ambient  = 0.25 * light.ambient;
+    vec3 diffuse  = 0.25 * light.diffuse  * d;
+    vec3 specular = 0.25 * light.specular * s;
 
     vec3 lightColor = vec3(1.f, 1.f, 1.f);
-    vec4 volumetric = CalcVolumeScattering(viewDir, light, G, lightColor, fragPos);
+    vec4 volumetric = CalcVolumeScatter(V_dir, light, G, lightColor, fragPos);
 
     float distance    = length(light.position - fragPos);
-    float attenuation = 1.0 / (light.constant + light.linear * distance + 
-  			     light.quadratic * (distance * distance));
+    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
     ambient  *= attenuation;
     diffuse  *= attenuation;
     specular *= attenuation;
     
-    vec4 color = vec4(ambient + diffuse + specular + volumetric.xyz * 0.25, volumetric.w);
+    vec4 color = vec4(diffuse + specular + ambient + volumetric.xyz * 0.25, volumetric.w);
 
     return vec4(color.xyz, color.w);
 }
@@ -142,7 +142,7 @@ void main()
     vec4 result = vec4(0., 0., 0., 0.);
    
    for(int i = 0; i < size; i++)
-        result += CalcPointLight(list[i], norm, fs_in._position, viewDir);
+        result += CalcLight(list[i], norm, fs_in._position, viewDir);
 
    color = result;
 }

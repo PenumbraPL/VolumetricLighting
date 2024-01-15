@@ -26,16 +26,18 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 //static
 void cursor_position_callback(GLFWwindow* window, double new_xpos, double new_ypos)
 {
-    int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
-    if (state != GLFW_RELEASE)
-    {
-        double nx = (mouse_speed / windowConfig.width) * (new_xpos - xpos);
-        double ny = (mouse_speed / windowConfig.height) * (new_ypos - ypos);
-        panel_config.phi += nx;
-        panel_config.theta += ny;
+    if (!panel_config.focused1 && !panel_config.focused2) {
+        int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
+        if (state != GLFW_RELEASE)
+        {
+            double nx = (mouse_speed / windowConfig.width) * (new_xpos - xpos);
+            double ny = (mouse_speed / windowConfig.height) * (new_ypos - ypos);
+            panel_config.phi += nx;
+            panel_config.theta += ny;
 
-        xpos = new_xpos;
-        ypos = new_ypos;
+            xpos = new_xpos;
+            ypos = new_ypos;
+        }
     }
 }
 
@@ -81,4 +83,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         windowConfig.cursor_mode %= 2;
         glfwSetInputMode(window, GLFW_CURSOR, mode[windowConfig.cursor_mode % (sizeof(mode) / sizeof(int))]);
     }
+}
+
+void focus_callback(GLFWwindow* window, int focused)
+{
+    panel_config.focused1 = focused ? true : false;
+    panel_config.focused2 = focused ? true : false;
 }
