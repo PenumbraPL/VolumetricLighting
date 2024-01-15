@@ -1,7 +1,7 @@
 // VolumetricLighting.cpp : This file contains the 'main' function. Program execution begins and ends there.
 #include "VolumetricLighting.h"
-#define PATH "./res/Cube/"
-#define FILE_NAME "cube.gltf"
+#define PATH "./res/models/DamagedHelmet/"
+#define FILE_NAME "DamagedHelmet.gltf"
 
 WindowInfo windowConfig = {
     1900,
@@ -9,8 +9,6 @@ WindowInfo windowConfig = {
     "GLTF Viewer",
     0, 0, 0
 };
-
-
 
 double xpos, ypos;
 float mouse_speed = 2.f;
@@ -24,17 +22,25 @@ std::vector<Primitive> primitives;
 std::vector<Light> lights;
 std::vector<Camera> cameras;
 
+namespace fs = std::filesystem;
+
 /* ============================================================================= */
 
-void print_map(const std::map<void*, unsigned int>& m){
-      for (const auto& n : m)
-          std::cout << n.first << " = " << n.second << "; ";
-    std::cout << '\n';
+void folder_content(std::string& path, std::vector<std::string> content) {
+    for (const auto& entry : fs::directory_iterator(path)) {
+        if (entry.is_regular_file()) {
+            std::cout << entry.path().filename().extension() << std::endl;
+            if (entry.path().filename().extension() == ".gltf") {}
+            content.push_back(entry.path().generic_string());
+        }
+        else if (entry.is_directory()) {
+            std::string subpath = entry.path().generic_string();
+            content.push_back(subpath);
+            std::cout << "============\n";
+            folder_content(subpath, content);
+        }
+    }
 }
-
-
-
-
 
 GLuint wrap_mode(AkWrapMode& wrap) {
     GLuint wrap_m = GL_REPEAT;
@@ -110,7 +116,7 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint* sampler
                 const char* f_path = tex->texture->image->initFrom->ref;
                 memcpy_s(path + strlen(path), 128 - strlen(path), f_path, strlen(f_path));
                 char* image = (char*)imageLoadFromFile(path, &width, &height, &components);
-               
+
                 if (image) {
                     glCreateTextures(texture_type, 1, texture);
                     *tex_type = texture_type;
@@ -118,7 +124,7 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint* sampler
                         glTextureStorage2D(*texture, 1, GL_RGB8, width, height);
                         glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
                     }
-                    if(std::string::npos != std::string(path).find(".jpeg", 0)){
+                    if (std::string::npos != std::string(path).find(".jpeg", 0)) {
                         glTextureStorage2D(*texture, 1, GL_RGB8, width, height);
                         glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
                     }
@@ -133,71 +139,6 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint* sampler
     }
 }
 
-
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-    panel_config.dist += yoffset * panel_config.dist / -6.;
-}
-
-static void cursor_position_callback(GLFWwindow* window, double new_xpos, double new_ypos)
-{
-    int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
-    if (state != GLFW_RELEASE)
-    {
-        double nx = (mouse_speed / windowConfig.width) * (new_xpos - xpos);
-        double ny = (mouse_speed / windowConfig.height) * (new_ypos - ypos);
-        panel_config.phi += nx;
-        panel_config.theta += ny;
-        
-        xpos = new_xpos;
-        ypos = new_ypos;
-    }
-}
-
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
-{
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-        glfwGetCursorPos(window, &xpos, &ypos);
-    }
-}
-
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-    if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.phi += 0.01;
-    }
-    if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.phi -= 0.01;
-    }
-    if (key == GLFW_KEY_UP && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.theta += 0.01;
-    }
-    if (key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.theta -= 0.01;
-    }
-    if (key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.tr_z += 1;
-    }
-    if (key == GLFW_KEY_D && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.tr_z -= 1;
-    }
-    if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.tr_x -= 1;
-    }
-    if (key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        panel_config.tr_x += 1;
-    }
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-    }
-    if (key == GLFW_KEY_H && action == GLFW_PRESS) {
-        int mode[2] = { GLFW_CURSOR_DISABLED, GLFW_CURSOR_NORMAL };
-        windowConfig.cursor_mode += 1;
-        windowConfig.cursor_mode %= 2;
-        glfwSetInputMode(window, GLFW_CURSOR, mode[windowConfig.cursor_mode % (sizeof(mode)/sizeof(int))]);
-    }
-}
-
 void proccess_node(AkNode* node) {
     int offset = 0;
     int comp_stride = 0;
@@ -207,7 +148,7 @@ void proccess_node(AkNode* node) {
 
     Primitive pr;
     std::string geo_type;
-    
+
     float* world_transform = pr.setWorldTransform();
     float* transform = pr.setTransform();
     pr.createSamplers();
@@ -266,8 +207,8 @@ void proccess_node(AkNode* node) {
                             set_up_color(&mr_cd, prim, &pr.samplers[MAT_ROUGH], &pr.textures[MAT_ROUGH], &pr.tex_type[MAT_ROUGH]);
                             break;
                         }
-                            
-                        case AK_MATERIAL_SPECULAR_GLOSSINES:{
+
+                        case AK_MATERIAL_SPECULAR_GLOSSINES: {
                             AkSpecularGlossiness* sg = (AkSpecularGlossiness*)tch;
                             AkColorDesc sg_cd;
                             AkColorDesc dif_cd;
@@ -294,7 +235,7 @@ void proccess_node(AkNode* node) {
                 AkInput* tan = ak_meshInputGet(prim, "TANGENT", set);
 
                 //std::cout << ak_meshInputCount(mesh) << std::endl;
-                
+
                 pr.wgs = wgs ? wgs->accessor : nullptr;
                 pr.jts = jts ? jts->accessor : nullptr;
                 pr.pos = pos ? pos->accessor : nullptr;
@@ -303,7 +244,7 @@ void proccess_node(AkNode* node) {
                 pr.col = col ? col->accessor : nullptr;
                 pr.tan = tan ? tan->accessor : nullptr;
 
-               pr.createPipeline();
+                pr.createPipeline();
 
                 primitives.push_back(pr);
             };
@@ -326,7 +267,7 @@ void proccess_node(AkNode* node) {
 
     std::cout << "Node name: " << node->name << std::endl;
     std::cout << "Node type: " << geo_type << std::endl;
-   
+
     if (node->next) {
         node = node->next;
         proccess_node(node);
@@ -345,12 +286,12 @@ std::string printCoordSys(AkCoordSys* coord) {
         coord->cameraOrientation.fwd,
         coord->cameraOrientation.right,
         coord->cameraOrientation.up };
-        std::string ax_name[] = { "axis FW:" ,"axis RH:" ,"axis UP:", "camera FW:", "camera RH:", "camera UP : "};
+        std::string ax_name[] = { "axis FW:" ,"axis RH:" ,"axis UP:", "camera FW:", "camera RH:", "camera UP : " };
 
         AkAxisRotDirection axis_dir = coord->rotDirection;
         std::string coordString;
 
-        for (int i = 0; i < sizeof(axis)/sizeof(AkAxis); i++) {
+        for (int i = 0; i < sizeof(axis) / sizeof(AkAxis); i++) {
             std::string st;
             switch (axis[i]) {
             case AK_AXIS_NEGATIVE_X: st = "NEGATIVE_X"; break;
@@ -379,13 +320,14 @@ std::string printInf(AkDocInf* inf, AkUnit* unit) {
         infString += "\nPath: " + std::string(inf->name);
         infString += "\nFlip Image: ";
         infString += inf->flipImage ? "True" : "False";
-        infString+= "\n";
+        infString += "\n";
         if (AK_FILE_TYPE_GLTF == inf->ftype) {
             infString += "Type: GLTF\n";
-        }else {
+        }
+        else {
             infString += "Unknown type\n";
         }
-        
+
         return infString;
     }
     return "AkDocInf or AkUnit is nullptr!\n";
@@ -420,10 +362,11 @@ int main(void)
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
     
     glfwSetKeyCallback(window, key_callback);
-    glfwSetErrorCallback(error_callback);
+    glfwSetErrorCallback(glew_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetCursorPosCallback(window, cursor_position_callback);
+    glfwSetWindowFocusCallback(window, focus_callback);
 
     initializeGLEW();
     
@@ -433,6 +376,7 @@ int main(void)
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    io.ConfigWindowsMoveFromTitleBarOnly = true;
 
     ImGui::StyleColorsDark();
 
@@ -446,8 +390,8 @@ int main(void)
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
         std::cout << "========== [GLFW]: Debug context initialize successful =======================\n";
         std::vector<DEBUGPROC> callbacks;
-        callback_list(callbacks);
-        debug_init(callbacks);
+        gl_fill_callback_list(callbacks);
+        gl_debug_init(callbacks);
     }  else {
         std::cout << "========== [GLFW]: Debug context initialize unsuccessful =====================\n";
     }
@@ -455,13 +399,17 @@ int main(void)
 
     GLuint vao, vertex_buffer;
     GLint mvp_location, vpos_location, vcol_location, 
-        norm_location, tex_location, is_tex_location, prj_location, camera_location;
+        norm_location, tex_location, is_tex_location, prj_location, camera_location, g_location, dir_location;
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
 
-
+    std::string path = "res";
+    std::vector<std::string> tree;
+    //std::map < std::string, std::string> tree;
+    folder_content(path, tree);
+    insert_tree(panel_config, tree);
     
 
 
@@ -568,7 +516,6 @@ int main(void)
         for (auto& u : bufferViews) {
             u.second = j++;
         }
-        print_map(bufferViews);
     }
 
 
@@ -600,7 +547,8 @@ int main(void)
         is_tex_location = glGetUniformLocation(fragment_program, "isTexture");
         prj_location = glGetUniformLocation(vertex_program, "PRJ");
         camera_location = glGetUniformLocation(fragment_program, "camera");
-
+        g_location = glGetUniformLocation(fragment_program, "G");
+        dir_location = glGetUniformLocation(fragment_program, "direction");
 
         if (mvp_location != -1) glEnableVertexAttribArray(mvp_location);
         if (vpos_location != -1) glEnableVertexAttribArray(vpos_location);
@@ -626,8 +574,35 @@ int main(void)
     env.loadMesh();
     env.createPipeline();
 
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    
+    Cloud cld;
+    cld.loadMesh();
+    cld.createPipeline(width, height);
+
+
+    //glDepthRange(panel_config.near_plane, panel_config.far_plane);
     glDepthFunc(GL_LEQUAL);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   
+    GLuint lights_buffer;
+    glGenBuffers(1, &lights_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, lights_buffer);
+
+    init_lights();
+     
+
+   LightsList lightbuffer{
+        lights_list.size()-1,
+      //  { 0 },
+        {lights_list.data()[0]}
+    };
+
+   // malloc(offsetof(LightsList, list) + N * PointLight);
+
+    glNamedBufferData(lights_buffer, 2*sizeof(LightsList), &lightbuffer, GL_DYNAMIC_DRAW);
+
 
     std::cout << "===================== Main loop ==============================================\n";
     while (!glfwWindowShouldClose(window))
@@ -636,39 +611,76 @@ int main(void)
         glfwGetFramebufferSize(window, &width, &height);
 
         glEnable(GL_DEPTH_TEST); 
-        glEnable(GL_BLEND);
+        //glEnable(GL_BLEND);
+
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0., 1., 1., 1.0);
 
+
+        float r = 0.1 * panel_config.dist;
+        float phi = panel_config.phi;
+        float theta = panel_config.theta;
+
+        glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
+        eye = glm::vec3(eye.z, eye.y, eye.x);
+
+        glm::vec3 north = glm::vec3(0., 1., 0.);
+        float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
+        if (corrected_theta > 3.14 / 2. && corrected_theta < 3.14 * 3. / 2.) {
+            north = glm::vec3(0., -1., 0.);
+        }
+        glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
+        if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
+        
+
+        
+        
         if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
 
         env.draw(width, height, Projection, camera);
+        //cld.draw(width, height, Projection, camera);
+
+        glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.02, panel_config.tr_y * 0.02, panel_config.tr_z * 0.02);
+        glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
+
+        glm::vec3 ambient = { panel_config.light_ambient[0], panel_config.light_ambient[1], panel_config.light_ambient[2] };
+        glm::vec3 diffuse = { panel_config.light_diffuse[0], panel_config.light_diffuse[1], panel_config.light_diffuse[2] };
+        glm::vec3 specular = { panel_config.light_specular[0], panel_config.light_specular[1], panel_config.light_specular[2] };
+        glm::vec4 position = { panel_config.position[0], panel_config.position[1], panel_config.position[2], 1. };
+
+        float l_position[16] = {};
+        l_position[0] = 1.;
+        l_position[5] = 1.;
+        l_position[10] = 1.;
+        l_position[15] = 1.;
+
+        glm::mat4 View = glm::rotate(
+            glm::rotate(
+                glm::translate(
+                    glm::make_mat4x4(l_position)
+                    , translate)
+                , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+            rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
+        glm::mat4 MVP = Projection * LookAt * View * Model;
+        
+        glm::vec4 new_position = position;
+        PointLight new_light = { new_position, panel_config.c, panel_config.l, panel_config.q, ambient, diffuse, specular };
 
 
-
+        if (compare_lights(lights_list.data()[0], new_light)) {
+            lights_list.data()[0] = new_light;
+            LightsList* ptr = (LightsList*)glMapNamedBuffer(lights_buffer, GL_WRITE_ONLY);
+            memcpy_s((void*)&ptr->list[0], sizeof(PointLight), &new_light, sizeof(PointLight));
+            glUnmapNamedBuffer(lights_buffer);
+        }
 
         for (int i = 0; i < primitives.size(); i++) {
-            float r     = 0.1 * panel_config.dist;
-            float phi   = panel_config.phi;
-            float theta = panel_config.theta;
-
-            glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
-            eye = glm::vec3(eye.z, eye.y, eye.x);
-            
-            glm::vec3 north = glm::vec3(0., 1., 0.);
-            float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
-            if (corrected_theta > 3.14/2. && corrected_theta < 3.14 * 3./2.) {
-                north = glm::vec3(0., -1., 0.);
-            }
-            
-            glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.1, panel_config.tr_y * 0.1, panel_config.tr_z * 0.1);
-            glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
 
             glBindProgramPipeline(primitives[i].pipeline);
-
-            glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
-            if(!camera) Projection = glm::perspectiveFov((float) 3.14*panel_config.fov/180, (float) width, (float) height, panel_config.near_plane, panel_config.far_plane);
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lights_buffer);
 
             glm::mat4 View =  glm::rotate(
                                 glm::rotate(
@@ -680,10 +692,13 @@ int main(void)
             glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
             glm::mat4 MVP = LookAt * View * Model;
             glm::vec3 camera_view = glm::vec4(eye, 1.0);
+            glm::vec3 camera_dir = glm::vec3(0.) - eye;
+
             glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
             glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], prj_location, 1, GL_FALSE, glm::value_ptr(Projection));
             glProgramUniform3fv(primitives[i].programs[FRAGMENT], camera_location, 1, glm::value_ptr(camera_view));
-
+            glProgramUniform1f(primitives[i].programs[FRAGMENT], g_location, panel_config.g);
+            glProgramUniform3fv(primitives[i].programs[FRAGMENT], dir_location, 1, glm::value_ptr(camera_dir));
 
             if(!primitives[i].textures[ALBEDO])
                 glProgramUniform1ui(primitives[i].programs[FRAGMENT], is_tex_location, GL_FALSE);
@@ -729,14 +744,18 @@ int main(void)
             glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
         }
 
+        cld.draw(width, height, Projection, camera, panel_config.g, lights_buffer);
+        //cld.draw(width, height, Projection, eye, lights_buffer);
         for (auto& l : lights)     l.drawLight(width, height, Projection, camera);
+
+
 
         // ImGui
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        drawLeftPanel(io);
+        drawLeftPanel(io, panel_config);
         drawRightPanel(io, panel_config);
         
         // Rendering
@@ -748,7 +767,8 @@ int main(void)
     }
     glBindProgramPipeline(0);
 
-   // env.deletePipeline();
+    env.deletePipeline();
+    cld.deletePipeline();
 
     for (auto& p : primitives) p.deleteTransforms();
     for (auto& p : primitives) p.deleteTexturesAndSamplers();

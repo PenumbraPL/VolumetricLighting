@@ -76,6 +76,7 @@
     <IncludePath>$(SolutionDir)\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)\lib;$(LibraryPath)</LibraryPath>
     <SourcePath>$(SolutionDir)\src;$(SourcePath)</SourcePath>
+    <ReferencePath>$(SolutionDir)\lib;$(ReferencePath)</ReferencePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -90,6 +91,7 @@
     <IncludePath>$(SolutionDir)\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)\lib;$(LibraryPath)</LibraryPath>
     <SourcePath>$(SolutionDir)\src;$(SourcePath)</SourcePath>
+    <ReferencePath>$(SolutionDir)\lib;$(ReferencePath)</ReferencePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -104,7 +106,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)\include;$(SolutionDir)\src;$(SolutionDir)\src\imgui</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\src\spdlog-1.x\include;$(SolutionDir)\include;$(SolutionDir)\src;$(SolutionDir)\src\imgui</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -143,7 +146,8 @@ Shell32.lib
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)\include;$(SolutionDir)\src;$(SolutionDir)\src\imgui</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\src\spdlog-1.x\include;$(SolutionDir)\include;$(SolutionDir)\src;$(SolutionDir)\src\imgui</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -180,6 +184,8 @@ Shell32.lib
     <ClCompile Include="Debug.cpp" />
     <ClCompile Include="Draw.cpp" />
     <ClCompile Include="GUI.cpp" />
+    <ClCompile Include="IO.cpp" />
+    <ClCompile Include="Source.cpp" />
     <ClCompile Include="src\imgui\backends\imgui_impl_glfw.cpp" />
     <ClCompile Include="src\imgui\backends\imgui_impl_opengl3.cpp" />
     <ClCompile Include="src\imgui\imgui.cpp" />
@@ -194,6 +200,7 @@ Shell32.lib
     <ClInclude Include="Draw.h" />
     <ClInclude Include="GLEW.h" />
     <ClInclude Include="GUI.h" />
+    <ClInclude Include="Header.h" />
     <ClInclude Include="include\ak\animation.h" />
     <ClInclude Include="include\ak\assetkit.h" />
     <ClInclude Include="include\ak\bbox.h" />
@@ -237,6 +244,7 @@ Shell32.lib
     <ClInclude Include="include\ds\sort.h" />
     <ClInclude Include="include\ds\util.h" />
     <ClInclude Include="include\ds\version.h" />
+    <ClInclude Include="IO.h" />
     <ClInclude Include="src\imgui\backends\imgui_impl_glfw.h" />
     <ClInclude Include="src\imgui\backends\imgui_impl_opengl3.h" />
     <ClInclude Include="src\imgui\imconfig.h" />
@@ -245,58 +253,171 @@ Shell32.lib
     <ClInclude Include="src\imgui\imstb_rectpack.h" />
     <ClInclude Include="src\imgui\imstb_textedit.h" />
     <ClInclude Include="src\imgui\imstb_truetype.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\async.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\async_logger-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\async_logger.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\cfg\argv.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\cfg\env.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\cfg\helpers-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\cfg\helpers.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\common-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\common.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\backtracer-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\backtracer.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\circular_q.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\console_globals.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\file_helper-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\file_helper.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\fmt_helper.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\log_msg-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\log_msg.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\log_msg_buffer-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\log_msg_buffer.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\mpmc_blocking_q.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\null_mutex.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\os-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\os.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\periodic_worker-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\periodic_worker.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\registry-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\registry.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\synchronous_factory.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\tcp_client-windows.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\tcp_client.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\thread_pool-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\thread_pool.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\udp_client-windows.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\udp_client.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\details\windows_include.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bin_to_hex.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bundled\args.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bundled\chrono.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bundled\color.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bundled\compile.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bundled\core.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bundled\format-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bundled\format.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bundled\locale.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bundled\os.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bundled\ostream.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bundled\printf.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bundled\ranges.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bundled\std.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\bundled\xchar.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\chrono.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\compile.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\fmt.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\ostr.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\ranges.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\std.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fmt\xchar.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\formatter.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\fwd.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\logger-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\logger.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\pattern_formatter-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\pattern_formatter.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\android_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\ansicolor_sink-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\ansicolor_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\base_sink-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\base_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\basic_file_sink-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\basic_file_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\callback_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\daily_file_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\dist_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\dup_filter_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\hourly_file_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\kafka_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\mongo_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\msvc_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\null_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\ostream_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\qt_sinks.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\ringbuffer_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\rotating_file_sink-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\rotating_file_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\sink-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\stdout_color_sinks-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\stdout_color_sinks.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\stdout_sinks-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\stdout_sinks.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\syslog_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\systemd_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\tcp_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\udp_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\wincolor_sink-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\wincolor_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\sinks\win_eventlog_sink.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\spdlog-inl.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\spdlog.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\stopwatch.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\tweakme.h" />
+    <ClInclude Include="src\spdlog-1.x\include\spdlog\version.h" />
     <ClInclude Include="src\stb\stb_image.h" />
     <ClInclude Include="VolumetricLighting.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\fragment.glsl" />
-    <None Include="res\fragment2.glsl" />
-    <None Include="res\fragment3.glsl" />
-    <None Include="res\fragment4.glsl" />
-    <None Include="res\fragment5.glsl" />
-    <None Include="res\lamp.gltf" />
-    <None Include="res\lamp_frag.glsl" />
-    <None Include="res\lamp_vec.glsl" />
-    <None Include="res\sample.gltf" />
-    <None Include="res\sample2\scene.bin" />
-    <None Include="res\sample2\scene.gltf" />
-    <None Include="res\sample3.gltf" />
-    <None Include="res\shaders\blinn.glsl" />
-    <None Include="res\shaders\cube_frag.glsl" />
-    <None Include="res\shaders\cube_vec.glsl" />
-    <None Include="res\shaders\env_frag.glsl" />
-    <None Include="res\shaders\env_vec.glsl" />
-    <None Include="res\shaders\fog_frag.glsl" />
-    <None Include="res\shaders\fog_vec.glsl" />
-    <None Include="res\shaders\metalic_r.glsl" />
-    <None Include="res\shaders\gourand_frag.glsl" />
-    <None Include="res\shaders\gourand_vec.glsl" />
-    <None Include="res\shaders\phong.glsl" />
-    <None Include="res\shaders\ph_frag.glsl" />
-    <None Include="res\shaders\ph_vec.glsl" />
-    <None Include="res\shaders\skybox_frag.glsl" />
-    <None Include="res\shaders\skybox_vec.glsl" />
-    <None Include="res\ship_in_clouds\scene.bin" />
-    <None Include="res\ship_in_clouds\scene.gltf" />
-    <None Include="res\vertex.glsl" />
-    <None Include="res\vertex2.glsl" />
-    <None Include="res\vertex3.glsl" />
-    <None Include="res\vertex4.glsl" />
-    <None Include="res\vertex5.glsl" />
-    <None Include="res\volkswagen\scene.bin" />
-    <None Include="res\volkswagen\scene.gltf" />
+    <None Include="res\models\cube\Cube.bin" />
+    <None Include="res\models\cube\Cube.gltf" />
+    <None Include="res\models\DamagedHelmet\DamagedHelmet.bin" />
+    <None Include="res\models\DamagedHelmet\DamagedHelmet.gltf" />
+    <None Include="res\models\environment\env_sphere.bin" />
+    <None Include="res\models\environment\env_sphere.gltf" />
+    <None Include="res\models\environment\env_test.bin" />
+    <None Include="res\models\environment\env_test.gltf" />
+    <None Include="res\models\environment\EveningEnvironmentHDRI002_4K-HDR.exr" />
+    <None Include="res\models\Latern\Lantern.bin" />
+    <None Include="res\models\Latern\Lantern.gltf" />
+    <None Include="res\models\sample2\scene.bin" />
+    <None Include="res\models\sample2\scene.gltf" />
+    <None Include="res\models\ship_in_clouds\scene.bin" />
+    <None Include="res\models\ship_in_clouds\scene.gltf" />
+    <None Include="res\models\volkswagen\scene.bin" />
+    <None Include="res\models\volkswagen\scene.gltf" />
+    <None Include="res\shaders\depth_ver.glsl" />
+    <None Include="res\shaders\lamp_frag.glsl" />
+    <None Include="res\shaders\lamp_vec.glsl" />
+    <None Include="res\shaders\pbr_frag.glsl" />
+    <None Include="res\shaders\pbr_with_ext_light_frag.glsl" />
+    <None Include="res\shaders\square_ver.glsl" />
+    <None Include="res\shaders\depth_frag.glsl" />
+    <None Include="res\shaders\environment_frag.glsl" />
+    <None Include="res\shaders\environment_vec.glsl" />
+    <None Include="res\shaders\standard_frag.glsl" />
+    <None Include="res\shaders\standard_vec.glsl" />
+    <None Include="res\shaders\std_with_ext_light_frag.glsl" />
+    <None Include="src\spdlog-1.x\include\spdlog\fmt\bundled\fmt.license.rst" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\sample2\Untitled.png" />
-    <Image Include="res\ship_in_clouds\textures\Boot_Finaal_emissive.jpeg" />
-    <Image Include="res\ship_in_clouds\textures\Cloud_1_baseColor.png" />
-    <Image Include="res\ship_in_clouds\textures\Cloud_1_emissive.jpeg" />
-    <Image Include="res\ship_in_clouds\textures\Cloud_2_emissive.jpeg" />
-    <Image Include="res\ship_in_clouds\textures\Cloud_3_baseColor.png" />
-    <Image Include="res\ship_in_clouds\textures\Cloud_3_emissive.jpeg" />
-    <Image Include="res\ship_in_clouds\textures\material_emissive.jpeg" />
-    <Image Include="res\ship_in_clouds\textures\Poly_emissive.jpeg" />
-    <Image Include="res\volkswagen\textures\Grates_baseColor.png" />
+    <Image Include="res\models\cube\Cube_BaseColor.png" />
+    <Image Include="res\models\cube\Cube_MetallicRoughness.png" />
+    <Image Include="res\models\DamagedHelmet\Default_albedo.jpg" />
+    <Image Include="res\models\DamagedHelmet\Default_AO.jpg" />
+    <Image Include="res\models\DamagedHelmet\Default_emissive.jpg" />
+    <Image Include="res\models\DamagedHelmet\Default_metalRoughness.jpg" />
+    <Image Include="res\models\DamagedHelmet\Default_normal.jpg" />
+    <Image Include="res\models\environment\Environment.jpg" />
+    <Image Include="res\models\Latern\Lantern_baseColor.png" />
+    <Image Include="res\models\Latern\Lantern_emissive.png" />
+    <Image Include="res\models\Latern\Lantern_normal.png" />
+    <Image Include="res\models\Latern\Lantern_roughnessMetallic.png" />
+    <Image Include="res\models\sample2\Untitled.png" />
+    <Image Include="res\models\ship_in_clouds\textures\Boot_Finaal_emissive.jpeg" />
+    <Image Include="res\models\ship_in_clouds\textures\Cloud_1_baseColor.png" />
+    <Image Include="res\models\ship_in_clouds\textures\Cloud_1_emissive.jpeg" />
+    <Image Include="res\models\ship_in_clouds\textures\Cloud_2_emissive.jpeg" />
+    <Image Include="res\models\ship_in_clouds\textures\Cloud_3_baseColor.png" />
+    <Image Include="res\models\ship_in_clouds\textures\Cloud_3_emissive.jpeg" />
+    <Image Include="res\models\ship_in_clouds\textures\material_emissive.jpeg" />
+    <Image Include="res\models\ship_in_clouds\textures\Poly_emissive.jpeg" />
+    <Image Include="res\models\volkswagen\textures\Grates_baseColor.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="res\models\ship_in_clouds\license.txt" />
+    <Text Include="res\models\volkswagen\license.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

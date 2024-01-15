@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 
-typedef void (* DEBUGPROC)(
+typedef void (*DEBUGPROC)(
 	GLenum source,
 	GLenum type,
 	GLuint id,
@@ -10,9 +10,6 @@ typedef void (* DEBUGPROC)(
 	const GLchar* message,
 	const void* userParam);
 
-void debug_init(std::vector<DEBUGPROC> callback_list);
-void callback_list(std::vector<DEBUGPROC>& callback_list);
-void error_callback(int code, const char* description);
-void turn_on_only_errors();
-void turn_on_everything();
-void display_logs();
+void gl_debug_init(std::vector<DEBUGPROC>& callback_list);
+void gl_fill_callback_list(std::vector<DEBUGPROC>& callback_list);
+void glew_callback(int code, const char* description);
