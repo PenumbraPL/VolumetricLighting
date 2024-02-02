@@ -3,6 +3,64 @@
 #include "pch.h";
 
 
+std::string printCoordSys(AkCoordSys* coord) {
+    if (coord) {
+        AkAxis axis[] = { coord->axis.fwd,
+        coord->axis.right,
+        coord->axis.up,
+        coord->cameraOrientation.fwd,
+        coord->cameraOrientation.right,
+        coord->cameraOrientation.up };
+        std::string ax_name[] = { "axis FW:" ,"axis RH:" ,"axis UP:", "camera FW:", "camera RH:", "camera UP : " };
+
+        AkAxisRotDirection axis_dir = coord->rotDirection;
+        std::string coordString;
+
+        for (int i = 0; i < sizeof(axis) / sizeof(AkAxis); i++) {
+            std::string st;
+            switch (axis[i]) {
+            case AK_AXIS_NEGATIVE_X: st = "NEGATIVE_X"; break;
+            case AK_AXIS_NEGATIVE_Y: st = "NEGATIVE_Y"; break;
+            case AK_AXIS_NEGATIVE_Z: st = "NEGATIVE_Z"; break;
+            case AK_AXIS_POSITIVE_X: st = "POSITIVE_X"; break;
+            case AK_AXIS_POSITIVE_Y: st = "POSITIVE_Y"; break;
+            case AK_AXIS_POSITIVE_Z: st = "POSITIVE_Z"; break;
+            }
+            coordString += ax_name[i] + " " + st + "\n";
+        }
+        switch (axis_dir) {
+        case AK_AXIS_ROT_DIR_LH: coordString += "rot dir: ROT LEFT\n";  break;
+        case AK_AXIS_ROT_DIR_RH: coordString += "rot dir: ROT RIGHT\n";  break;
+        }
+        return coordString;
+    }
+    return "CoordSys is nullptr!\n";
+}
+
+std::string printInf(AkDocInf* inf, AkUnit* unit) {
+    std::string infString;
+    if (inf && unit) {
+        infString += "Units: " + std::string(unit->name) + " ";
+        infString += unit->dist;
+        infString += "\nPath: " + std::string(inf->name);
+        infString += "\nFlip Image: ";
+        infString += inf->flipImage ? "True" : "False";
+        infString += "\n";
+        if (AK_FILE_TYPE_GLTF == inf->ftype) {
+            infString += "Type: GLTF\n";
+        }
+        else {
+            infString += "Unknown type\n";
+        }
+
+        return infString;
+    }
+    return "AkDocInf or AkUnit is nullptr!\n";
+}
+
+
+
+
 void formatAttribute(GLint attr_location, AkAccessor* acc) {
     int comp_size = acc->componentSize;;
     int type = acc->componentType;

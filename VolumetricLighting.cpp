@@ -1,17 +1,65 @@
 // VolumetricLighting.cpp : This file contains the 'main' function. Program execution begins and ends there.
 #include "VolumetricLighting.h"
-#define PATH "./res/models/DamagedHelmet/"
-#define FILE_NAME "DamagedHelmet.gltf"
-
-
-
 #include "pch.h"
 #include "Debug.h"
 #include "Models.h";
 
 
-
+ConfigContext panel_config{
+    500.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0, false, false, { 0.4f, 0.7f, 0.0f, 0.5f }, { 0.4f, 0.7f, 0.0f, 0.5f },{ 0.4f, 0.7f, 0.0f, 0.5f }, { 0.0f, 0.0f, 0.0f }, 0.1, 0.5, 0.5
+};
 auto logger = spdlog::basic_logger_mt("basic_logger", "logs/basic-log.txt");
+
+
+std::vector<PointLight> lights_list;
+
+
+void init_lights(void) {
+    lights_list.push_back({ glm::vec3(1.5, 1.5, 1.5), 0.1, 0.5, 0.5, glm::vec3(1., 1., 1.), glm::vec3(1., 1., 1.), glm::vec3(1., 1., 1.) });
+    lights_list.push_back({ glm::vec3(-1.5, -1.5, 1.5), 0.1, 0.5, 0.5, glm::vec3(1., .9, .8), glm::vec3(.7, .5, .4), glm::vec3(.3, .2, .1) });
+    lights_list.push_back({ glm::vec3(1.5, -1.5, 1.5), 0.1, 0.5, 0.5, glm::vec3(1., .9, .8), glm::vec3(.7, .5, .4), glm::vec3(.3, .2, .1) });
+}
+
+bool compare_lights(PointLight& old_light, PointLight& new_light) {
+    return memcmp(&old_light, &new_light, sizeof(PointLight));
+}
+
+bool compare_lights(LightsList& old_light, LightsList& new_light) {
+    if (old_light.size != new_light.size) return true;
+
+    return memcmp(&old_light.list, &new_light.list, old_light.size * sizeof(PointLight));
+}
+
+
+void insert_tree(ConfigContext& context, std::vector<std::string>& tree) {
+    context.directory = &tree;
+}
+
+
+GLint checkPipelineStatus(GLuint vertex_shader, GLuint fragment_shader) {
+    GLint v_comp_status, f_comp_status;
+    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &v_comp_status);
+    if (!v_comp_status) {
+        char comp_info[1024];
+        memset(comp_info, '\0', 1024);
+        //glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, NULL);
+        glGetShaderInfoLog(vertex_shader, 1024, NULL, comp_info);
+        std::cout << "Vertex Shader: ";
+        fwrite(comp_info, 1024, 1, stdout);
+    }
+    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &f_comp_status);
+    if (!f_comp_status) {
+        char comp_info[1024];
+        memset(comp_info, '\0', 1024);
+        //glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, NULL);
+        glGetShaderInfoLog(fragment_shader, 1024, NULL, comp_info);
+        std::cout << "Fragment Shader: ";
+        fwrite(comp_info, 1024, 1, stdout);
+    }
+    return (!v_comp_status || !f_comp_status) ? 0 : 1;
+}
+
+
 
 WindowInfo windowConfig = {
     1900,
@@ -37,21 +85,67 @@ namespace fs = std::filesystem;
 
 /* ============================================================================= */
 
-void folder_content(std::string& path, std::vector<std::string> content) {
-    for (const auto& entry : fs::directory_iterator(path)) {
-        if (entry.is_regular_file()) {
-            std::cout << entry.path().filename().extension() << std::endl;
-            if (entry.path().filename().extension() == ".gltf") {}
-            content.push_back(entry.path().generic_string());
-        }
-        else if (entry.is_directory()) {
-            std::string subpath = entry.path().generic_string();
-            content.push_back(subpath);
-            std::cout << "============\n";
-            folder_content(subpath, content);
-        }
-    }
+
+PointLight getLight(ConfigContext& panel_config) {
+    glm::vec3 ambient = { panel_config.light_ambient[0], panel_config.light_ambient[1], panel_config.light_ambient[2] };
+    glm::vec3 diffuse = { panel_config.light_diffuse[0], panel_config.light_diffuse[1], panel_config.light_diffuse[2] };
+    glm::vec3 specular = { panel_config.light_specular[0], panel_config.light_specular[1], panel_config.light_specular[2] };
+    glm::vec4 position = { panel_config.position[0], panel_config.position[1], panel_config.position[2], 1. };
+
+    float l_position[16] = {};
+    l_position[0] = 1.;
+    l_position[5] = 1.;
+    l_position[10] = 1.;
+    l_position[15] = 1.;
+
+    //glm::mat4 View = glm::rotate(
+    //    glm::rotate(
+    //        glm::translate(
+    //            glm::make_mat4x4(l_position)
+    //            , translate)
+    //        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+    //    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+    //glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
+    //glm::mat4 MVP = Projection * LookAt * View * Model;
+
+    glm::vec4 new_position = position;
+
+    return  { new_position, panel_config.c, panel_config.l, panel_config.q, ambient, diffuse, specular };
 }
+
+
+glm::vec3 getTranslate(ConfigContext& panel_config) {
+    return  glm::vec3(panel_config.tr_x * 0.02, panel_config.tr_y * 0.02, panel_config.tr_z * 0.02);
+}
+
+glm::vec3 getRotate(ConfigContext& panel_config) {
+    return glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
+}
+
+
+glm::vec3 polar(ConfigContext& panel_config) {
+    float r = 0.1 * panel_config.dist;
+    float phi = panel_config.phi;
+    float theta = panel_config.theta;
+    glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
+    
+    return glm::vec3(eye.z, eye.y, eye.x);
+}
+
+
+glm::mat4 preperLookAt(ConfigContext& panel_config){
+    float theta = panel_config.theta;
+    glm::vec3 eye = polar(panel_config); 
+
+    glm::vec3 north = glm::vec3(0., 1., 0.);
+    float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
+    if (corrected_theta > 3.14 / 2. && corrected_theta < 3.14 * 3. / 2.) {
+        north = glm::vec3(0., -1., 0.);
+    }
+    return  glm::lookAt(eye, glm::vec3(0.), north);
+}
+
+
 
 GLuint wrap_mode(AkWrapMode& wrap) {
     GLuint wrap_m = GL_REPEAT;
@@ -292,61 +386,6 @@ void proccess_node(AkNode* node) {
     }
 }
 
-std::string printCoordSys(AkCoordSys* coord) {
-    if (coord) {
-        AkAxis axis[] = { coord->axis.fwd,
-        coord->axis.right,
-        coord->axis.up,
-        coord->cameraOrientation.fwd,
-        coord->cameraOrientation.right,
-        coord->cameraOrientation.up };
-        std::string ax_name[] = { "axis FW:" ,"axis RH:" ,"axis UP:", "camera FW:", "camera RH:", "camera UP : " };
-
-        AkAxisRotDirection axis_dir = coord->rotDirection;
-        std::string coordString;
-
-        for (int i = 0; i < sizeof(axis) / sizeof(AkAxis); i++) {
-            std::string st;
-            switch (axis[i]) {
-            case AK_AXIS_NEGATIVE_X: st = "NEGATIVE_X"; break;
-            case AK_AXIS_NEGATIVE_Y: st = "NEGATIVE_Y"; break;
-            case AK_AXIS_NEGATIVE_Z: st = "NEGATIVE_Z"; break;
-            case AK_AXIS_POSITIVE_X: st = "POSITIVE_X"; break;
-            case AK_AXIS_POSITIVE_Y: st = "POSITIVE_Y"; break;
-            case AK_AXIS_POSITIVE_Z: st = "POSITIVE_Z"; break;
-            }
-            coordString += ax_name[i] + " " + st + "\n";
-        }
-        switch (axis_dir) {
-        case AK_AXIS_ROT_DIR_LH: coordString += "rot dir: ROT LEFT\n";  break;
-        case AK_AXIS_ROT_DIR_RH: coordString += "rot dir: ROT RIGHT\n";  break;
-        }
-        return coordString;
-    }
-    return "CoordSys is nullptr!\n";
-}
-
-std::string printInf(AkDocInf* inf, AkUnit* unit) {
-    std::string infString;
-    if (inf && unit) {
-        infString += "Units: " + std::string(unit->name) + " ";
-        infString += unit->dist;
-        infString += "\nPath: " + std::string(inf->name);
-        infString += "\nFlip Image: ";
-        infString += inf->flipImage ? "True" : "False";
-        infString += "\n";
-        if (AK_FILE_TYPE_GLTF == inf->ftype) {
-            infString += "Type: GLTF\n";
-        }
-        else {
-            infString += "Unknown type\n";
-        }
-
-        return infString;
-    }
-    return "AkDocInf or AkUnit is nullptr!\n";
-}
-
 
 
 
@@ -409,19 +448,9 @@ int main(void)
     
 
     GLuint vao, vertex_buffer;
-    GLint mvp_location, vpos_location, vcol_location, 
-        norm_location, tex_location, is_tex_location, prj_location, camera_location, g_location, dir_location;
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
-
-
-    std::string path = "res";
-    std::vector<std::string> tree;
-    //std::map < std::string, std::string> tree;
-    folder_content(path, tree);
-    insert_tree(panel_config, tree);
-    
 
 
     /* ================================================ */
@@ -535,13 +564,6 @@ int main(void)
 
     /* ======================================================== */
 
-    //mvp_location = glGetUniformLocation(program, "MVP");
-    //norm_location = glGetAttribLocation(program, "vNor");
-    //vpos_location = glGetAttribLocation(program, "vPos");
-    //tex_location = glGetAttribLocation(program, "vTex");
-    //is_tex_location = glGetUniformLocation(program, "isTexture");
-
-
    
     GLuint* buffers = (GLuint*) calloc(bufferViews.size(), sizeof(GLuint));
     glCreateBuffers(bufferViews.size(), buffers);
@@ -550,39 +572,10 @@ int main(void)
         glNamedBufferData(buffers[i], ((AkBuffer*) buffer.first)->length, ((AkBuffer*) buffer.first)->data, GL_STATIC_DRAW);
     }
     
-    for (int i = 0; i < primitives.size(); i++) {
-        GLuint& vertex_program = primitives[i].programs[VERTEX];
-        GLuint& fragment_program = primitives[i].programs[FRAGMENT];
-        // TO DO
-        mvp_location = glGetUniformLocation(vertex_program, "MVP");
-        norm_location = glGetAttribLocation(vertex_program, "vNor");
-        vpos_location = glGetAttribLocation(vertex_program, "vPos");
-        tex_location = glGetAttribLocation(vertex_program, "vTex");
-        is_tex_location = glGetUniformLocation(fragment_program, "isTexture");
-        prj_location = glGetUniformLocation(vertex_program, "PRJ");
-        camera_location = glGetUniformLocation(fragment_program, "camera");
-        g_location = glGetUniformLocation(fragment_program, "G");
-        dir_location = glGetUniformLocation(fragment_program, "direction");
+    for (auto& p : primitives) p.getLocation();
 
-        if (mvp_location != -1) glEnableVertexAttribArray(mvp_location);
-        if (vpos_location != -1) glEnableVertexAttribArray(vpos_location);
-        if (norm_location != -1) glEnableVertexAttribArray(norm_location);
-        if (tex_location != -1) glEnableVertexAttribArray(tex_location);
-        if (is_tex_location != -1) glEnableVertexAttribArray(is_tex_location);
-        if (prj_location != -1) glEnableVertexAttribArray(prj_location);
-        if (camera_location != -1) glEnableVertexAttribArray(camera_location);
+    for (auto& l : lights)    l.createPipeline();
 
-
-        if (vpos_location != -1) formatAttribute(vpos_location, primitives[i].pos);
-        if (norm_location != -1) formatAttribute(norm_location, primitives[i].nor);
-        if (tex_location  != -1) formatAttribute(tex_location, primitives[i].tex);
-        //glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
-    }
-
-
-    for (auto& l : lights) {
-        l.createPipeline();
-    }
 
     Environment env;
     env.loadMesh();
@@ -627,136 +620,29 @@ int main(void)
         glClearColor(0., 1., 1., 1.0);
 
 
-        float r = 0.1 * panel_config.dist;
-        float phi = panel_config.phi;
-        float theta = panel_config.theta;
-
-        glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
-        eye = glm::vec3(eye.z, eye.y, eye.x);
-
-        glm::vec3 north = glm::vec3(0., 1., 0.);
-        float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
-        if (corrected_theta > 3.14 / 2. && corrected_theta < 3.14 * 3. / 2.) {
-            north = glm::vec3(0., -1., 0.);
-        }
-        glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
+        glm::vec3 eye = polar(panel_config);
+        glm::mat4 LookAt = preperLookAt(panel_config);
         if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
         
 
         env.draw(width, height, Projection, camera);
-        //cld.draw(width, height, Projection, camera);
 
-        glm::vec3 translate = glm::vec3(panel_config.tr_x * 0.02, panel_config.tr_y * 0.02, panel_config.tr_z * 0.02);
-        glm::vec3 rotate = glm::vec3(3.14 * panel_config.rot_x / 180, 3.14 * panel_config.rot_y / 180, 0.f);
-
-        glm::vec3 ambient = { panel_config.light_ambient[0], panel_config.light_ambient[1], panel_config.light_ambient[2] };
-        glm::vec3 diffuse = { panel_config.light_diffuse[0], panel_config.light_diffuse[1], panel_config.light_diffuse[2] };
-        glm::vec3 specular = { panel_config.light_specular[0], panel_config.light_specular[1], panel_config.light_specular[2] };
-        glm::vec4 position = { panel_config.position[0], panel_config.position[1], panel_config.position[2], 1. };
-
-        float l_position[16] = {};
-        l_position[0] = 1.;
-        l_position[5] = 1.;
-        l_position[10] = 1.;
-        l_position[15] = 1.;
-
-        glm::mat4 View = glm::rotate(
-            glm::rotate(
-                glm::translate(
-                    glm::make_mat4x4(l_position)
-                    , translate)
-                , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
-            rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
-        glm::mat4 MVP = Projection * LookAt * View * Model;
-        
-        glm::vec4 new_position = position;
-        PointLight new_light = { new_position, panel_config.c, panel_config.l, panel_config.q, ambient, diffuse, specular };
-
-
+        glm::vec3 translate = getTranslate(panel_config);
+        glm::vec3 rotate = getRotate(panel_config); 
+        PointLight new_light = getLight(panel_config);
         if (compare_lights(lights_list.data()[0], new_light)) {
             lights_list.data()[0] = new_light;
             LightsList* ptr = (LightsList*)glMapNamedBuffer(lights_buffer, GL_WRITE_ONLY);
             memcpy_s((void*)&ptr->list[0], sizeof(PointLight), &new_light, sizeof(PointLight));
             glUnmapNamedBuffer(lights_buffer);
         }
-        /*if (compare_lights(lights_list.data()[0], new_light)) {
-            lights_list.data()[0] = new_light;
-            LightsList* ptr = (LightsList*)glMapNamedBuffer(lights_buffer, GL_WRITE_ONLY);
-            memcpy_s((void*)&ptr->list[0], sizeof(PointLight), &new_light, sizeof(PointLight));
-            glUnmapNamedBuffer(lights_buffer);
-        }*/
 
-        for (int i = 0; i < primitives.size(); i++) {
 
-            glBindProgramPipeline(primitives[i].pipeline);
-            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lights_buffer);
-
-            glm::mat4 View =  glm::rotate(
-                                glm::rotate(
-                                    glm::translate(
-                                        glm::make_mat4x4(primitives[i].transform)
-                                        , translate)
-                                    , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
-                                    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-            glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
-            glm::mat4 MVP = LookAt * View * Model;
-            glm::vec3 camera_view = glm::vec4(eye, 1.0);
-            glm::vec3 camera_dir = glm::vec3(0.) - eye;
-
-            glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], mvp_location, 1, GL_FALSE, glm::value_ptr(MVP));
-            glProgramUniformMatrix4fv(primitives[i].programs[VERTEX], prj_location, 1, GL_FALSE, glm::value_ptr(Projection));
-            glProgramUniform3fv(primitives[i].programs[FRAGMENT], camera_location, 1, glm::value_ptr(camera_view));
-            glProgramUniform1f(primitives[i].programs[FRAGMENT], g_location, panel_config.g);
-            glProgramUniform3fv(primitives[i].programs[FRAGMENT], dir_location, 1, glm::value_ptr(camera_dir));
-
-            if(!primitives[i].textures[ALBEDO])
-                glProgramUniform1ui(primitives[i].programs[FRAGMENT], is_tex_location, GL_FALSE);
-
-            int j = bufferViews[primitives[i].pos->buffer];
-            int binding_point = 0;
-            glVertexAttribBinding(vpos_location, binding_point);
-            glBindVertexBuffer(binding_point, buffers[j], primitives[i].pos->byteOffset, primitives[i].pos->componentBytes);
-            
-            if (norm_location != -1) {
-                j = bufferViews[primitives[i].nor->buffer];
-                binding_point = 1;
-                glVertexAttribBinding(norm_location, binding_point);
-                glBindVertexBuffer(binding_point, buffers[j], primitives[i].nor->byteOffset, primitives[i].nor->componentBytes);
-            }
-
-            if (tex_location != -1) {
-                j = bufferViews[primitives[i].tex->buffer];
-                binding_point = 2;
-                glVertexAttribBinding(tex_location, binding_point);
-                glBindVertexBuffer(binding_point, buffers[j], primitives[i].tex->byteOffset, primitives[i].tex->componentBytes);
-            }
-            for (unsigned int tex_type = AMBIENT; tex_type < TT_SIZE; tex_type++) {
-                GLuint sampler = primitives[i].samplers[(TextureType) tex_type];
-                GLuint texture = primitives[i].textures[(TextureType) tex_type];
-                if (sampler && texture) {
-                    //glProgramUniform1ui(primitives[i].programs[FRAGMENT], is_tex_location, GL_TRUE);
-                    glBindSampler(tex_type, sampler);
-                    glActiveTexture(GL_TEXTURE0 + tex_type);
-                    glBindTexture(primitives[i].tex_type[tex_type], texture);
-                }
-                else {
-                    glActiveTexture(GL_TEXTURE0 + tex_type);
-                    glBindTexture(GL_TEXTURE_2D, 0); // needs change
-                }
-                
-                /*
-                else {
-                    glProgramUniform1ui(primitives[i].programs[FRAGMENT], is_tex_location, GL_FALSE);
-                }*/
-            }
-
-            glDrawElements(GL_TRIANGLES, primitives[i].ind_size, GL_UNSIGNED_INT, primitives[i].ind);
+        for (auto& p : primitives) {
+            p.draw(lights_buffer, bufferViews, buffers,
+                eye, LookAt, Projection, translate, rotate);
         }
-
         cld.draw(width, height, Projection, camera, panel_config.g, lights_buffer);
-        //cld.draw(width, height, Projection, eye, lights_buffer);
         for (auto& l : lights)     l.drawLight(width, height, Projection, camera);
 
 
