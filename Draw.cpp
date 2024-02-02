@@ -1,4 +1,6 @@
+#include "pch.h"
 #include "Draw.h"
+
 
 void setPointer(GLuint program, GLint &mvp_location, GLint &vpos_location, GLint &vcol_location) {
     mvp_location = glGetUniformLocation(program, "MVP");

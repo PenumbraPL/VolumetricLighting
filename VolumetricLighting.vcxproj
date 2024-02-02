@@ -104,10 +104,16 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)\src\spdlog-1.x\include;$(SolutionDir)\include;$(SolutionDir)\src;$(SolutionDir)\src\imgui</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ShowIncludes>false</ShowIncludes>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <Optimization>Disabled</Optimization>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <PrecompiledHeader>Create</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,10 +150,16 @@ Shell32.lib
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)\src\spdlog-1.x\include;$(SolutionDir)\include;$(SolutionDir)\src;$(SolutionDir)\src\imgui</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ShowIncludes>false</ShowIncludes>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <Optimization>Disabled</Optimization>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <PrecompiledHeader>Create</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -185,22 +197,42 @@ Shell32.lib
     <ClCompile Include="Draw.cpp" />
     <ClCompile Include="GUI.cpp" />
     <ClCompile Include="IO.cpp" />
-    <ClCompile Include="Source.cpp" />
-    <ClCompile Include="src\imgui\backends\imgui_impl_glfw.cpp" />
-    <ClCompile Include="src\imgui\backends\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="src\imgui\imgui.cpp" />
-    <ClCompile Include="src\imgui\imgui_demo.cpp" />
-    <ClCompile Include="src\imgui\imgui_draw.cpp" />
-    <ClCompile Include="src\imgui\imgui_tables.cpp" />
-    <ClCompile Include="src\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Models.cpp" />
+    <ClCompile Include="src\imgui\backends\imgui_impl_glfw.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="src\imgui\backends\imgui_impl_opengl3.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_demo.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_draw.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_tables.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_widgets.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Tools.cpp" />
     <ClCompile Include="VolumetricLighting.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Debug.h" />
     <ClInclude Include="Draw.h" />
-    <ClInclude Include="GLEW.h" />
     <ClInclude Include="GUI.h" />
-    <ClInclude Include="Header.h" />
     <ClInclude Include="include\ak\animation.h" />
     <ClInclude Include="include\ak\assetkit.h" />
     <ClInclude Include="include\ak\bbox.h" />
@@ -245,6 +277,8 @@ Shell32.lib
     <ClInclude Include="include\ds\util.h" />
     <ClInclude Include="include\ds\version.h" />
     <ClInclude Include="IO.h" />
+    <ClInclude Include="Models.h" />
+    <ClInclude Include="pch.h" />
     <ClInclude Include="src\imgui\backends\imgui_impl_glfw.h" />
     <ClInclude Include="src\imgui\backends\imgui_impl_opengl3.h" />
     <ClInclude Include="src\imgui\imconfig.h" />
@@ -360,6 +394,7 @@ Shell32.lib
     <ClInclude Include="VolumetricLighting.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="ClassDiagram.cd" />
     <None Include="res\models\cube\Cube.bin" />
     <None Include="res\models\cube\Cube.gltf" />
     <None Include="res\models\DamagedHelmet\DamagedHelmet.bin" />
@@ -416,6 +451,7 @@ Shell32.lib
     <Image Include="res\models\volkswagen\textures\Grates_baseColor.png" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="logs\basic-log.txt" />
     <Text Include="res\models\ship_in_clouds\license.txt" />
     <Text Include="res\models\volkswagen\license.txt" />
   </ItemGroup>

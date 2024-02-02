@@ -76,6 +76,9 @@
     <Filter Include="Resource Files\models\Volkswagen">
       <UniqueIdentifier>{b8098380-dbc5-4019-acd9-deae31a235b7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\logs">
+      <UniqueIdentifier>{5918f1d6-1ce7-4bbd-9bd5-efbc97b34651}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="VolumetricLighting.cpp">
@@ -114,7 +117,10 @@
     <ClCompile Include="IO.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source.cpp">
+    <ClCompile Include="Tools.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Models.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -249,9 +255,6 @@
       <Filter>Header Files\assetkit</Filter>
     </ClInclude>
     <ClInclude Include="src\stb\stb_image.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GLEW.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\ds\allocator.h">
@@ -602,7 +605,10 @@
     <ClInclude Include="IO.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Header.h">
+    <ClInclude Include="pch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Models.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -697,6 +703,7 @@
     <None Include="res\shaders\pbr_with_ext_light_frag.glsl">
       <Filter>Resource Files\shaders\fragment</Filter>
     </None>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\models\cube\Cube_MetallicRoughness.png">
@@ -772,6 +779,9 @@
     </Text>
     <Text Include="res\models\volkswagen\license.txt">
       <Filter>Resource Files\models\Volkswagen</Filter>
+    </Text>
+    <Text Include="logs\basic-log.txt">
+      <Filter>Resource Files\logs</Filter>
     </Text>
   </ItemGroup>
 </Project>

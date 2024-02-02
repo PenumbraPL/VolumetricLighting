@@ -142,7 +142,7 @@ void main()
     vec4 result = vec4(0., 0., 0., 0.);
    
    for(int i = 0; i < size; i++)
-        result += CalcLight(list[i], norm, fs_in._position, viewDir);
+        result += CalcLight(list[i], norm, fs_in._position, viewDir)/size;
 
    color = result;
 }

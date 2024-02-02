@@ -3,6 +3,16 @@
 #define PATH "./res/models/DamagedHelmet/"
 #define FILE_NAME "DamagedHelmet.gltf"
 
+
+
+#include "pch.h"
+#include "Debug.h"
+#include "Models.h";
+
+
+
+auto logger = spdlog::basic_logger_mt("basic_logger", "logs/basic-log.txt");
+
 WindowInfo windowConfig = {
     1900,
     1000,
@@ -23,6 +33,7 @@ std::vector<Light> lights;
 std::vector<Camera> cameras;
 
 namespace fs = std::filesystem;
+
 
 /* ============================================================================= */
 
@@ -138,6 +149,9 @@ void set_up_color(AkColorDesc* colordesc, AkMeshPrimitive* prim, GLuint* sampler
         }
     }
 }
+
+
+
 
 void proccess_node(AkNode* node) {
     int offset = 0;
@@ -338,10 +352,10 @@ std::string printInf(AkDocInf* inf, AkUnit* unit) {
 
 int main(void)
 {
-    std::cout << "========== Initialization started ============================================\n";
+    logger->info("========== Initialization started ============================================\n");
     if (!glfwInit()) {
-        std::cout << "========== [GLFW]: Initialization failed =====================================\n";
-        return 1;
+        logger->error("========== [GLFW]: Initialization failed =====================================\n");
+        exit(EXIT_FAILURE);
     }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
@@ -352,9 +366,9 @@ int main(void)
     if (!window)
     {
         glfwTerminate();
-        std::cout << "========== [GLFW]: Terminated ================================================\n";
-        std::cout << "========== [GLFW]: Window initialization failed ==============================\n";
-        return 1;
+        logger->warn("========== [GLFW]: Terminated ================================================\n");
+        logger->error("========== [GLFW]: Window initialization failed ==============================\n");
+        exit(EXIT_FAILURE);
     }
 
     glfwMakeContextCurrent(window);
@@ -377,23 +391,20 @@ int main(void)
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.ConfigWindowsMoveFromTitleBarOnly = true;
-
     ImGui::StyleColorsDark();
-
     const char* glsl_version = "#version 450";
-    // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
 
     int flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
-        std::cout << "========== [GLFW]: Debug context initialize successful =======================\n";
+        logger->info("========== [GLFW]: Debug context initialize successful =======================\n");
         std::vector<DEBUGPROC> callbacks;
         gl_fill_callback_list(callbacks);
         gl_debug_init(callbacks);
     }  else {
-        std::cout << "========== [GLFW]: Debug context initialize unsuccessful =====================\n";
+        logger->warn("========== [GLFW]: Debug context initialize unsuccessful =====================\n");
     }
     
 
@@ -415,7 +426,7 @@ int main(void)
 
     /* ================================================ */
 
-    ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
+    //ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
 
 
 
@@ -428,12 +439,12 @@ int main(void)
     std::string scene_path = PATH;
     scene_path += FILE_NAME;
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
-        std::cout << "Document couldn't be loaded\n";
-        return -1;
+        logger->error("Document couldn't be loaded\n");
+        exit(EXIT_FAILURE);
     }else {
-        std::cout << printCoordSys(doc->coordSys);
-        std::cout << printInf(doc->inf, doc->unit);
-        std::cout << "==============================================================================\n";
+        logger->info(printCoordSys(doc->coordSys));
+        logger->info(printInf(doc->inf, doc->unit));
+        logger->info("==============================================================================\n");
     }
 
     float* camera_mat = (float*)calloc(16, sizeof(float));
@@ -443,9 +454,12 @@ int main(void)
 
     if (doc->scene.visualScene) {
         scene = (AkVisualScene*) ak_instanceObject(doc->scene.visualScene);
-        std::cout << "=============== Visual Scene loaded ====";
-        if(scene->name) std::cout << "Scene name: " << scene->name << "============" << std::endl;
-        
+        logger->info("=============== Visual Scene loaded ====");
+        if (scene->name) {
+            logger->info("Scene name: ");
+            logger->info(scene->name);
+            logger->info("============\n");
+        }
 
         ak_firstCamera(doc, &camera, camera_mat, camera_proj);
         if (camera) {
@@ -591,20 +605,15 @@ int main(void)
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, lights_buffer);
 
     init_lights();
-     
+    int light_size = sizeof(PointLight) * lights_list.size();
+    unsigned int l_size = lights_list.size();
 
-   LightsList lightbuffer{
-        lights_list.size()-1,
-      //  { 0 },
-        {lights_list.data()[0]}
-    };
-
-   // malloc(offsetof(LightsList, list) + N * PointLight);
-
-    glNamedBufferData(lights_buffer, 2*sizeof(LightsList), &lightbuffer, GL_DYNAMIC_DRAW);
+    glNamedBufferData(lights_buffer, sizeof(LightsList) + light_size, NULL, GL_DYNAMIC_DRAW);
+    glNamedBufferSubData(lights_buffer, offsetof(LightsList, size), sizeof(unsigned int), &l_size);
+    glNamedBufferSubData(lights_buffer, offsetof(LightsList, list), light_size, lights_list.data());
 
 
-    std::cout << "===================== Main loop ==============================================\n";
+    logger->info("===================== Main loop ==============================================\n");
     while (!glfwWindowShouldClose(window))
     {
         int width, height;
@@ -633,10 +642,6 @@ int main(void)
         glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
         if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
         
-
-        
-        
-        if (!camera) Projection = glm::perspectiveFov((float)3.14 * panel_config.fov / 180, (float)width, (float)height, panel_config.near_plane, panel_config.far_plane);
 
         env.draw(width, height, Projection, camera);
         //cld.draw(width, height, Projection, camera);
@@ -675,6 +680,12 @@ int main(void)
             memcpy_s((void*)&ptr->list[0], sizeof(PointLight), &new_light, sizeof(PointLight));
             glUnmapNamedBuffer(lights_buffer);
         }
+        /*if (compare_lights(lights_list.data()[0], new_light)) {
+            lights_list.data()[0] = new_light;
+            LightsList* ptr = (LightsList*)glMapNamedBuffer(lights_buffer, GL_WRITE_ONLY);
+            memcpy_s((void*)&ptr->list[0], sizeof(PointLight), &new_light, sizeof(PointLight));
+            glUnmapNamedBuffer(lights_buffer);
+        }*/
 
         for (int i = 0; i < primitives.size(); i++) {
 
@@ -721,7 +732,7 @@ int main(void)
                 glVertexAttribBinding(tex_location, binding_point);
                 glBindVertexBuffer(binding_point, buffers[j], primitives[i].tex->byteOffset, primitives[i].tex->componentBytes);
             }
-            for (unsigned int tex_type = AMBIENT; tex_type < SIZE; tex_type++) {
+            for (unsigned int tex_type = AMBIENT; tex_type < TT_SIZE; tex_type++) {
                 GLuint sampler = primitives[i].samplers[(TextureType) tex_type];
                 GLuint texture = primitives[i].textures[(TextureType) tex_type];
                 if (sampler && texture) {
@@ -784,7 +795,7 @@ int main(void)
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     glfwTerminate();
-    std::cout << "========== [GLFW]: Terminated ================================================\n";
-    std::cout << "===================== Exit succeeded =========================================\n";
+    logger->info("========== [GLFW]: Terminated ================================================\n");
+    logger->info("===================== Exit succeeded =========================================\n");
     return 0;
 }

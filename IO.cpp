@@ -1,5 +1,6 @@
 #include "IO.h"
 #include "GUI.h"
+#include "pch.h"
 
 extern ConfigContext panel_config;
 extern float mouse_speed;

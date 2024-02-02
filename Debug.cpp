@@ -1,7 +1,7 @@
 #include "GL/glew.h"
+#include "pch.h"
 #include "Debug.h"
-#include "iostream"
-#include "spdlog/sinks/basic_file_sink.h"
+
 
 
 void turn_on_everything(bool without_notif) {
