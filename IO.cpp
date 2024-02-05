@@ -24,7 +24,7 @@ namespace control
 {
     void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     {
-        panelConfig.dist += yoffset * panelConfig.dist / -6.;
+        panelConfig.dist += (float) (yoffset * panelConfig.dist / -6.);
     }
 
     //static
@@ -35,8 +35,8 @@ namespace control
             if (state != GLFW_RELEASE) {
                 double nx = (mouseSpeed / windowConfig.width) * (new_xpos - xpos);
                 double ny = (mouseSpeed / windowConfig.height) * (new_ypos - ypos);
-                panelConfig.phi += nx;
-                panelConfig.theta += ny;
+                panelConfig.phi += (float) nx;
+                panelConfig.theta += (float) ny;
 
                 xpos = new_xpos;
                 ypos = new_ypos;
@@ -59,16 +59,16 @@ namespace control
         int mods)
     {
         if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-            panelConfig.phi += 0.01;
+            panelConfig.phi += 0.01f;
         }
         if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-            panelConfig.phi -= 0.01;
+            panelConfig.phi -= 0.01f;
         }
         if (key == GLFW_KEY_UP && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-            panelConfig.theta += 0.01;
+            panelConfig.theta += 0.01f;
         }
         if (key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-            panelConfig.theta -= 0.01;
+            panelConfig.theta -= 0.01f;
         }
         if (key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
             panelConfig.tr_z += 1;

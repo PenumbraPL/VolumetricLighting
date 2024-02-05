@@ -14,7 +14,7 @@
 #define PATH "./res/models/DamagedHelmet/"
 #define FILE_NAME "DamagedHelmet.gltf"
 #include "Debug.h"
-#include "Models.h";
+#include "Models.h"
 
 
 ConfigContext panelConfig{
@@ -23,7 +23,7 @@ ConfigContext panelConfig{
     { 0.4f, 0.7f, 0.0f, 0.5f },
     { 0.4f, 0.7f, 0.0f, 0.5f },
     { 0.0f, 0.0f, 0.0f },
-    0.1, 0.5, 0.5
+    0.1f, 0.5f, 0.5f
 };
 auto logger = spdlog::basic_logger_mt("basic_logger", "logs/basic-log.txt");
 struct WindowInfo {
@@ -112,15 +112,14 @@ int main(void)
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
         logger->info("========== [GLFW]: Debug context initialize successful =======================\n");
         std::vector<DEBUGPROC> callbacks;
-        debug::gl_fill_callback_list(callbacks);
-        debug::gl_debug_init(callbacks);
+        debug::fill_callback_list(callbacks);
+        debug::debug_init(callbacks);
     }  
     else {
         logger->warn("========== [GLFW]: Debug context initialize unsuccessful =====================\n");
     }
     
-    GLuint vao, vertex_buffer;
-
+    GLuint vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
@@ -131,8 +130,6 @@ int main(void)
     AkDoc* doc;
     AkVisualScene* scene;
     AkCamera* camera = nullptr;
-    AkInstanceGeometry* geometry;
-    AkNode *root, *node_ptr;
 
     std::string scene_path = PATH;
     scene_path += FILE_NAME;
@@ -234,7 +231,7 @@ int main(void)
 
    
     GLuint* docDataBuffer = (GLuint*) calloc(bufferViews.size(), sizeof(GLuint));
-    glCreateBuffers(bufferViews.size(), docDataBuffer);
+    glCreateBuffers((GLsizei) bufferViews.size(), docDataBuffer);
     for (auto &buffer : bufferViews) {
         unsigned int i = bufferViews[buffer.first];
         glNamedBufferData(docDataBuffer[i], ((AkBuffer*) buffer.first)->length, ((AkBuffer*) buffer.first)->data, GL_STATIC_DRAW);
@@ -265,8 +262,8 @@ int main(void)
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightsBuffer);
 
     init_lights();
-    int lightsBufferSize = sizeof(PointLight) * lightsData.size();
-    unsigned int lightDataSize = lightsData.size();
+    int lightsBufferSize = (int) sizeof(PointLight) * lightsData.size();
+    unsigned int lightDataSize = (unsigned int) lightsData.size();
 
     glNamedBufferData(lightsBuffer, sizeof(LightsList) + lightsBufferSize, NULL, GL_DYNAMIC_DRAW);
     glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
@@ -339,7 +336,7 @@ int main(void)
     for (auto& l : lights)     l.deletePipeline();
 
 
-    glDeleteBuffers(bufferViews.size(), docDataBuffer); 
+    glDeleteBuffers((GLsizei) bufferViews.size(), docDataBuffer); 
     free(docDataBuffer);
     glDeleteVertexArrays(1, &vao);
 

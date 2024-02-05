@@ -1,6 +1,6 @@
 #pragma once
 #include "GLFW/glfw3.h"
-#include "pch.h";
+#include "pch.h"
 #include "GUI.h"
 
 extern ConfigContext panelConfig;
@@ -58,8 +58,8 @@ struct Environment {
     GLuint pipeline;
     GLuint skybox;
     GLuint env_sampler;
-    glm::mat4 MVP;
-    GLuint* primitiveDataBuffer;
+    glm::mat4 MVP = glm::mat4x4(0.);
+    GLuint* primitiveDataBuffer = nullptr;
     GLuint mvpBindingLocation;
 
     void createPipeline();

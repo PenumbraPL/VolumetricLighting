@@ -82,7 +82,7 @@ struct ConfigContext{
 
      glm::vec3 polar() 
      {
-         float r = 0.1 * dist;
+         float r = 0.1f * dist;
          float phi = this->phi;
          float theta = this->theta;
          glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));

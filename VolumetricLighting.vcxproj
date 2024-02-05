@@ -109,7 +109,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)\src\spdlog-1.x\include;$(SolutionDir)\include;$(SolutionDir)\src;$(SolutionDir)\src\imgui</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <ShowIncludes>false</ShowIncludes>
-      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4996;4200</DisableSpecificWarnings>
       <Optimization>Disabled</Optimization>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>Create</PrecompiledHeader>
@@ -155,7 +155,7 @@ Shell32.lib
       <AdditionalIncludeDirectories>$(SolutionDir)\src\spdlog-1.x\include;$(SolutionDir)\include;$(SolutionDir)\src;$(SolutionDir)\src\imgui</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <ShowIncludes>false</ShowIncludes>
-      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4996;4200</DisableSpecificWarnings>
       <Optimization>Disabled</Optimization>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>Create</PrecompiledHeader>

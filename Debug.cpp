@@ -30,7 +30,7 @@ namespace debug
 		glDebugMessageControl(GL_DEBUG_SOURCE_API, GL_DEBUG_TYPE_ERROR, GL_DEBUG_SEVERITY_MEDIUM, 0, NULL, GL_TRUE);
 	}
 
-	void gl_display_logs()
+	void display_logs()
 	{
 		char messageLog[2048];
 		memset(messageLog, '\0', 2048);
@@ -38,7 +38,7 @@ namespace debug
 		fwrite(messageLog, sizeof(char), 2048, stdout);
 	}
 
-	void gl_callback_basic_info(GLenum source,
+	void callback_basic_info(GLenum source,
 		GLenum type,
 		GLuint id,
 		GLenum severity,
@@ -59,7 +59,7 @@ namespace debug
 			<< " ======================================================================== \n";
 	};
 
-	void gl_callback_full_info(GLenum source,
+	void callback_full_info(GLenum source,
 		GLenum type,
 		GLuint id,
 		GLenum severity,
@@ -82,9 +82,9 @@ namespace debug
 			<< " ======================================================================== \n";
 	};
 
-	void gl_fill_callback_list(std::vector<DEBUGPROC>& callback_list) 
+	void fill_callback_list(std::vector<DEBUGPROC>& callback_list) 
 	{
-		callback_list.push_back(&gl_callback_basic_info);
+		callback_list.push_back(&callback_basic_info);
 		//callback_list.push_back(&gl_callback_full_info);
 	}
 
@@ -105,7 +105,7 @@ namespace debug
 
 	/* ================================================ */
 
-	void gl_debug_init(std::vector<DEBUGPROC>& callback_list) 
+	void debug_init(std::vector<DEBUGPROC>& callback_list) 
 	{
 		glEnable(GL_DEBUG_OUTPUT);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -114,7 +114,7 @@ namespace debug
 		for (auto& callback : callback_list) {
 			glDebugMessageCallback(callback, userParam);
 		}
-		gl_display_logs();
+		display_logs();
 		turn_on_only_errors();
 		//turn_on_everything();
 		basic_logfile_example();

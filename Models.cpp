@@ -98,7 +98,6 @@ void Environment::loadMesh()
 {
     AkDoc* doc;
     AkVisualScene* scene;
-    AkInstanceGeometry* geometry;
 
     std::string scene_path = "res/models/environment/";
     scene_path += "env_sphere.gltf";
@@ -133,7 +132,7 @@ void Environment::loadMesh()
 
                 if (primitive->indices) {
                     ind = (uint32_t*)primitive->indices->items;
-                    ind_size = primitive->indices->count;
+                    ind_size = (unsigned int) primitive->indices->count;
                 }
 
                 int set = primitive->input->set;
@@ -141,10 +140,13 @@ void Environment::loadMesh()
                 tex = ak_meshInputGet(primitive, "TEXCOORD", set);
 
                 primitiveDataBuffer = (GLuint*)calloc(2, sizeof(GLuint));
-                glCreateBuffers(2, primitiveDataBuffer);
-                glNamedBufferData(primitiveDataBuffer[0], pos->accessor->buffer->length, pos->accessor->buffer->data, GL_STATIC_DRAW);
-                glNamedBufferData(primitiveDataBuffer[1], tex->accessor->buffer->length, tex->accessor->buffer->data, GL_STATIC_DRAW);
-            };
+                
+                if (primitiveDataBuffer) {
+                    glCreateBuffers(2, primitiveDataBuffer);
+                    glNamedBufferData(primitiveDataBuffer[0], pos->accessor->buffer->length, pos->accessor->buffer->data, GL_STATIC_DRAW);
+                    glNamedBufferData(primitiveDataBuffer[1], tex->accessor->buffer->length, tex->accessor->buffer->data, GL_STATIC_DRAW);
+                }
+            }
         }
     }
 
@@ -177,7 +179,7 @@ void Environment::draw(int width, int height, glm::mat4 Proj, AkCamera* camera)
     if (vertexPosBindingLocation != -1) glEnableVertexAttribArray(vertexPosBindingLocation);
     if (textureBindingLocation != -1) glEnableVertexAttribArray(textureBindingLocation);
 
-    float r = 0.1 * panelConfig.dist;
+    float r = 0.1f * panelConfig.dist;
     float phi = panelConfig.phi;
     float theta = panelConfig.theta;
 
@@ -437,16 +439,16 @@ void Primitive::deletePrograms()
 GLuint* Primitive::createTextures() 
 {
     textures = (GLuint*)calloc(8, sizeof(GLuint));
-    memset(textures, 0, 8);
+    if(textures) memset(textures, 0, 8);
     texturesType = (GLuint*)calloc(8, sizeof(GLuint));
-    memset(texturesType, 0, 8);
+    if(texturesType) memset(texturesType, 0, 8);
     return textures;
 }
 
 GLuint* Primitive::createSamplers() 
 {
     samplers = (GLuint*)calloc(8, sizeof(GLuint));
-    memset(samplers, 0, 8);
+    if(samplers) memset(samplers, 0, 8);
     return samplers;
 }
 
@@ -526,7 +528,6 @@ void Light::loadMesh()
 {
     AkDoc* doc;
     AkVisualScene* scene;
-    AkInstanceGeometry* geometry;
 
     std::string scene_path = "res/modeles/";
     scene_path += "lamp.gltf";
@@ -551,7 +552,7 @@ void Light::loadMesh()
 
                 if (primitive->indices) {
                     ind = (uint32_t*)primitive->indices->items;
-                    ind_size = primitive->indices->count;
+                    ind_size = (unsigned int) primitive->indices->count;
                 }
 
                 int set = primitive->input->set;
@@ -582,7 +583,7 @@ void Light::drawLight(
     if (vertexPosBindingLocation != -1) glEnableVertexAttribArray(vertexPosBindingLocation);
     if (vcol_location != -1) glEnableVertexAttribArray(vcol_location);
 
-    float r = 0.1 * panelConfig.dist;
+    float r = 0.1f * panelConfig.dist;
     float phi = panelConfig.phi;
     float theta = panelConfig.theta;
 
@@ -698,7 +699,6 @@ void Cloud::loadMesh()
 {
     AkDoc* doc;
     AkVisualScene* scene;
-    AkInstanceGeometry* geometry;
 
     std::string scene_path = "res/models/cube/";
     scene_path += "Cube.gltf";
@@ -732,7 +732,7 @@ void Cloud::loadMesh()
 
                 if (primitive->indices) {
                     ind = (uint32_t*)primitive->indices->items;
-                    ind_size = primitive->indices->count;
+                    ind_size = (unsigned int) primitive->indices->count;
                 }
 
                 int set = primitive->input->set;
@@ -772,7 +772,7 @@ void Cloud::draw(
     if (vertexPosBindingLocation != -1) glEnableVertexAttribArray(vertexPosBindingLocation);
     if (vtex_location != -1) glEnableVertexAttribArray(vtex_location);
 
-    float r = 0.1 * panelConfig.dist;
+    float r = 0.1f * panelConfig.dist;
     float phi = panelConfig.phi;
     float theta = panelConfig.theta;
 

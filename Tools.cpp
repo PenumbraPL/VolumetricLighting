@@ -160,13 +160,13 @@ void proccess_node(AkNode* node)
     int type = 0;
     int comp_size = 0;
 
-    Primitive pr;
+    Primitive primitive;
     std::string geo_type;
 
-    float* world_transform = pr.setWorldTransform();
-    float* localTransform = pr.setTransform();
-    pr.createSamplers();
-    pr.createTextures();
+    float* world_transform = primitive.setWorldTransform();
+    float* localTransform = primitive.setTransform();
+    primitive.createSamplers();
+    primitive.createTextures();
     ak_transformCombineWorld(node, world_transform);
     ak_transformCombine(node, localTransform);
     std::regex light_regex("^[Ll]ight.*");
@@ -190,8 +190,8 @@ void proccess_node(AkNode* node)
                 default:                              prim_type = GL_POINTS; break;
                 }
                 if (prim->indices) {
-                    pr.ind = (uint32_t*)prim->indices->items;
-                    pr.ind_size = prim->indices->count;
+                    primitive.ind = (uint32_t*)prim->indices->items;
+                    primitive.ind_size = (unsigned int) prim->indices->count;
                 }
                 std::cout << "Mesh name:" << mesh->name << std::endl;   // should i insert mesh->name ??
                 std::cout << "Mesh center:" << mesh->center << std::endl; // same
@@ -203,10 +203,10 @@ void proccess_node(AkNode* node)
                     AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
                     AkTechniqueFxCommon* tch = ef->profile->technique->common;
                     if (tch) {
-                        set_up_color(tch->ambient, prim, &pr.samplers[AMBIENT], &pr.textures[AMBIENT], &pr.texturesType[AMBIENT]);
-                        set_up_color(tch->emission, prim, &pr.samplers[EMISIVE], &pr.textures[EMISIVE], &pr.texturesType[EMISIVE]);
-                        set_up_color(tch->diffuse, prim, &pr.samplers[DIFFUSE], &pr.textures[DIFFUSE], &pr.texturesType[DIFFUSE]);
-                        set_up_color(tch->specular, prim, &pr.samplers[SPECULAR], &pr.textures[SPECULAR], &pr.texturesType[SPECULAR]);
+                        set_up_color(tch->ambient, prim, &primitive.samplers[AMBIENT], &primitive.textures[AMBIENT], &primitive.texturesType[AMBIENT]);
+                        set_up_color(tch->emission, prim, &primitive.samplers[EMISIVE], &primitive.textures[EMISIVE], &primitive.texturesType[EMISIVE]);
+                        set_up_color(tch->diffuse, prim, &primitive.samplers[DIFFUSE], &primitive.textures[DIFFUSE], &primitive.texturesType[DIFFUSE]);
+                        set_up_color(tch->specular, prim, &primitive.samplers[SPECULAR], &primitive.textures[SPECULAR], &primitive.texturesType[SPECULAR]);
 
                         switch (tch->type) {
                         case AK_MATERIAL_METALLIC_ROUGHNESS: {
@@ -217,8 +217,8 @@ void proccess_node(AkNode* node)
                             alb_cd.texture = mr->albedoTex;
                             mr_cd.color = &mr->albedo;//&mr->roughness;
                             mr_cd.texture = mr->metalRoughTex;
-                            set_up_color(&alb_cd, prim, &pr.samplers[ALBEDO], &pr.textures[ALBEDO], &pr.texturesType[ALBEDO]);
-                            set_up_color(&mr_cd, prim, &pr.samplers[MAT_ROUGH], &pr.textures[MAT_ROUGH], &pr.texturesType[MAT_ROUGH]);
+                            set_up_color(&alb_cd, prim, &primitive.samplers[ALBEDO], &primitive.textures[ALBEDO], &primitive.texturesType[ALBEDO]);
+                            set_up_color(&mr_cd, prim, &primitive.samplers[MAT_ROUGH], &primitive.textures[MAT_ROUGH], &primitive.texturesType[MAT_ROUGH]);
                             break;
                         }
 
@@ -230,8 +230,8 @@ void proccess_node(AkNode* node)
                             sg_cd.texture = sg->specGlossTex;
                             dif_cd.color = &sg->diffuse;
                             dif_cd.texture = sg->diffuseTex;
-                            set_up_color(&sg_cd, prim, &pr.samplers[SP_GLOSSINESS], &pr.textures[SP_GLOSSINESS], &pr.texturesType[SP_GLOSSINESS]);
-                            set_up_color(&dif_cd, prim, &pr.samplers[SP_DIFFUSE], &pr.textures[SP_DIFFUSE], &pr.texturesType[SP_DIFFUSE]);
+                            set_up_color(&sg_cd, prim, &primitive.samplers[SP_GLOSSINESS], &primitive.textures[SP_GLOSSINESS], &primitive.texturesType[SP_GLOSSINESS]);
+                            set_up_color(&dif_cd, prim, &primitive.samplers[SP_DIFFUSE], &primitive.textures[SP_DIFFUSE], &primitive.texturesType[SP_DIFFUSE]);
                             break;
                         }
                         };
@@ -250,17 +250,17 @@ void proccess_node(AkNode* node)
 
                 //std::cout << ak_meshInputCount(mesh) << std::endl;
 
-                pr.wgs = wgs ? wgs->accessor : nullptr;
-                pr.jts = jts ? jts->accessor : nullptr;
-                pr.pos = pos ? pos->accessor : nullptr;
-                pr.tex = tex ? tex->accessor : nullptr;
-                pr.nor = nor ? nor->accessor : nullptr;
-                pr.col = col ? col->accessor : nullptr;
-                pr.tan = tan ? tan->accessor : nullptr;
+                primitive.wgs = wgs ? wgs->accessor : nullptr;
+                primitive.jts = jts ? jts->accessor : nullptr;
+                primitive.pos = pos ? pos->accessor : nullptr;
+                primitive.tex = tex ? tex->accessor : nullptr;
+                primitive.nor = nor ? nor->accessor : nullptr;
+                primitive.col = col ? col->accessor : nullptr;
+                primitive.tan = tan ? tan->accessor : nullptr;
 
-                pr.createPipeline();
+                primitive.createPipeline();
 
-                primitives.push_back(pr);
+                primitives.push_back(primitive);
             };
             break;
         case AK_GEOMETRY_SPLINE: geo_type = "spline"; break;
