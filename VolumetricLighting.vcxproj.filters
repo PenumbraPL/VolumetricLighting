@@ -123,6 +123,9 @@
     <ClCompile Include="Models.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Light.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\imgui\imconfig.h">
@@ -289,9 +292,6 @@
     </ClInclude>
     <ClInclude Include="include\ds\version.h">
       <Filter>Header Files\ds</Filter>
-    </ClInclude>
-    <ClInclude Include="VolumetricLighting.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\spdlog-1.x\include\spdlog\formatter.h">
       <Filter>Header Files\spdlog</Filter>
@@ -609,6 +609,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Models.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Tools.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Light.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

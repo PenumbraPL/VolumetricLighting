@@ -10,6 +10,9 @@ typedef void (*DEBUGPROC)(
 	const GLchar* message,
 	const void* userParam);
 
-void gl_debug_init(std::vector<DEBUGPROC>& callback_list);
-void gl_fill_callback_list(std::vector<DEBUGPROC>& callback_list);
-void glew_callback(int code, const char* description);
+namespace debug
+{
+	void gl_debug_init(std::vector<DEBUGPROC>& callback_list);
+	void gl_fill_callback_list(std::vector<DEBUGPROC>& callback_list);
+	void glew_callback(int code, const char* description);
+}

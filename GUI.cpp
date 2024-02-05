@@ -3,7 +3,46 @@
 
 namespace fs = std::filesystem;
 
-void folder_content(std::string& path, std::vector<int>& content, int& i, int& selected2) {
+
+PointLight getLight(ConfigContext& panelConfig) 
+{
+    glm::vec3 ambient = { panelConfig.light_ambient[0], panelConfig.light_ambient[1], panelConfig.light_ambient[2] };
+    glm::vec3 diffuse = { panelConfig.light_diffuse[0], panelConfig.light_diffuse[1], panelConfig.light_diffuse[2] };
+    glm::vec3 specular = { panelConfig.light_specular[0], panelConfig.light_specular[1], panelConfig.light_specular[2] };
+    glm::vec4 position = { panelConfig.position[0], panelConfig.position[1], panelConfig.position[2], 1. };
+
+    float l_position[16] = {};
+    l_position[0] = 1.;
+    l_position[5] = 1.;
+    l_position[10] = 1.;
+    l_position[15] = 1.;
+
+    //glm::mat4 View = glm::rotate(
+    //    glm::rotate(
+    //        glm::translate(
+    //            glm::make_mat4x4(l_position)
+    //            , translate)
+    //        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+    //    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+    //glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
+    //glm::mat4 MVP = Projection * LookAt * View * Model;
+
+    glm::vec4 new_position = position;
+
+    return  { new_position, panelConfig.c, panelConfig.l, panelConfig.q, ambient, diffuse, specular };
+}
+
+void insert_tree(ConfigContext& context, std::vector<std::string>& tree) 
+{
+    context.directory = &tree;
+}
+
+void folder_content(
+    std::string& path, 
+    std::vector<int>& content, 
+    int& i, 
+    int& selected2) 
+{
     for (const auto& entry : fs::directory_iterator(path)) {
         if (entry.is_regular_file()) {
             //std::cout << entry.path().filename().extension() << std::endl;
@@ -18,8 +57,7 @@ void folder_content(std::string& path, std::vector<int>& content, int& i, int& s
             std::string subpath = entry.path().generic_string();
             //content.push_back(subpath);
             //std::cout << "============\n";
-            if (ImGui::TreeNode((void*)(intptr_t)i, entry.path().filename().generic_string().c_str()))
-            {
+            if (ImGui::TreeNode((void*)(intptr_t)i, entry.path().filename().generic_string().c_str())){
                 folder_content(subpath, content, i, selected2);
                 ImGui::TreePop();
             }
@@ -27,7 +65,8 @@ void folder_content(std::string& path, std::vector<int>& content, int& i, int& s
     }
 }
 
-void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
+void drawLeftPanel(ImGuiIO& io, ConfigContext& config) 
+{
     bool show_demo_window = false;
     static bool show_shader_dialog = false;
     bool show_another_window = true;
@@ -36,10 +75,7 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
     static int selected2 = 0;
     static float g = 0.123f;
 
-
-
-    if(ImGui::Begin("Control"))
-    {
+    if(ImGui::Begin("Control")) {
         config.focused1 = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow) ? true : false;
 
         static float f = 0.0f;
@@ -47,11 +83,8 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
 
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
 
-        if (ImGui::BeginTabBar("LeftPanelBar", tab_bar_flags))
-        {
-
-            if (ImGui::BeginTabItem("Config"))
-            {
+        if (ImGui::BeginTabBar("LeftPanelBar", tab_bar_flags)) {
+            if (ImGui::BeginTabItem("Config")) {
                 ImGui::ColorEdit3("ambient light", config.light_ambient);
                 ImGui::ColorEdit3("diffuse light", config.light_diffuse);
                 ImGui::ColorEdit3("specular light", config.light_specular);
@@ -63,21 +96,18 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
                 ImGui::SliderFloat("y", &config.position[1], -1.0f, 1.0f);
                 ImGui::SliderFloat("z", &config.position[2], -1.0f, 1.0f);
 
-
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("Debug"))
-            {
+            if (ImGui::BeginTabItem("Debug")) {
                 int wrap_width = 400;
                 ImDrawList* draw_list = ImGui::GetWindowDrawList();
-                for (int n = 0; n < 1; n++)
-                {
+                for (int n = 0; n < 1; n++) {
                     ImGui::Text("Test paragraph %d:", n);
                     ImVec2 pos = ImGui::GetCursorScreenPos();
                     ImVec2 marker_min = ImVec2(pos.x + wrap_width, pos.y);
                     ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
                     ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
-                    if (n == 0)
+                    if (n == 0) {
                         ImGui::Text("========== Initialization started ============================================\
                             ==========[GLEW]: Using GLEW 2.1.0 ========================================\
                             ==========[GLFW] : Debug context initialize successful ======================\
@@ -85,29 +115,32 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
                             ==========[GLFW]: Terminated ================================================\
                             ==================== = Exit succeeded ========================================\
                             ", wrap_width);
-                    else
+                    }
+                    else {
                         ImGui::Text("aaaaaaaa bbbbbbbb, c cccccccc,dddddddd. d eeeeeeee   ffffffff. gggggggg!hhhhhhhh");
-
+                    }
                     draw_list->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
                     draw_list->AddRectFilled(marker_min, marker_max, IM_COL32(255, 0, 255, 255));
                     ImGui::PopTextWrapPos();
                 }
 
-                
                 ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
                 if (ImGui::TreeNode("Mouse + Keyboard")) {
-                    if (ImGui::IsMousePosValid())
+                    if (ImGui::IsMousePosValid()) {
                         ImGui::Text("Mouse pos: (%g, %g)", io.MousePos.x, io.MousePos.y);
-                    else
+                    }
+                    else {
                         ImGui::Text("Mouse pos: <INVALID>");
+                    }
                     ImGui::Text("Mouse delta: (%g, %g)", io.MouseDelta.x, io.MouseDelta.y);
                     ImGui::Text("Mouse down:");
-                    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
-                        if (ImGui::IsMouseDown(i)) { 
+                    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++) {
+                        if (ImGui::IsMouseDown(i)) {
                             ImGui::SameLine();
                             ImGui::Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]);
                         }
+                    }
                     ImGui::Text("Mouse wheel: %.1f", io.MouseWheel);
 
                     // We iterate both legacy native range and named ImGuiKey ranges, which is a little odd but this allows displaying the data for old/new backends.
@@ -122,17 +155,15 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
                     ImGuiKey start_key = (ImGuiKey)0;
 #endif
                     ImGui::Text("Keys down:");
-                    for (ImGuiKey key = start_key; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
-                    { 
+                    for (ImGuiKey key = start_key; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1)) { 
                         if (funcs::IsLegacyNativeDupe(key) || !ImGui::IsKeyDown(key)) continue;
-                    ImGui::SameLine();
-                    ImGui::Text((key < ImGuiKey_NamedKey_BEGIN) ? "\"%s\"" : "\"%s\" %d", ImGui::GetKeyName(key), key);
+                        ImGui::SameLine();
+                        ImGui::Text((key < ImGuiKey_NamedKey_BEGIN) ? "\"%s\"" : "\"%s\" %d", ImGui::GetKeyName(key), key);
                     }
-                    ImGui::Text("Keys mods: %s%s%s%s", 
+                    ImGui::Text("Keys mods: %s%s%s%s",
                         io.KeyCtrl ? "CTRL " : "", io.KeyShift ? "SHIFT " : "", io.KeyAlt ? "ALT " : "", io.KeySuper ? "SUPER " : "");
                     ImGui::Text("Chars queue:");
-                    for (int i = 0; i < io.InputQueueCharacters.Size; i++) 
-                    { 
+                    for (int i = 0; i < io.InputQueueCharacters.Size; i++) { 
                         ImWchar c = io.InputQueueCharacters[i];
                         ImGui::SameLine();
                         ImGui::Text("\'%c\' (0x%04X)", (c > ' ' && c <= 255) ? (char)c : '?', c);
@@ -140,11 +171,9 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
                     ImGui::TreePop();
                 }
 
-
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("Scene"))
-            {
+            if (ImGui::BeginTabItem("Scene")) {
                 if (config.directory) {
                     int i = 0;
                     std::string path = "res/models/";
@@ -153,8 +182,6 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
                             ImGui::SetNextItemOpen(true, ImGuiCond_Once);*/
                     folder_content(path, tree, i, selected2);
                 }
-
-
 
                 /*if (config.directory) {
                     std::vector<std::string> folders;
@@ -202,11 +229,9 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
                 //else
                 //    show_shader_dialog = false;
 
-
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("Lights"))
-            {
+            if (ImGui::BeginTabItem("Lights")) {
                 static bool selected[3] = { false, false, false };
                 ImGui::Selectable("Light 1", &selected[0]);
                 ImGui::Separator();
@@ -246,20 +271,17 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config) {
             selected[1] = false;
         }
     }
-
 }
 
-
-void drawRightPanel(ImGuiIO& io, ConfigContext &config) {
+void drawRightPanel(ImGuiIO& io, ConfigContext &config) 
+{
     if (ImGui::Begin("View")) {
         config.focused2 = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow) ? true : false;
-
         
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
         ImGui::Text("Far plane:"); ImGui::SliderFloat("Fp", &config.far_plane, 0.1f, 200.0f);
         ImGui::Text("Near plane:"); ImGui::SliderFloat("Np", &config.near_plane, 0.0001f, 10.0f);
         ImGui::Text("fov:"); ImGui::SliderInt("fov", &config.fov, 10, 120);
-
         ImGui::Separator();
 
         ImGui::SliderInt("Translation X", &config.tr_x, -100, 100);
@@ -270,8 +292,8 @@ void drawRightPanel(ImGuiIO& io, ConfigContext &config) {
         ImGui::SliderFloat("Camera distance", &config.dist, 0, 360);
         ImGui::SliderAngle("Camera phi", &config.phi, 0, 360);
         ImGui::SliderAngle("Camera theta", &config.theta, 0, 360);
-
         ImGui::Separator();
+
         ImGui::Button("Save Image");
         ImGui::SameLine(); ImGui::Button("Save Clip");
         ImGui::End();

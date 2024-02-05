@@ -3,7 +3,7 @@
 #include "pch.h";
 #include "GUI.h"
 
-extern ConfigContext panel_config;
+extern ConfigContext panelConfig;
 
 enum TextureType {
     AMBIENT,
@@ -27,48 +27,49 @@ enum ShaderTypes {
 };
 
 
-void formatAttribute(GLint attr_location, AkAccessor* acc);
-char* read_file(const char* file_name);
-void*
-imageLoadFromFile(const char* __restrict path,
+void* imageLoadFromFile(
+    const char* __restrict path,
     int* __restrict width,
     int* __restrict height,
     int* __restrict components);
 
-void*
-imageLoadFromMemory(const char* __restrict data,
+void* imageLoadFromMemory(
+    const char* __restrict data,
     size_t                  len,
     int* __restrict width,
     int* __restrict height,
     int* __restrict components);
 
-void
-imageFlipVerticallyOnLoad(bool flip);
+void imageFlipVerticallyOnLoad(bool flip);
 
 
 
 struct Environment {
-    glm::mat4x4 transform = glm::mat4x4(0.);
-    glm::mat4x4 w_transform = glm::mat4x4(0.);
+    glm::mat4x4 localTransform = glm::mat4x4(0.);
+    glm::mat4x4 worldTransform = glm::mat4x4(0.);
 
     uint32_t* ind = nullptr;
     unsigned int ind_size;
     AkInput* pos = nullptr;
     AkInput* tex = nullptr;
 
-    GLuint vertex_program;
-    GLuint fragment_program;
+    GLuint vertexProgram;
+    GLuint fragmentProgram;
     GLuint pipeline;
     GLuint skybox;
     GLuint env_sampler;
     glm::mat4 MVP;
-    GLuint* buffer;
-    GLuint mvp_location;
+    GLuint* primitiveDataBuffer;
+    GLuint mvpBindingLocation;
 
     void createPipeline();
     void deletePipeline();
     void loadMesh();
-    void draw(int width, int height, glm::mat4 Proj, AkCamera* camera);
+    void draw(
+        int width, 
+        int height, 
+        glm::mat4 Proj, 
+        AkCamera* camera);
 };
 
 
@@ -76,8 +77,8 @@ struct Environment {
 
 
 struct Primitive {
-    float* transform;
-    float* w_transform;
+    float* localTransform;
+    float* worldTransform;
 
     uint32_t* ind;
     unsigned int ind_size;
@@ -85,7 +86,7 @@ struct Primitive {
     GLuint pipeline;
 
     GLuint* textures = nullptr;
-    GLuint* tex_type = nullptr;
+    GLuint* texturesType = nullptr;
     GLuint* samplers = nullptr;
 
     AkAccessor* wgs;
@@ -96,15 +97,27 @@ struct Primitive {
     AkAccessor* col;
     AkAccessor* tan;
 
-    GLuint mvp_location, prj_location, camera_location, g_location, is_tex_location,
-        dir_location, vpos_location, norm_location, tex_location;
+    GLuint mvpBindingLocation,
+        prjBindingLocation,
+        cameraBindingLocation,
+        gBindingLocation,
+        isTexBindingLocation,
+        camDirBindingLocation, 
+        vertexPosBindingLocation, 
+        normalsBindingLocation,
+        textureBindingLocation;
 
 
     void getLocation();
-    void draw(GLuint& lights_buffer, std::map <void*, unsigned int>& bufferViews, GLuint* buffers,
+    void draw(
+        GLuint& lights_buffer,
+        std::map <void*, unsigned int>& bufferViews, 
+        GLuint* buffers,
         glm::vec3& eye,
-        glm::mat4& LookAt, glm::mat4& Projection,
-        glm::vec3& translate, glm::vec3& rotate);
+        glm::mat4& LookAt,
+        glm::mat4& Projection,
+        glm::vec3& translate, 
+        glm::vec3& rotate);
     float* setTransform(void);
     float* setWorldTransform(void);
     void deleteTransforms();
@@ -120,8 +133,8 @@ struct Primitive {
 
 struct Light {
     enum LightType { POSITIONAL, DIRECTIONAL, AREA } light_type = POSITIONAL;
-    glm::mat4x4 transform;
-    glm::mat4x4 w_transform;
+    glm::mat4x4 localTransform;
+    glm::mat4x4 worldTransform;
     glm::vec4 direction = glm::vec4(0, 0, 0, 0);
     glm::vec3 color = glm::vec3(1.0, 1.0, 1.0);
     float intensity = 1.0;
@@ -131,22 +144,26 @@ struct Light {
     AkInput* pos = nullptr;
     AkInput* nor = nullptr;
 
-    GLuint vertex_program;
-    GLuint fragment_program;
+    GLuint vertexProgram;
+    GLuint fragmentProgram;
     GLuint pipeline;
-    GLuint mvp_location;
-    GLuint buffer;
+    GLuint mvpBindingLocation;
+    GLuint primitiveDataBuffer;
 
     void createPipeline();
     void deletePipeline();
     void loadMesh();
-    void drawLight(int width, int height, glm::mat4 Proj, AkCamera* camera);
+    void drawLight(
+        int width, 
+        int height, 
+        glm::mat4 Proj, 
+        AkCamera* camera);
 };
 
 
 struct Camera {
-    glm::mat4x4 transform;
-    glm::mat4x4 w_transform;
+    glm::mat4x4 localTransform;
+    glm::mat4x4 worldTransform;
     glm::vec4 direction;
     float zNear;
     float zFar;
@@ -155,8 +172,8 @@ struct Camera {
 
 
 struct Cloud {
-    glm::mat4x4 transform = glm::mat4x4(0.);
-    glm::mat4x4 w_transform = glm::mat4x4(0.);
+    glm::mat4x4 localTransform = glm::mat4x4(0.);
+    glm::mat4x4 worldTransform = glm::mat4x4(0.);
 
     int width = 0;
     int height = 0;
@@ -166,21 +183,25 @@ struct Cloud {
     AkInput* pos = nullptr;
     AkInput* tex = nullptr;
 
-    GLuint vertex_program;
-    GLuint fragment_program;
+    GLuint vertexProgram;
+    GLuint fragmentProgram;
     GLuint pipeline;
 
     glm::mat4 MVP;
-    GLuint* buffer;
-    GLuint mvp_location;
-    GLuint prj_location;
+    GLuint* primitiveDataBuffer;
+    GLuint mvpBindingLocation;
+    GLuint prjBindingLocation;
 
-    GLuint depth_buffer;
-    unsigned int zero = 0;
-
+    GLuint depthBuffer;
 
     void createPipeline(int width, int height);
     void deletePipeline();
     void loadMesh();
-    void draw(int width, int height, glm::mat4 Proj, AkCamera* camera, float& g, GLuint lightbuffer);
+    void draw(
+        int width, 
+        int height, 
+        glm::mat4 Proj, 
+        AkCamera* camera, 
+        float& g, 
+        GLuint lightbuffer);
 };

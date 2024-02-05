@@ -1,9 +1,302 @@
 #include "GL/glew.h"
 #include "GLFW/glfw3.h"
 #include "pch.h";
+#include "Models.h"
+
+extern std::vector<Primitive> primitives;
+extern std::vector<Light> lights;
+extern const char* model_path;
 
 
-std::string printCoordSys(AkCoordSys* coord) {
+
+
+void initialize_GLEW(void) 
+{
+    GLenum err = glewInit();
+    if (GLEW_OK != err) {
+        std::cout << "========== [GLEW]: Initialization failed =====================================\n";
+        std::cout << "\tError:" << glewGetErrorString(err);
+    }
+    std::cout << "========== [GLEW]: Using GLEW " << glewGetString(GLEW_VERSION) << " =========================================\n";
+
+    // glewIsSupported supported from version 1.3
+    if (GLEW_VERSION_1_3) {
+        std::string versionName = "GL_VERSION_4_5";
+        std::string extensionList[] = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shader_image_load_store",
+            "GL_ARB_texture_storage",
+            "GL_ARB_vertex_attrib_binding",
+            "GL_ARB_vertex_attrib_64bit",
+            "GL_KHR_debug",
+            "GL_NV_shader_buffer_load"
+        };
+        for (auto& ext : extensionList) {
+            if (!glewIsSupported((versionName + " " + ext).c_str())) {
+                std::cout << "========== [GLEW]: For " + versionName + " extension " + ext + " isn't supported \n";
+            }
+        }
+    }
+    else {
+        std::cout << "========== [GLEW]: OpenGL's extensions support haven't been verified! ============================\n";
+    }
+}
+
+
+
+GLuint wrap_mode(AkWrapMode& wrap) {
+    GLuint wrap_m = GL_REPEAT;
+    switch (wrap) {
+    case AK_WRAP_MODE_WRAP:         wrap_m = GL_REPEAT; break;
+    case AK_WRAP_MODE_MIRROR:       wrap_m = GL_MIRRORED_REPEAT; break;
+    case AK_WRAP_MODE_CLAMP:        wrap_m = GL_CLAMP_TO_EDGE; break;
+    case AK_WRAP_MODE_BORDER:       wrap_m = GL_CLAMP_TO_BORDER; break;
+    case AK_WRAP_MODE_MIRROR_ONCE:  wrap_m = GL_MIRROR_CLAMP_TO_EDGE; break;
+    }
+    return wrap_m;
+}
+
+void set_up_color(
+    AkColorDesc* colordesc,
+    AkMeshPrimitive* prim,
+    GLuint* sampler,
+    GLuint* texture,
+    GLuint* texturesType) 
+{
+    if (colordesc) {
+        if (colordesc->texture) {
+            AkTextureRef* tex = colordesc->texture;
+            if (tex->texture) {
+                AkSampler* samp = tex->texture->sampler;
+                if (!samp) return;
+
+                AkTypeId type = tex->texture->type;
+
+                GLuint texture_type;
+                GLuint minfilter, magfilter, mipfilter;
+                GLuint wrap_t, wrap_s, wrap_p;
+                switch (type) {
+                case AKT_SAMPLER1D:     texture_type = GL_TEXTURE_1D; break;
+                case AKT_SAMPLER2D:     texture_type = GL_TEXTURE_2D; break;
+                case AKT_SAMPLER3D:     texture_type = GL_TEXTURE_3D; break;
+                case AKT_SAMPLER_CUBE:  texture_type = GL_TEXTURE_CUBE_MAP; break;
+                case AKT_SAMPLER_RECT:  texture_type = GL_TEXTURE_RECTANGLE; break;
+                case AKT_SAMPLER_DEPTH: texture_type = GL_TEXTURE_2D; break;
+                    break;
+                }
+                wrap_t = wrap_mode(samp->wrapT);
+                wrap_s = wrap_mode(samp->wrapS);
+                wrap_p = wrap_mode(samp->wrapP);
+
+                switch (samp->minfilter) {
+                case AK_MINFILTER_LINEAR:       minfilter = GL_LINEAR; break;
+                case AK_MINFILTER_NEAREST:      minfilter = GL_NEAREST; break;
+                case AK_LINEAR_MIPMAP_NEAREST:  minfilter = GL_LINEAR_MIPMAP_NEAREST; break;
+                case AK_LINEAR_MIPMAP_LINEAR:   minfilter = GL_LINEAR_MIPMAP_LINEAR; break;
+                case AK_NEAREST_MIPMAP_NEAREST: minfilter = GL_NEAREST_MIPMAP_NEAREST; break;
+                case AK_NEAREST_MIPMAP_LINEAR:  minfilter = GL_NEAREST_MIPMAP_LINEAR; break;
+                }
+
+                switch (samp->magfilter) {
+                case AK_MAGFILTER_LINEAR:   magfilter = GL_LINEAR; break;
+                case AK_MAGFILTER_NEAREST:  magfilter = GL_NEAREST; break;
+                }
+
+                switch (samp->mipfilter) {
+                case AK_MIPFILTER_LINEAR:    mipfilter = GL_LINEAR; break;
+                case AK_MIPFILTER_NEAREST:   mipfilter = GL_NEAREST; break;
+                case AK_MIPFILTER_NONE:      mipfilter = GL_NONE; break;
+                }
+
+                glCreateSamplers(1, sampler);
+                glSamplerParameteri(*sampler, GL_TEXTURE_WRAP_S, wrap_s);
+                glSamplerParameteri(*sampler, GL_TEXTURE_WRAP_T, wrap_t);
+                glSamplerParameteri(*sampler, GL_TEXTURE_WRAP_R, wrap_p);
+                glSamplerParameteri(*sampler, GL_TEXTURE_MIN_FILTER, minfilter);
+                glSamplerParameteri(*sampler, GL_TEXTURE_MAG_FILTER, magfilter);
+
+
+                AkInput* tex_coord = ak_meshInputGet(prim, tex->coordInputName, tex->slot); //
+                int components = 0;
+                int width = 0;
+                int height = 0;
+                char path[128] = { '\0' };
+                memcpy_s(path, 128, model_path, strlen(model_path));
+                //char path[128] = { PATH };
+                const char* f_path = tex->texture->image->initFrom->ref;
+                memcpy_s(path + strlen(path), 128 - strlen(path), f_path, strlen(f_path));
+                char* image = (char*)imageLoadFromFile(path, &width, &height, &components);
+
+                if (image) {
+                    glCreateTextures(texture_type, 1, texture);
+                    *texturesType = texture_type;
+                    if (std::string::npos != std::string(path).find(".jpg", 0)) {
+                        glTextureStorage2D(*texture, 1, GL_RGB8, width, height);
+                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
+                    }
+                    if (std::string::npos != std::string(path).find(".jpeg", 0)) {
+                        glTextureStorage2D(*texture, 1, GL_RGB8, width, height);
+                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
+                    }
+                    if (std::string::npos != std::string(path).find(".png", 0)) {
+                        glTextureStorage2D(*texture, 1, GL_RGBA8, width, height);
+                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image);
+                    }
+                    stbi_image_free(image);
+                }
+            }
+        }
+    }
+}
+
+
+
+
+void proccess_node(AkNode* node) 
+{
+    int offset = 0;
+    int comp_stride = 0;
+    int normalize = 0;
+    int type = 0;
+    int comp_size = 0;
+
+    Primitive pr;
+    std::string geo_type;
+
+    float* world_transform = pr.setWorldTransform();
+    float* localTransform = pr.setTransform();
+    pr.createSamplers();
+    pr.createTextures();
+    ak_transformCombineWorld(node, world_transform);
+    ak_transformCombine(node, localTransform);
+    std::regex light_regex("^[Ll]ight.*");
+
+    if (node->geometry) {
+        AkGeometry* geometry = ak_instanceObjectGeom(node); // if geometry
+        AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
+        switch ((AkGeometryType)geometry->gdata->type) { //if gdata
+        case AK_GEOMETRY_MESH:
+            geo_type = "mesh";
+            if (mesh) {
+                GLuint prim_type;
+
+//                for (int i = 0; i < mesh->primitiveCount; i++) {/*prim = prim->next;*/ }
+                AkMeshPrimitive* prim = mesh->primitive;
+                switch (prim->type) {
+                case AK_PRIMITIVE_LINES:              prim_type = GL_LINES; break;
+                case AK_PRIMITIVE_POLYGONS:           prim_type = GL_POLYGON; break;
+                case AK_PRIMITIVE_TRIANGLES:          prim_type = GL_TRIANGLES; break;
+                case AK_PRIMITIVE_POINTS:
+                default:                              prim_type = GL_POINTS; break;
+                }
+                if (prim->indices) {
+                    pr.ind = (uint32_t*)prim->indices->items;
+                    pr.ind_size = prim->indices->count;
+                }
+                std::cout << "Mesh name:" << mesh->name << std::endl;   // should i insert mesh->name ??
+                std::cout << "Mesh center:" << mesh->center << std::endl; // same
+                std::cout << "Primitive center: " << prim->center << std::endl;
+                int set = prim->input->set;
+
+                if (prim->material) {
+                    AkMaterial* mat = prim->material;
+                    AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
+                    AkTechniqueFxCommon* tch = ef->profile->technique->common;
+                    if (tch) {
+                        set_up_color(tch->ambient, prim, &pr.samplers[AMBIENT], &pr.textures[AMBIENT], &pr.texturesType[AMBIENT]);
+                        set_up_color(tch->emission, prim, &pr.samplers[EMISIVE], &pr.textures[EMISIVE], &pr.texturesType[EMISIVE]);
+                        set_up_color(tch->diffuse, prim, &pr.samplers[DIFFUSE], &pr.textures[DIFFUSE], &pr.texturesType[DIFFUSE]);
+                        set_up_color(tch->specular, prim, &pr.samplers[SPECULAR], &pr.textures[SPECULAR], &pr.texturesType[SPECULAR]);
+
+                        switch (tch->type) {
+                        case AK_MATERIAL_METALLIC_ROUGHNESS: {
+                            AkMetallicRoughness* mr = (AkMetallicRoughness*)tch;
+                            AkColorDesc alb_cd;
+                            AkColorDesc mr_cd;
+                            alb_cd.color = &mr->albedo;
+                            alb_cd.texture = mr->albedoTex;
+                            mr_cd.color = &mr->albedo;//&mr->roughness;
+                            mr_cd.texture = mr->metalRoughTex;
+                            set_up_color(&alb_cd, prim, &pr.samplers[ALBEDO], &pr.textures[ALBEDO], &pr.texturesType[ALBEDO]);
+                            set_up_color(&mr_cd, prim, &pr.samplers[MAT_ROUGH], &pr.textures[MAT_ROUGH], &pr.texturesType[MAT_ROUGH]);
+                            break;
+                        }
+
+                        case AK_MATERIAL_SPECULAR_GLOSSINES: {
+                            AkSpecularGlossiness* sg = (AkSpecularGlossiness*)tch;
+                            AkColorDesc sg_cd;
+                            AkColorDesc dif_cd;
+                            sg_cd.color = &sg->specular;
+                            sg_cd.texture = sg->specGlossTex;
+                            dif_cd.color = &sg->diffuse;
+                            dif_cd.texture = sg->diffuseTex;
+                            set_up_color(&sg_cd, prim, &pr.samplers[SP_GLOSSINESS], &pr.textures[SP_GLOSSINESS], &pr.texturesType[SP_GLOSSINESS]);
+                            set_up_color(&dif_cd, prim, &pr.samplers[SP_DIFFUSE], &pr.textures[SP_DIFFUSE], &pr.texturesType[SP_DIFFUSE]);
+                            break;
+                        }
+                        };
+                        std::cout << "Is double sized: " << (tch->doubleSided ? "True" : "False");
+                    }
+                }
+
+                AkInput* wgs = ak_meshInputGet(prim, "WEIGHTS", set);
+                AkInput* jts = ak_meshInputGet(prim, "JOINTS", set);
+                AkInput* pos = ak_meshInputGet(prim, "POSITION", set);
+                AkInput* tex = ak_meshInputGet(prim, "TEXCOORD", set); // if indexed then multiple parts to proccess
+                AkInput* nor = ak_meshInputGet(prim, "NORMAL", set);
+
+                AkInput* col = ak_meshInputGet(prim, "COLOR", set);
+                AkInput* tan = ak_meshInputGet(prim, "TANGENT", set);
+
+                //std::cout << ak_meshInputCount(mesh) << std::endl;
+
+                pr.wgs = wgs ? wgs->accessor : nullptr;
+                pr.jts = jts ? jts->accessor : nullptr;
+                pr.pos = pos ? pos->accessor : nullptr;
+                pr.tex = tex ? tex->accessor : nullptr;
+                pr.nor = nor ? nor->accessor : nullptr;
+                pr.col = col ? col->accessor : nullptr;
+                pr.tan = tan ? tan->accessor : nullptr;
+
+                pr.createPipeline();
+
+                primitives.push_back(pr);
+            };
+            break;
+        case AK_GEOMETRY_SPLINE: geo_type = "spline"; break;
+        case  AK_GEOMETRY_BREP:  geo_type = "brep";   break;
+        default:                 geo_type = "other";  break;
+        };
+    }
+    else if (std::regex_match(node->name, light_regex)) {
+        Light light;
+        light.localTransform = glm::make_mat4x4(localTransform);
+        light.worldTransform = glm::make_mat4x4(world_transform);
+        free(localTransform);
+        free(world_transform);
+
+        light.loadMesh();
+        lights.push_back(light);
+    }
+
+    std::cout << "Node name: " << node->name << std::endl;
+    std::cout << "Node type: " << geo_type << std::endl;
+
+    if (node->next) {
+        node = node->next;
+        proccess_node(node);
+    }
+    if (node->chld) {
+        node = node->chld;
+        proccess_node(node);
+    }
+}
+
+
+
+
+std::string print_coord_system(AkCoordSys* coord) 
+{
     if (coord) {
         AkAxis axis[] = { coord->axis.fwd,
         coord->axis.right,
@@ -37,7 +330,8 @@ std::string printCoordSys(AkCoordSys* coord) {
     return "CoordSys is nullptr!\n";
 }
 
-std::string printInf(AkDocInf* inf, AkUnit* unit) {
+std::string print_doc_information(AkDocInf* inf, AkUnit* unit) 
+{
     std::string infString;
     if (inf && unit) {
         infString += "Units: " + std::string(unit->name) + " ";
@@ -61,7 +355,8 @@ std::string printInf(AkDocInf* inf, AkUnit* unit) {
 
 
 
-void formatAttribute(GLint attr_location, AkAccessor* acc) {
+void format_attribute(GLint attr_location, AkAccessor* acc) 
+{
     int comp_size = acc->componentSize;;
     int type = acc->componentType;
     GLuint normalize = acc->normalized ? GL_TRUE : GL_FALSE;
@@ -96,13 +391,13 @@ void formatAttribute(GLint attr_location, AkAccessor* acc) {
     glVertexAttribFormat(attr_location, comp_size, type, normalize, 0);
 }
 
-char* read_file(const char* file_name) {
+char* read_file(const char* file_name) 
+{
     FILE* fs;
     fopen_s(&fs, file_name, "rb");
 
-    if (!fs) {
-        return nullptr;
-    }
+    if (!fs) return nullptr;
+
 
     fseek(fs, 0, SEEK_END);
     int file_size = ftell(fs);
@@ -113,4 +408,28 @@ char* read_file(const char* file_name) {
     fclose(fs);
 
     return buffer;
+}
+
+GLint check_pipeline_status(GLuint vertex_shader, GLuint fragment_shader) 
+{
+    GLint v_comp_status, f_comp_status;
+    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &v_comp_status);
+    if (!v_comp_status) {
+        char comp_info[1024];
+        memset(comp_info, '\0', 1024);
+        //glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, NULL);
+        glGetShaderInfoLog(vertex_shader, 1024, NULL, comp_info);
+        std::cout << "Vertex Shader: ";
+        fwrite(comp_info, 1024, 1, stdout);
+    }
+    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &f_comp_status);
+    if (!f_comp_status) {
+        char comp_info[1024];
+        memset(comp_info, '\0', 1024);
+        //glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, NULL);
+        glGetShaderInfoLog(fragment_shader, 1024, NULL, comp_info);
+        std::cout << "Fragment Shader: ";
+        fwrite(comp_info, 1024, 1, stdout);
+    }
+    return (!v_comp_status || !f_comp_status) ? 0 : 1;
 }

@@ -197,6 +197,7 @@ Shell32.lib
     <ClCompile Include="Draw.cpp" />
     <ClCompile Include="GUI.cpp" />
     <ClCompile Include="IO.cpp" />
+    <ClCompile Include="Light.cpp" />
     <ClCompile Include="Models.cpp" />
     <ClCompile Include="src\imgui\backends\imgui_impl_glfw.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
@@ -277,6 +278,7 @@ Shell32.lib
     <ClInclude Include="include\ds\util.h" />
     <ClInclude Include="include\ds\version.h" />
     <ClInclude Include="IO.h" />
+    <ClInclude Include="Light.h" />
     <ClInclude Include="Models.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="src\imgui\backends\imgui_impl_glfw.h" />
@@ -391,7 +393,7 @@ Shell32.lib
     <ClInclude Include="src\spdlog-1.x\include\spdlog\tweakme.h" />
     <ClInclude Include="src\spdlog-1.x\include\spdlog\version.h" />
     <ClInclude Include="src\stb\stb_image.h" />
-    <ClInclude Include="VolumetricLighting.h" />
+    <ClInclude Include="Tools.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
