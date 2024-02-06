@@ -10,22 +10,19 @@
 #include "IO.h"
 #include "Tools.h"
 #include "Light.h"
-
-#define PATH "./res/models/DamagedHelmet/"
-#define FILE_NAME "DamagedHelmet.gltf"
 #include "Debug.h"
 #include "Models.h"
 
+#define PATH "./res/models/DamagedHelmet/"
+#define FILE_NAME "DamagedHelmet.gltf"
 
-ConfigContext panelConfig{
-    500.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0, false, false,
-    { 0.4f, 0.7f, 0.0f, 0.5f },
-    { 0.4f, 0.7f, 0.0f, 0.5f },
-    { 0.4f, 0.7f, 0.0f, 0.5f },
-    { 0.0f, 0.0f, 0.0f },
-    0.1f, 0.5f, 0.5f
-};
-auto logger = spdlog::basic_logger_mt("basic_logger", "logs/basic-log.txt");
+
+auto bufferLogger = std::make_shared <debug::BufferLogger>();
+auto fileLogger = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/basic-log.txt", true);
+auto logger = spdlog::logger("multi_sink", {bufferLogger, fileLogger});
+std::vector<std::string> directory;
+
+
 struct WindowInfo {
     int width;
     int height;
@@ -49,22 +46,33 @@ std::map <void*, unsigned int> bufferViews;
 std::map <void*, unsigned int> textureViews;
 std::map <void*, unsigned int> imageViews;
 std::vector<Primitive> primitives;
-const char* model_path = PATH;
 std::vector<Light> lights;
 std::vector<Camera> cameras;
+const char* modelPath = PATH;
+
+ConfigContext panelConfig{
+    500.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0, false, false,
+    { 0.4f, 0.7f, 0.0f, 0.5f },
+    { 0.4f, 0.7f, 0.0f, 0.5f },
+    { 0.4f, 0.7f, 0.0f, 0.5f },
+    { 0.0f, 0.0f, 0.0f },
+    0.1f, 0.5f, 0.5f, 0.f,
+    &directory,
+    std::string(""),
+    0, lightsData.data()
+};
+
 
 namespace fs = std::filesystem;
 
 
 /* ============================================================================= */
 
-
-
-int main(void)
+void init(GLFWwindow** windowPtr, ImGuiIO& io)
 {
-    logger->info("========== Initialization started ============================================\n");
+    logger.info("========== Initialization started ============================================\n");
     if (!glfwInit()) {
-        logger->error("========== [GLFW]: Initialization failed =====================================\n");
+        logger.error("========== [GLFW]: Initialization failed =====================================\n");
         exit(EXIT_FAILURE);
     }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
@@ -75,15 +83,16 @@ int main(void)
     GLFWwindow* window = glfwCreateWindow(windowConfig.width, windowConfig.height, windowConfig.title, NULL, NULL);
     if (!window) {
         glfwTerminate();
-        logger->warn("========== [GLFW]: Terminated ================================================\n");
-        logger->error("========== [GLFW]: Window initialization failed ==============================\n");
+        logger.warn("========== [GLFW]: Terminated ================================================\n");
+        logger.error("========== [GLFW]: Window initialization failed ==============================\n");
         exit(EXIT_FAILURE);
     }
+    *windowPtr = window;
 
     glfwMakeContextCurrent(window);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
-    
+
     glfwSetKeyCallback(window, control::key_callback);
     glfwSetErrorCallback(debug::glew_callback);
     glfwSetScrollCallback(window, control::scroll_callback);
@@ -92,11 +101,9 @@ int main(void)
     glfwSetWindowFocusCallback(window, control::focus_callback);
 
     initialize_GLEW();
-    
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
+
+
+
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.ConfigWindowsMoveFromTitleBarOnly = true;
@@ -105,23 +112,31 @@ int main(void)
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-
-    int flags; 
+    int flags;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
-
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
-        logger->info("========== [GLFW]: Debug context initialize successful =======================\n");
+        logger.info("========== [GLFW]: Debug context initialize successful =======================\n");
         std::vector<DEBUGPROC> callbacks;
         debug::fill_callback_list(callbacks);
         debug::debug_init(callbacks);
-    }  
-    else {
-        logger->warn("========== [GLFW]: Debug context initialize unsuccessful =====================\n");
     }
-    
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
+    else {
+        logger.warn("========== [GLFW]: Debug context initialize unsuccessful =====================\n");
+    }
+}
+
+/* ============================================================================= */
+
+
+int main(void)
+{
+    GLFWwindow* window;
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    init(&window, io);
+
 
     /* ================================================ */
 
@@ -129,43 +144,40 @@ int main(void)
 
     AkDoc* doc;
     AkVisualScene* scene;
-    AkCamera* camera = nullptr;
 
-    std::string scene_path = PATH;
-    scene_path += FILE_NAME;
-    if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
-        logger->error("Document couldn't be loaded\n");
+    std::string scenePath = PATH;
+    scenePath += FILE_NAME;
+    if (ak_load(&doc, scenePath.c_str(), NULL) != AK_OK) {
+        logger.error("Document couldn't be loaded\n");
         exit(EXIT_FAILURE);
     }
     else {
-        logger->info(print_coord_system(doc->coordSys));
-        logger->info(print_doc_information(doc->inf, doc->unit));
-        logger->info("==============================================================================\n");
+        logger.info(print_coord_system(doc->coordSys));
+        logger.info(print_doc_information(doc->inf, doc->unit));
+        logger.info("==============================================================================\n");
     }
+    
 
-    float* camera_mat = (float*)calloc(16, sizeof(float));
-    float* camera_proj = (float*)calloc(16, sizeof(float));
+    AkCamera* camera = nullptr;
+    glm::mat4 View;
     glm::mat4 Projection;
-    glm::mat4 Camera;
-
     if (doc->scene.visualScene) {
-        scene = (AkVisualScene*) ak_instanceObject(doc->scene.visualScene);
-        logger->info("=============== Visual Scene loaded ====");
+        scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
+        logger.info("=========================== Visual Scene loaded ==================================================\n");
         if (scene->name) {
-            logger->info("Scene name: ");
-            logger->info(scene->name);
-            logger->info("============\n");
+            std::string sceneInfo = "======================== Scene name: ";
+            sceneInfo += scene->name;
+            sceneInfo += "========================\n";
+            logger.info(sceneInfo);
         }
+        float cameraView[16];
+        float cameraProjection[16];
 
-        ak_firstCamera(doc, &camera, camera_mat, camera_proj);
+        ak_firstCamera(doc, &camera, cameraView, cameraProjection);
         if (camera) {
-            Projection = glm::make_mat4x4(camera_proj);
-            Camera = glm::make_mat4x4(camera_mat);
-            for (int i = 0; i < 16; i++) {
-                std::cout << camera_mat[i] << ", ";
-                if (i % 4 == 3) std::cout << std::endl;
-            }
-        } 
+            View = glm::make_mat4x4(cameraView);
+            Projection = glm::make_mat4x4(cameraProjection);
+        }
         else if (scene->cameras) {
             if (scene->cameras->first) {
                 camera = (AkCamera*)ak_instanceObject(scene->cameras->first->instance);
@@ -178,11 +190,6 @@ int main(void)
         proccess_node(node); // pointer to pointer?
     }
 
-    if (camera_mat) free(camera_mat);
-    if (camera_proj) free(camera_proj);
-
-    // choose shaders from compiled set
-    //primitives[0].program = &program;
 
 
     // What with and libimages ??
@@ -229,7 +236,10 @@ int main(void)
 
     /* ======================================================== */
 
-   
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
     GLuint* docDataBuffer = (GLuint*) calloc(bufferViews.size(), sizeof(GLuint));
     glCreateBuffers((GLsizei) bufferViews.size(), docDataBuffer);
     for (auto &buffer : bufferViews) {
@@ -270,7 +280,7 @@ int main(void)
     glNamedBufferSubData(lightsBuffer, offsetof(LightsList, list), lightsBufferSize, lightsData.data());
 
 
-    logger->info("===================== Main loop ==============================================\n");
+    logger.info("===================== Main loop ==============================================\n");
     while (!glfwWindowShouldClose(window)) {
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
@@ -309,7 +319,6 @@ int main(void)
         for (auto& l : lights)     l.drawLight(width, height, Projection, camera);
 
 
-
         // ImGui
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -325,6 +334,9 @@ int main(void)
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+    
+    /* ======================================================== */
+
     glBindProgramPipeline(0);
 
     env.deletePipeline();
@@ -339,13 +351,13 @@ int main(void)
     glDeleteBuffers((GLsizei) bufferViews.size(), docDataBuffer); 
     free(docDataBuffer);
     glDeleteVertexArrays(1, &vao);
-
+    //
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     glfwTerminate();
-    logger->info("========== [GLFW]: Terminated ================================================\n");
-    logger->info("===================== Exit succeeded =========================================\n");
+    logger.info("========== [GLFW]: Terminated ================================================\n");
+    logger.info("===================== Exit succeeded =========================================\n");
     return 0;
 }

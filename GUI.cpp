@@ -1,8 +1,11 @@
 #include "pch.h"
 #include "GUI.h"
+#include "Tools.h"
+#include "Debug.h"
 
 namespace fs = std::filesystem;
 
+extern std::shared_ptr<debug::BufferLogger> bufferLogger;
 
 PointLight getLight(ConfigContext& panelConfig) 
 {
@@ -10,6 +13,8 @@ PointLight getLight(ConfigContext& panelConfig)
     glm::vec3 diffuse = { panelConfig.light_diffuse[0], panelConfig.light_diffuse[1], panelConfig.light_diffuse[2] };
     glm::vec3 specular = { panelConfig.light_specular[0], panelConfig.light_specular[1], panelConfig.light_specular[2] };
     glm::vec4 position = { panelConfig.position[0], panelConfig.position[1], panelConfig.position[2], 1. };
+
+    //lightsData[lightId]
 
     float l_position[16] = {};
     l_position[0] = 1.;
@@ -39,28 +44,29 @@ void insert_tree(ConfigContext& context, std::vector<std::string>& tree)
 
 void folder_content(
     std::string& path, 
-    std::vector<int>& content, 
+    std::vector<std::string>& content, 
     int& i, 
-    int& selected2) 
+    std::string& selected) 
 {
     for (const auto& entry : fs::directory_iterator(path)) {
         if (entry.is_regular_file()) {
-            //std::cout << entry.path().filename().extension() << std::endl;
             if (entry.path().filename().extension() == ".gltf") {
-                content.push_back(0);
-                
-                ImGui::Selectable(entry.path().filename().generic_string().c_str(), content.at(content.size() - 1) == i);
-                ImGui::SameLine(200); ImGui::Text(entry.path().generic_string().c_str());
+                std::string fileName = entry.path().filename().generic_string();
+                std::string filePath = entry.path().generic_string();
+                content.push_back(filePath);
+
+                if(ImGui::Selectable(fileName.c_str(), content.at(content.size() - 1) == selected)) selected = filePath;
+                ImGui::SameLine(200); ImGui::Text(filePath.c_str());
             }
         }
         else if (entry.is_directory()) {
             std::string subpath = entry.path().generic_string();
-            //content.push_back(subpath);
-            //std::cout << "============\n";
+
             if (ImGui::TreeNode((void*)(intptr_t)i, entry.path().filename().generic_string().c_str())){
-                folder_content(subpath, content, i, selected2);
+                folder_content(subpath, content, i, selected);
                 ImGui::TreePop();
             }
+            i++;
         }
     }
 }
@@ -72,7 +78,7 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
     bool show_another_window = true;
     static int e = 0;
     static bool selected[3] = { false, false, false };
-    static int selected2 = 0;
+    //static std::string selected2 = 0;
     static float g = 0.123f;
 
     if(ImGui::Begin("Control")) {
@@ -88,11 +94,11 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
                 ImGui::ColorEdit3("ambient light", config.light_ambient);
                 ImGui::ColorEdit3("diffuse light", config.light_diffuse);
                 ImGui::ColorEdit3("specular light", config.light_specular);
-                /*ImGui::SameLine();*/ ImGui::SliderFloat("const", &config.c, 0.0f, 1.0f);
+                ImGui::SliderFloat("const", &config.c, 0.0f, 1.0f);
                 ImGui::SliderFloat("linear", &config.l, 0.0f, 1.0f);
                 ImGui::SliderFloat("quad", &config.q, 0.0f, 1.0f);
                 ImGui::SliderFloat("g const", &config.g, -0.99999f, 0.99999f, "ratio = %.3f");
-                /*ImGui::SameLine();*/ ImGui::SliderFloat("x", &config.position[0], -1.0f, 1.0f);
+                ImGui::SliderFloat("x", &config.position[0], -1.0f, 1.0f);
                 ImGui::SliderFloat("y", &config.position[1], -1.0f, 1.0f);
                 ImGui::SliderFloat("z", &config.position[2], -1.0f, 1.0f);
 
@@ -108,19 +114,12 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
                     ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
                     ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
                     if (n == 0) {
-                        ImGui::Text("========== Initialization started ============================================\
-                            ==========[GLEW]: Using GLEW 2.1.0 ========================================\
-                            ==========[GLFW] : Debug context initialize successful ======================\
-                            ===================== Main loop ==============================================\
-                            ==========[GLFW]: Terminated ================================================\
-                            ==================== = Exit succeeded ========================================\
-                            ", wrap_width);
+                        ImGui::Text(bufferLogger->getBuffer().c_str(), wrap_width);
                     }
                     else {
-                        ImGui::Text("aaaaaaaa bbbbbbbb, c cccccccc,dddddddd. d eeeeeeee   ffffffff. gggggggg!hhhhhhhh");
+                        ImGui::Text("Logger error!");
                     }
                     draw_list->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
-                    draw_list->AddRectFilled(marker_min, marker_max, IM_COL32(255, 0, 255, 255));
                     ImGui::PopTextWrapPos();
                 }
 
@@ -177,49 +176,12 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
                 if (config.directory) {
                     int i = 0;
                     std::string path = "res/models/";
-                    std::vector<int> tree;
-                    /*    if (i == 0)
-                            ImGui::SetNextItemOpen(true, ImGuiCond_Once);*/
-                    folder_content(path, tree, i, selected2);
+                    std::vector<std::string> tree;
+
+                    folder_content(path, tree, i, config.fileSelection);
                 }
 
-                /*if (config.directory) {
-                    std::vector<std::string> folders;
-                    for (int i = 0; i < config.directory->size(); i++)
-                    {
-                        std::string& path = (*config.directory)[i];
-                        if (i == 0)
-                            ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-                        int epos = path.find("/");
-                        
-                        bool found = false;
-                        std::string searched = path.substr(0, epos + 1);
-                        for (auto& folder : folders) {
-                            if (folder == searched) {
-                                
-                                break;
-                            }
-                        }
 
-                        std::string to_find;
-                        if(path.find(to_find) != std::string::npos)
-                        if (ImGui::TreeNode((void*)(intptr_t)i, "Child %d", i))
-                        {
-                            std::vector<std::string> files;
-                            for (auto& file : files) {
-                                std::string path = file;
-                                int pos = path.rfind("/");
-                                if (pos == std::string::npos)
-                                    ImGui::Selectable(path.c_str(), selected2 == i);
-                                else
-                                    ImGui::Selectable(path.substr(pos + 1).c_str(), selected2 == i);
-                                ImGui::SameLine(200); ImGui::Text(path.c_str());
-                            }
-                            ImGui::TreePop();
-                        }
-                    }
-                }*/
-                
                 //    
                 //ImGui::Selectable("Scene One", &selected[0]); ImGui::SameLine(300); ImGui::Text(" 2,345 bytes");
                 //ImGui::Selectable("Scene Two", &selected[1]); ImGui::SameLine(300); ImGui::Text("12,345 bytes");

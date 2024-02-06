@@ -5,7 +5,7 @@
 
 extern std::vector<Primitive> primitives;
 extern std::vector<Light> lights;
-extern const char* model_path;
+extern const char* modelPath;
 
 
 
@@ -121,7 +121,7 @@ void set_up_color(
                 int width = 0;
                 int height = 0;
                 char path[128] = { '\0' };
-                memcpy_s(path, 128, model_path, strlen(model_path));
+                memcpy_s(path, 128, modelPath, strlen(modelPath));
                 //char path[128] = { PATH };
                 const char* f_path = tex->texture->image->initFrom->ref;
                 memcpy_s(path + strlen(path), 128 - strlen(path), f_path, strlen(f_path));

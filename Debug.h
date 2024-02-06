@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <sstream>
 
 typedef void (*DEBUGPROC)(
 	GLenum source,
@@ -15,4 +16,38 @@ namespace debug
 	void debug_init(std::vector<DEBUGPROC>& callback_list);
 	void fill_callback_list(std::vector<DEBUGPROC>& callback_list);
 	void glew_callback(int code, const char* description);
+
+    class BufferLogger : public spdlog::sinks::sink {
+    public:
+        explicit BufferLogger(std::size_t _maxBufferSize = 4096) : _maxBufferSize(_maxBufferSize) {
+            _buffer.reserve(_maxBufferSize);
+        }
+
+        void log(const spdlog::details::log_msg& msg) override {
+            std::ostringstream oss;
+            oss << "[" << spdlog::level::to_string_view(msg.level).data() << "] " << msg.payload.data();
+            std::string formattedMsg = oss.str();
+            _buffer += formattedMsg;
+            _buffer += "\n";
+
+            if (_buffer.size() > _maxBufferSize) {
+                _buffer.erase(0, _buffer.size() - _maxBufferSize);
+            }
+        }
+
+        void flush() override {}
+
+        std::string getBuffer() const {
+            return _buffer;
+        }
+
+        virtual void set_pattern(const std::string& pattern) override {}
+
+        virtual void set_formatter(std::unique_ptr<spdlog::formatter> sink_formatter) override {}
+
+    private:
+        std::string _buffer;
+        std::size_t _maxBufferSize;
+    };
 }
+
