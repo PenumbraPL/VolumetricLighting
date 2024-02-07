@@ -75,6 +75,20 @@ glm::mat4 ConfigContext::getProjection(int width, int height) {
 }
 
 
+std::string ConfigContext::getModelPath() {
+    std::cout << fileSelection.substr(0, fileSelection.find_last_of("/")+1).c_str() << std::endl;
+    return fileSelection.substr(0, fileSelection.find_last_of("/")+1);
+}
+
+
+std::string ConfigContext::getModelName() {
+    std::cout << "model name: " << fileSelection.substr(fileSelection.find_last_of("/")+1).c_str() << std::endl;
+    return fileSelection.substr(fileSelection.find_last_of("/")+1);
+}
+
+
+
+
 void folder_content(
     std::string& path, 
     std::vector<std::string>& content, 

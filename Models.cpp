@@ -529,7 +529,7 @@ void Light::loadMesh()
     AkDoc* doc;
     AkVisualScene* scene;
 
-    std::string scene_path = "res/modeles/";
+    std::string scene_path = "res/models/";
     scene_path += "lamp.gltf";
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
         std::cout << "Light mesh couldn't be loaded\n";
@@ -570,7 +570,8 @@ void Light::drawLight(
     int width,
     int height,
     glm::mat4 Proj,
-    AkCamera* camera) 
+    AkCamera* camera,
+    glm::mat4x4& transform) 
 {
     mvpBindingLocation = glGetUniformLocation(vertexProgram, "MVP");
     GLuint vcol_location = glGetAttribLocation(vertexProgram, "vCol");
@@ -608,11 +609,12 @@ void Light::drawLight(
     if (!camera) Projection = glm::perspectiveFov((float)3.14 * panelConfig.fov / 180, (float)width, (float)height, panelConfig.zNear, panelConfig.zFar);
     else Projection = Proj;
 
+
     glm::mat4 View = 
         glm::rotate(
             glm::rotate(
                 glm::translate(
-                    localTransform
+                    transform//localTransform
                 , translate)
             , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
         rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));

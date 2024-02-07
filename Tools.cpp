@@ -2,12 +2,7 @@
 #include "GLFW/glfw3.h"
 #include "pch.h";
 #include "Models.h"
-
-extern std::vector<Primitive> primitives;
-extern std::vector<Light> lights;
-extern const char* modelPath;
-
-
+#include "GUI.h"
 
 
 void initialize_GLEW(void) 
@@ -61,7 +56,8 @@ void set_up_color(
     AkMeshPrimitive* prim,
     GLuint* sampler,
     GLuint* texture,
-    GLuint* texturesType) 
+    GLuint* texturesType,
+    ConfigContext& panelConfig) 
 {
     if (colordesc) {
         if (colordesc->texture) {
@@ -121,7 +117,7 @@ void set_up_color(
                 int width = 0;
                 int height = 0;
                 char path[128] = { '\0' };
-                memcpy_s(path, 128, modelPath, strlen(modelPath));
+                memcpy_s(path, 128, panelConfig.getModelPath().c_str(), strlen(panelConfig.getModelPath().c_str()));
                 //char path[128] = { PATH };
                 const char* f_path = tex->texture->image->initFrom->ref;
                 memcpy_s(path + strlen(path), 128 - strlen(path), f_path, strlen(f_path));
@@ -152,7 +148,7 @@ void set_up_color(
 
 
 
-void proccess_node(AkNode* node) 
+void proccess_node(AkNode* node, std::vector<Primitive>& primitives)
 {
     int offset = 0;
     int comp_stride = 0;
@@ -203,10 +199,10 @@ void proccess_node(AkNode* node)
                     AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
                     AkTechniqueFxCommon* tch = ef->profile->technique->common;
                     if (tch) {
-                        set_up_color(tch->ambient, prim, &primitive.samplers[AMBIENT], &primitive.textures[AMBIENT], &primitive.texturesType[AMBIENT]);
-                        set_up_color(tch->emission, prim, &primitive.samplers[EMISIVE], &primitive.textures[EMISIVE], &primitive.texturesType[EMISIVE]);
-                        set_up_color(tch->diffuse, prim, &primitive.samplers[DIFFUSE], &primitive.textures[DIFFUSE], &primitive.texturesType[DIFFUSE]);
-                        set_up_color(tch->specular, prim, &primitive.samplers[SPECULAR], &primitive.textures[SPECULAR], &primitive.texturesType[SPECULAR]);
+                        set_up_color(tch->ambient, prim, &primitive.samplers[AMBIENT], &primitive.textures[AMBIENT], &primitive.texturesType[AMBIENT], panelConfig);
+                        set_up_color(tch->emission, prim, &primitive.samplers[EMISIVE], &primitive.textures[EMISIVE], &primitive.texturesType[EMISIVE], panelConfig);
+                        set_up_color(tch->diffuse, prim, &primitive.samplers[DIFFUSE], &primitive.textures[DIFFUSE], &primitive.texturesType[DIFFUSE], panelConfig);
+                        set_up_color(tch->specular, prim, &primitive.samplers[SPECULAR], &primitive.textures[SPECULAR], &primitive.texturesType[SPECULAR], panelConfig);
 
                         switch (tch->type) {
                         case AK_MATERIAL_METALLIC_ROUGHNESS: {
@@ -217,8 +213,8 @@ void proccess_node(AkNode* node)
                             alb_cd.texture = mr->albedoTex;
                             mr_cd.color = &mr->albedo;//&mr->roughness;
                             mr_cd.texture = mr->metalRoughTex;
-                            set_up_color(&alb_cd, prim, &primitive.samplers[ALBEDO], &primitive.textures[ALBEDO], &primitive.texturesType[ALBEDO]);
-                            set_up_color(&mr_cd, prim, &primitive.samplers[MAT_ROUGH], &primitive.textures[MAT_ROUGH], &primitive.texturesType[MAT_ROUGH]);
+                            set_up_color(&alb_cd, prim, &primitive.samplers[ALBEDO], &primitive.textures[ALBEDO], &primitive.texturesType[ALBEDO], panelConfig);
+                            set_up_color(&mr_cd, prim, &primitive.samplers[MAT_ROUGH], &primitive.textures[MAT_ROUGH], &primitive.texturesType[MAT_ROUGH], panelConfig);
                             break;
                         }
 
@@ -230,8 +226,8 @@ void proccess_node(AkNode* node)
                             sg_cd.texture = sg->specGlossTex;
                             dif_cd.color = &sg->diffuse;
                             dif_cd.texture = sg->diffuseTex;
-                            set_up_color(&sg_cd, prim, &primitive.samplers[SP_GLOSSINESS], &primitive.textures[SP_GLOSSINESS], &primitive.texturesType[SP_GLOSSINESS]);
-                            set_up_color(&dif_cd, prim, &primitive.samplers[SP_DIFFUSE], &primitive.textures[SP_DIFFUSE], &primitive.texturesType[SP_DIFFUSE]);
+                            set_up_color(&sg_cd, prim, &primitive.samplers[SP_GLOSSINESS], &primitive.textures[SP_GLOSSINESS], &primitive.texturesType[SP_GLOSSINESS], panelConfig);
+                            set_up_color(&dif_cd, prim, &primitive.samplers[SP_DIFFUSE], &primitive.textures[SP_DIFFUSE], &primitive.texturesType[SP_DIFFUSE], panelConfig);
                             break;
                         }
                         };
@@ -268,7 +264,7 @@ void proccess_node(AkNode* node)
         default:                 geo_type = "other";  break;
         };
     }
-    else if (std::regex_match(node->name, light_regex)) {
+    /*else if (std::regex_match(node->name, light_regex)) {
         Light light;
         light.localTransform = glm::make_mat4x4(localTransform);
         light.worldTransform = glm::make_mat4x4(world_transform);
@@ -277,18 +273,19 @@ void proccess_node(AkNode* node)
 
         light.loadMesh();
         lights.push_back(light);
-    }
+        // light from gltf file
+    }*/
 
     std::cout << "Node name: " << node->name << std::endl;
     std::cout << "Node type: " << geo_type << std::endl;
 
     if (node->next) {
         node = node->next;
-        proccess_node(node);
+        proccess_node(node, primitives);
     }
     if (node->chld) {
         node = node->chld;
-        proccess_node(node);
+        proccess_node(node, primitives);
     }
 }
 

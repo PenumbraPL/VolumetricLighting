@@ -3,8 +3,8 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 
-#include "pch.h"
 #include "Light.h"
+#include "pch.h"
 
 struct ConfigContext{
      float zFar;
@@ -33,6 +33,7 @@ struct ConfigContext{
      unsigned int lightId;
      PointLight* lightsData;
      unsigned int lightsSize;
+     
 
      PointLight getLight();
      void updateLight();
@@ -41,6 +42,8 @@ struct ConfigContext{
      glm::vec3 getView();
      glm::mat4 getLookAt();
      glm::mat4 getProjection(int width, int height);
+     std::string getModelPath();
+     std::string getModelName();
 };
 
 

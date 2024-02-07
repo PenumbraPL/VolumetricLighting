@@ -11,7 +11,6 @@ struct PointLight {
     alignas(16) glm::vec3 ambient = glm::vec3(0.8f);
     alignas(16) glm::vec3 diffuse = glm::vec3(0.8f);
     alignas(16) glm::vec3 specular = glm::vec3(0.8f);
-
 };
 struct LightsList {
     unsigned int size;

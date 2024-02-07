@@ -13,8 +13,7 @@
 #include "Debug.h"
 #include "Models.h"
 
-#define PATH "./res/models/DamagedHelmet/"
-#define FILE_NAME "DamagedHelmet.gltf"
+namespace fs = std::filesystem;
 
 
 auto bufferLogger = std::make_shared <debug::BufferLogger>();
@@ -31,15 +30,6 @@ windowConfig = {
     0, 2.f, 0., 0.
 };
 
-std::vector<PointLight> lightsData;
-std::map <void*, unsigned int> bufferViews;
-std::map <void*, unsigned int> textureViews;
-std::map <void*, unsigned int> imageViews;
-std::vector<Primitive> primitives;
-std::vector<Light> lights;
-//std::vector<Camera> cameras;
-const char* modelPath = PATH;
-
 ConfigContext panelConfig{
     500.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0, false, false,
     { 0.4f, 0.7f, 0.0f, 0.5f },
@@ -48,12 +38,11 @@ ConfigContext panelConfig{
     { 0.0f, 0.0f, 0.0f },
     0.1f, 0.5f, 0.5f, 0.f,
     &directory,
-    std::string(""),
-    0, lightsData.data(), lightsData.size()
+    "./res/models/DamagedHelmet/DamagedHelmet.gltf",
+    0, nullptr, 0
 };
 // what if lightsData is empty?
 
-namespace fs = std::filesystem;
 
 
 /* ============================================================================= */
@@ -127,6 +116,15 @@ int main(void)
     ImGuiIO& io = ImGui::GetIO();
     init(&window, io);
 
+    Light lightModel;
+    lightModel.loadMesh();
+    lightModel.createPipeline();
+
+    std::vector<Primitive> primitives;
+    std::vector<PointLight> lightsData;
+    //std::vector<Camera> cameras;
+
+
 
     /* ================================================ */
 
@@ -135,8 +133,8 @@ int main(void)
     AkDoc* doc;
     AkVisualScene* scene;
 
-    std::string scenePath = PATH;
-    scenePath += FILE_NAME;
+    std::string scenePath = panelConfig.getModelPath();
+    scenePath += panelConfig.getModelName();
     if (ak_load(&doc, scenePath.c_str(), NULL) != AK_OK) {
         logger.error("Document couldn't be loaded\n");
         exit(EXIT_FAILURE);
@@ -177,10 +175,14 @@ int main(void)
 
 
         AkNode* node = ak_instanceObjectNode(scene->node);
-        proccess_node(node); // pointer to pointer?
+        proccess_node(node, primitives); // pointer to pointer?
     }
 
 
+
+    std::map <void*, unsigned int> bufferViews;
+    std::map <void*, unsigned int> textureViews;
+    std::map <void*, unsigned int> imageViews;
 
     // What with and libimages ??
     int j = 0;
@@ -241,8 +243,6 @@ int main(void)
     glfwGetFramebufferSize(window, &width, &height);
 
     for (auto& p : primitives) p.getLocation();
-
-    for (auto& l : lights)    l.createPipeline();
 
     Environment env;
     env.loadMesh();
@@ -307,8 +307,13 @@ int main(void)
             p.draw(lightsBuffer, bufferViews, docDataBuffer,
                 eye, LookAt, Projection, translate, rotate);
         }
+
+        for (auto& l : lightsData) {
+            glm::mat4x4 transform = glm::translate(glm::mat4x4(1.f), l.position);
+            lightModel.drawLight(width, height, Projection, camera, transform);
+        }
+
         cld.draw(width, height, Projection, camera, panelConfig.g, lightsBuffer);
-        for (auto& l : lights)     l.drawLight(width, height, Projection, camera);
 
 
         // ImGui
@@ -337,8 +342,7 @@ int main(void)
     for (auto& p : primitives) p.deleteTransforms();
     for (auto& p : primitives) p.deleteTexturesAndSamplers();
     for (auto& p : primitives) p.deletePipeline();
-    for (auto& l : lights)     l.deletePipeline();
-
+    lightModel.deletePipeline();
 
     glDeleteBuffers((GLsizei) bufferViews.size(), docDataBuffer); 
     free(docDataBuffer);

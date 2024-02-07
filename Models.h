@@ -1,7 +1,7 @@
 #pragma once
 #include "GLFW/glfw3.h"
-#include "pch.h"
 #include "GUI.h"
+#include "pch.h"
 
 extern ConfigContext panelConfig;
 
@@ -157,7 +157,8 @@ struct Light {
         int width, 
         int height, 
         glm::mat4 Proj, 
-        AkCamera* camera);
+        AkCamera* camera,
+        glm::mat4x4& transform);
 };
 
 
