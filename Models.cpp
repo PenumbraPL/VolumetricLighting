@@ -179,9 +179,9 @@ void Environment::draw(int width, int height, glm::mat4 Proj, AkCamera* camera)
     if (vertexPosBindingLocation != -1) glEnableVertexAttribArray(vertexPosBindingLocation);
     if (textureBindingLocation != -1) glEnableVertexAttribArray(textureBindingLocation);
 
-    float r = 0.1f * panelConfig.dist;
-    float phi = panelConfig.phi;
-    float theta = panelConfig.theta;
+    float r = 0.1f * panelConfig.viewDistance;
+    float phi = panelConfig.viewPhi;
+    float theta = panelConfig.viewTheta;
 
     glm::mat4x4 Projection;
 
@@ -195,12 +195,12 @@ void Environment::draw(int width, int height, glm::mat4 Proj, AkCamera* camera)
     }
 
     glm::vec3 translate = glm::vec3(0., 0., 0.);// glm::vec3(panelConfig.tr_x * 0.1, panelConfig.tr_y * 0.1, panelConfig.tr_z * 0.1);
-    glm::vec3 rotate = glm::vec3(0., 0., 0.);//glm::vec3(3.14 * panelConfig.rot_x / 180, 3.14 * panelConfig.rot_y / 180, 0.f);
+    glm::vec3 rotate = glm::vec3(0., 0., 0.);//glm::vec3(3.14 * panelConfig.xRotate / 180, 3.14 * panelConfig.yRotate / 180, 0.f);
 
     glBindProgramPipeline(pipeline);
 
     glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
-    if (!camera) Projection = glm::perspectiveFov((float)3.14 * panelConfig.fov / 180, (float)width, (float)height, panelConfig.near_plane, panelConfig.far_plane);
+    if (!camera) Projection = glm::perspectiveFov((float)3.14 * panelConfig.fov / 180, (float)width, (float)height, panelConfig.zNear, panelConfig.zFar);
     else Projection = Proj;
 
     glm::mat4 View = glm::rotate(
@@ -583,9 +583,9 @@ void Light::drawLight(
     if (vertexPosBindingLocation != -1) glEnableVertexAttribArray(vertexPosBindingLocation);
     if (vcol_location != -1) glEnableVertexAttribArray(vcol_location);
 
-    float r = 0.1f * panelConfig.dist;
-    float phi = panelConfig.phi;
-    float theta = panelConfig.theta;
+    float r = 0.1f * panelConfig.viewDistance;
+    float phi = panelConfig.viewPhi;
+    float theta = panelConfig.viewTheta;
 
     glm::mat4x4 Projection;
 
@@ -598,14 +598,14 @@ void Light::drawLight(
         north = glm::vec3(0., -1., 0.);
     }
 
-    glm::vec3 translate = glm::vec3(panelConfig.tr_x * 0.1, panelConfig.tr_y * 0.1, panelConfig.tr_z * 0.1);
-    glm::vec3 rotate = glm::vec3(3.14 * panelConfig.rot_x / 180, 3.14 * panelConfig.rot_y / 180, 0.f);
+    glm::vec3 translate = glm::vec3(panelConfig.xTranslate * 0.1, panelConfig.yTranslate * 0.1, panelConfig.zTranslate * 0.1);
+    glm::vec3 rotate = glm::vec3(3.14 * panelConfig.xRotate / 180, 3.14 * panelConfig.yRotate / 180, 0.f);
 
     glBindProgramPipeline(0);
     glBindProgramPipeline(pipeline);
 
     glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
-    if (!camera) Projection = glm::perspectiveFov((float)3.14 * panelConfig.fov / 180, (float)width, (float)height, panelConfig.near_plane, panelConfig.far_plane);
+    if (!camera) Projection = glm::perspectiveFov((float)3.14 * panelConfig.fov / 180, (float)width, (float)height, panelConfig.zNear, panelConfig.zFar);
     else Projection = Proj;
 
     glm::mat4 View = 
@@ -772,9 +772,9 @@ void Cloud::draw(
     if (vertexPosBindingLocation != -1) glEnableVertexAttribArray(vertexPosBindingLocation);
     if (vtex_location != -1) glEnableVertexAttribArray(vtex_location);
 
-    float r = 0.1f * panelConfig.dist;
-    float phi = panelConfig.phi;
-    float theta = panelConfig.theta;
+    float r = 0.1f * panelConfig.viewDistance;
+    float phi = panelConfig.viewPhi;
+    float theta = panelConfig.viewTheta;
 
     glm::mat4x4 Projection;
 
@@ -788,7 +788,7 @@ void Cloud::draw(
     }
 
     glm::vec3 translate = glm::vec3(0., 0., 0.);// glm::vec3(panelConfig.tr_x * 0.1, panelConfig.tr_y * 0.1, panelConfig.tr_z * 0.1);
-    glm::vec3 rotate = glm::vec3(0., 0., 0.);//glm::vec3(3.14 * panelConfig.rot_x / 180, 3.14 * panelConfig.rot_y / 180, 0.f);
+    glm::vec3 rotate = glm::vec3(0., 0., 0.);//glm::vec3(3.14 * panelConfig.xRotate / 180, 3.14 * panelConfig.yRotate / 180, 0.f);
 
     int binding_point = 0;
     glVertexAttribBinding(vertexPosBindingLocation, binding_point);
@@ -803,7 +803,7 @@ void Cloud::draw(
 
     glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
     if (!camera) {
-        Projection = glm::perspectiveFov((float)3.14 * panelConfig.fov / 180, (float)width, (float)height, panelConfig.near_plane, panelConfig.far_plane);
+        Projection = glm::perspectiveFov((float)3.14 * panelConfig.fov / 180, (float)width, (float)height, panelConfig.zNear, panelConfig.zFar);
     }
     else {
         Projection = Proj;

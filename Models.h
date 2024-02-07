@@ -164,7 +164,7 @@ struct Light {
 struct Camera {
     glm::mat4x4 localTransform;
     glm::mat4x4 worldTransform;
-    glm::vec4 direction;
+    glm::vec4 viewDirection;
     float zNear;
     float zFar;
     int fov;

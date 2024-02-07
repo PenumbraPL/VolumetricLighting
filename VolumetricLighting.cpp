@@ -23,31 +23,21 @@ auto logger = spdlog::logger("multi_sink", {bufferLogger, fileLogger});
 std::vector<std::string> directory;
 
 
-struct WindowInfo {
-    int width;
-    int height;
-    const char* title;
-    int cursor_mode;
-    int imgui;
-    int mbutton;
-} windowConfig = {
+struct WindowInfo 
+windowConfig = {
     1900,
     1000,
     "GLTF Viewer",
-    0, 0, 0
+    0, 2.f, 0., 0.
 };
 
-double xpos, ypos;
-float mouseSpeed = 2.f;
-std::vector<glm::mat4x4*> mats;
-glm::vec4 cam;
 std::vector<PointLight> lightsData;
 std::map <void*, unsigned int> bufferViews;
 std::map <void*, unsigned int> textureViews;
 std::map <void*, unsigned int> imageViews;
 std::vector<Primitive> primitives;
 std::vector<Light> lights;
-std::vector<Camera> cameras;
+//std::vector<Camera> cameras;
 const char* modelPath = PATH;
 
 ConfigContext panelConfig{
@@ -59,9 +49,9 @@ ConfigContext panelConfig{
     0.1f, 0.5f, 0.5f, 0.f,
     &directory,
     std::string(""),
-    0, lightsData.data()
+    0, lightsData.data(), lightsData.size()
 };
-
+// what if lightsData is empty?
 
 namespace fs = std::filesystem;
 
@@ -271,7 +261,7 @@ int main(void)
     glGenBuffers(1, &lightsBuffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightsBuffer);
 
-    init_lights();
+    init_lights(lightsData);
     int lightsBufferSize = (int) sizeof(PointLight) * lightsData.size();
     unsigned int lightDataSize = (unsigned int) lightsData.size();
 
@@ -293,21 +283,23 @@ int main(void)
         glClearColor(0., 1., 1., 1.);
 
 
-        glm::vec3 eye = panelConfig.polar();
-        glm::mat4 LookAt = panelConfig.preperLookAt();
-        if (!camera) Projection = glm::perspectiveFov((float)3.14 * panelConfig.fov / 180, (float)width, (float)height, panelConfig.near_plane, panelConfig.far_plane);
-        
+        glm::vec3 eye = panelConfig.getView();
+        glm::mat4 LookAt = panelConfig.getLookAt();
+        if (!camera) Projection = panelConfig.getProjection(width, height);
+        panelConfig.lightsData = lightsData.data();
+        panelConfig.lightsSize = lightsData.size();
 
         env.draw(width, height, Projection, camera);
 
         glm::vec3 translate = panelConfig.getTranslate();
         glm::vec3 rotate = panelConfig.getRotate();
-        PointLight newLight = getLight(panelConfig);
-        if (compare_lights(lightsData.data()[0], newLight)) {
-            lightsData.data()[0] = newLight;
+        PointLight newLight = panelConfig.getLight();
+        if (compare_lights(lightsData.data()[panelConfig.lightId], newLight)) {
+            lightsData.data()[panelConfig.lightId] = newLight;
             LightsList* ptr = (LightsList*)glMapNamedBuffer(lightsBuffer, GL_WRITE_ONLY);
-            memcpy_s((void*)&ptr->list[0], sizeof(PointLight), &newLight, sizeof(PointLight));
+            memcpy_s((void*)&ptr->list[panelConfig.lightId], sizeof(PointLight), &newLight, sizeof(PointLight));
             glUnmapNamedBuffer(lightsBuffer);
+            panelConfig.updateLight();
         }
 
 

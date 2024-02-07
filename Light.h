@@ -1,7 +1,5 @@
 #pragma once
-
 #include "pch.h"
-
 
 struct PointLight {
     alignas(16) glm::vec3 position = glm::vec3(0.);
@@ -21,8 +19,6 @@ struct LightsList {
 };
 
 
-void init_lights(void);
+void init_lights(std::vector<PointLight>& lightsData);
 bool compare_lights(PointLight & old_light, PointLight & new_light);
 bool compare_lights(LightsList & old_light, LightsList & new_light);
-//void insert_tree(ConfigContext& context, std::vector<std::string>& tree);
-//PointLight getLight(ConfigContext& panelConfig);

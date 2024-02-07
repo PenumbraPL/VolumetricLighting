@@ -1,6 +1,16 @@
 #pragma once
 #include "GLFW/glfw3.h"
 
+struct WindowInfo {
+    int width;
+    int height;
+    const char* title;
+    int cursorMode;
+	float mouseSpeed;
+	double xCursorPosition;
+	double yCursorPosition;
+};
+
 namespace control 
 {
 	void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);

@@ -35,15 +35,14 @@ namespace debug
             }
         }
 
-        void flush() override {}
 
         std::string getBuffer() const {
             return _buffer;
         }
 
-        virtual void set_pattern(const std::string& pattern) override {}
-
-        virtual void set_formatter(std::unique_ptr<spdlog::formatter> sink_formatter) override {}
+        void set_pattern(const std::string& pattern) override {}
+        void flush() override {}
+        void set_formatter(std::unique_ptr<spdlog::formatter> sink_formatter) override {}
 
     private:
         std::string _buffer;

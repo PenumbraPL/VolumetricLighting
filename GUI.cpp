@@ -7,40 +7,73 @@ namespace fs = std::filesystem;
 
 extern std::shared_ptr<debug::BufferLogger> bufferLogger;
 
-PointLight getLight(ConfigContext& panelConfig) 
+PointLight ConfigContext::getLight()
 {
-    glm::vec3 ambient = { panelConfig.light_ambient[0], panelConfig.light_ambient[1], panelConfig.light_ambient[2] };
-    glm::vec3 diffuse = { panelConfig.light_diffuse[0], panelConfig.light_diffuse[1], panelConfig.light_diffuse[2] };
-    glm::vec3 specular = { panelConfig.light_specular[0], panelConfig.light_specular[1], panelConfig.light_specular[2] };
-    glm::vec4 position = { panelConfig.position[0], panelConfig.position[1], panelConfig.position[2], 1. };
+    //glm::vec3 ambient = lightsData[lightId].ambient;
+    //glm::vec3 diffuse = lightsData[lightId].diffuse;
+    //glm::vec3 specular = lightsData[lightId].specular;
+    //glm::vec3 position = lightsData[lightId].position;
+    //float c = lightsData[lightId].constant;
+    //float l = lightsData[lightId].linear;
+    //float q = lightsData[lightId].quadratic;
 
-    //lightsData[lightId]
+    glm::vec3 ambient = glm::vec3{ lightAmbient[0], lightAmbient[1], lightAmbient[2] };
+    glm::vec3 diffuse = glm::vec3{ lightDiffuse[0], lightDiffuse[1], lightDiffuse[2] };
+    glm::vec3 specular = glm::vec3{ lightSpecular[0], lightSpecular[1], lightSpecular[2] };
+    glm::vec3 position = glm::vec3{ this->position[0], this->position[1], this->position[2] };
 
-    float l_position[16] = {};
-    l_position[0] = 1.;
-    l_position[5] = 1.;
-    l_position[10] = 1.;
-    l_position[15] = 1.;
 
-    //glm::mat4 View = glm::rotate(
-    //    glm::rotate(
-    //        glm::translate(
-    //            glm::make_mat4x4(l_position)
-    //            , translate)
-    //        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
-    //    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-    //glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
-    //glm::mat4 MVP = Projection * LookAt * View * Model;
-
-    glm::vec4 new_position = position;
-
-    return  { new_position, panelConfig.c, panelConfig.l, panelConfig.q, ambient, diffuse, specular };
+    return { position, c, l, q, ambient, diffuse, specular };
 }
 
-void insert_tree(ConfigContext& context, std::vector<std::string>& tree) 
-{
-    context.directory = &tree;
+void ConfigContext::updateLight() {
+    lightsData[lightId].ambient = { lightAmbient[0], lightAmbient[1], lightAmbient[2] };
+    lightsData[lightId].diffuse = { lightDiffuse[0], lightDiffuse[1], lightDiffuse[2] };
+    lightsData[lightId].specular = { lightSpecular[0], lightSpecular[1], lightSpecular[2] };
+    lightsData[lightId].position = { position[0], position[1], position[2] };
 }
+
+
+glm::vec3 ConfigContext::getTranslate()
+{
+    return  glm::vec3(xTranslate * 0.02, yTranslate * 0.02, zTranslate * 0.02);
+}
+
+glm::vec3 ConfigContext::getRotate()
+{
+    return glm::vec3(3.14 * xRotate / 180, 3.14 * yRotate / 180, 0.f);
+}
+
+
+glm::vec3 ConfigContext::getView()
+{
+    float r = 0.1f * viewDistance;
+    float phi = this->viewPhi;
+    float theta = this->viewTheta;
+    glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
+
+    return glm::vec3(eye.z, eye.y, eye.x);
+}
+
+
+glm::mat4 ConfigContext::getLookAt()
+{
+    float theta = this->viewTheta;
+    glm::vec3 eye = getView();
+
+    glm::vec3 north = glm::vec3(0., 1., 0.);
+    float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
+    if (corrected_theta > 3.14 / 2. && corrected_theta < 3.14 * 3. / 2.) {
+        north = glm::vec3(0., -1., 0.);
+    }
+    return  glm::lookAt(eye, glm::vec3(0.), north);
+}
+
+
+glm::mat4 ConfigContext::getProjection(int width, int height) {
+    return glm::perspectiveFov((float)3.14 * fov / 180, (float)width, (float)height, zNear, zFar);
+}
+
 
 void folder_content(
     std::string& path, 
@@ -80,10 +113,11 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
     static bool selected[3] = { false, false, false };
     //static std::string selected2 = 0;
     static float g = 0.123f;
+    static float scroll_to_off_px = 0.0f;
 
-    if(ImGui::Begin("Control")) {
+    if (ImGui::Begin("Control")) {
         config.focused1 = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow) ? true : false;
-
+        
         static float f = 0.0f;
         static int counter = 0;
 
@@ -91,37 +125,40 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
 
         if (ImGui::BeginTabBar("LeftPanelBar", tab_bar_flags)) {
             if (ImGui::BeginTabItem("Config")) {
-                ImGui::ColorEdit3("ambient light", config.light_ambient);
-                ImGui::ColorEdit3("diffuse light", config.light_diffuse);
-                ImGui::ColorEdit3("specular light", config.light_specular);
-                ImGui::SliderFloat("const", &config.c, 0.0f, 1.0f);
-                ImGui::SliderFloat("linear", &config.l, 0.0f, 1.0f);
-                ImGui::SliderFloat("quad", &config.q, 0.0f, 1.0f);
+       
                 ImGui::SliderFloat("g const", &config.g, -0.99999f, 0.99999f, "ratio = %.3f");
-                ImGui::SliderFloat("x", &config.position[0], -1.0f, 1.0f);
-                ImGui::SliderFloat("y", &config.position[1], -1.0f, 1.0f);
-                ImGui::SliderFloat("z", &config.position[2], -1.0f, 1.0f);
+
 
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Debug")) {
-                int wrap_width = 400;
-                ImDrawList* draw_list = ImGui::GetWindowDrawList();
-                for (int n = 0; n < 1; n++) {
-                    ImGui::Text("Test paragraph %d:", n);
-                    ImVec2 pos = ImGui::GetCursorScreenPos();
-                    ImVec2 marker_min = ImVec2(pos.x + wrap_width, pos.y);
-                    ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
-                    ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
-                    if (n == 0) {
-                        ImGui::Text(bufferLogger->getBuffer().c_str(), wrap_width);
-                    }
-                    else {
-                        ImGui::Text("Logger error!");
-                    }
-                    draw_list->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
-                    ImGui::PopTextWrapPos();
+                ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+                if (ImGui::TreeNode("Debug info")) {
+                    int wrap_width = 400;
+                    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+                    unsigned int lines = 20;
+                    float scroll_x = ImGui::GetScrollX();
+                    float scroll_max_x = ImGui::GetScrollMaxX();
+                    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 3.0f);
+                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0f, 2.0f));
+                    ImVec2 scrolling_child_size = ImVec2(0, ImGui::GetFrameHeightWithSpacing() * lines + 30);
+                    ImGui::BeginChild("scrolling", scrolling_child_size, 0, ImGuiWindowFlags_HorizontalScrollbar);
+
+                    //ImVec2 pos = ImGui::GetCursorScreenPos();
+                    //ImVec2 marker_min = ImVec2(pos.x + wrap_width, pos.y);
+                    //ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
+                    //ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
+                    ImGui::Text(bufferLogger->getBuffer().c_str(), scroll_x - 20, scroll_max_x);// wrap_width);
+                    //draw_list->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
+                    //ImGui::PopTextWrapPos();
+
+                    ImGui::EndChild();
+                    ImGui::PopStyleVar(2);
+                    ImGui::Spacing();
+                    ImGui::TreePop();
                 }
+
 
                 ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
@@ -142,17 +179,11 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
                     }
                     ImGui::Text("Mouse wheel: %.1f", io.MouseWheel);
 
-                    // We iterate both legacy native range and named ImGuiKey ranges, which is a little odd but this allows displaying the data for old/new backends.
-                    // User code should never have to go through such hoops! You can generally iterate between ImGuiKey_NamedKey_BEGIN and ImGuiKey_NamedKey_END.
-#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
-                    struct funcs { static bool IsLegacyNativeDupe(ImGuiKey) { return false; } };
-                    ImGuiKey start_key = ImGuiKey_NamedKey_BEGIN;
-#else
                     struct funcs { static bool IsLegacyNativeDupe(ImGuiKey key) { 
                         return key < 512 && ImGui::GetIO().KeyMap[key] != -1;
-                    } }; // Hide Native<>ImGuiKey duplicates when both exists in the array
+                    } }; 
                     ImGuiKey start_key = (ImGuiKey)0;
-#endif
+
                     ImGui::Text("Keys down:");
                     for (ImGuiKey key = start_key; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1)) { 
                         if (funcs::IsLegacyNativeDupe(key) || !ImGui::IsKeyDown(key)) continue;
@@ -172,6 +203,7 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
 
                 ImGui::EndTabItem();
             }
+
             if (ImGui::BeginTabItem("Scene")) {
                 if (config.directory) {
                     int i = 0;
@@ -194,12 +226,50 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Lights")) {
-                static bool selected[3] = { false, false, false };
-                ImGui::Selectable("Light 1", &selected[0]);
+              
+                for (int i = 0; i < config.lightsSize; i++) {
+                    std::string text = "Light " + std::to_string(i);
+                    if(ImGui::Selectable(text.c_str(), i == config.lightId)) config.lightId = i;
+                }
                 ImGui::Separator();
-                ImGui::Button("Add Light"); ImGui::SameLine(300);
-                ImGui::Button("Delete Light");
+                if(ImGui::Button("Add Light")) config.lightsSize++; 
+                ImGui::SameLine(300); if(ImGui::Button("Delete Light")) config.lightsSize > 0 ? config.lightsSize-- : 0;
                 ImGui::EndTabItem();
+                ImGui::Separator();
+
+                glm::vec3 ambient = config.lightsData[config.lightId].ambient;
+                glm::vec3 diffuse = config.lightsData[config.lightId].diffuse;
+                glm::vec3 specular = config.lightsData[config.lightId].specular;
+                glm::vec3 position = config.lightsData[config.lightId].position;
+                config.lightAmbient[0] = ambient.x;
+                config.lightAmbient[1] = ambient.y;
+                config.lightAmbient[2] = ambient.z;
+                config.lightDiffuse[0] = diffuse.x;
+                config.lightDiffuse[1] = diffuse.y;
+                config.lightDiffuse[2] = diffuse.z;
+                config.lightSpecular[0] = specular.x;
+                config.lightSpecular[1] = specular.y;
+                config.lightSpecular[2] = specular.z;
+                config.position[0] = position.x;
+                config.position[1] = position.y;
+                config.position[2] = position.z;
+
+                ImGui::ColorEdit3("ambient light", config.lightAmbient);
+                ImGui::ColorEdit3("diffuse light", config.lightDiffuse);
+                ImGui::ColorEdit3("specular light", config.lightSpecular);
+                ImGui::SliderFloat("const", &config.c, 0.0f, 1.0f);
+                ImGui::SliderFloat("linear", &config.l, 0.0f, 1.0f);
+                ImGui::SliderFloat("quad", &config.q, 0.0f, 1.0f);
+                ImGui::SliderFloat("x", &config.position[0], -1.0f, 1.0f);
+                ImGui::SliderFloat("y", &config.position[1], -1.0f, 1.0f);
+                ImGui::SliderFloat("z", &config.position[2], -1.0f, 1.0f);
+
+
+                //config.lightsData[config.lightId].ambient = { config.lightAmbient[0], config.lightAmbient[1], config.lightAmbient[2] };
+                //config.lightsData[config.lightId].diffuse = { config.lightDiffuse[0], config.lightDiffuse[1], config.lightDiffuse[2] };
+                //config.lightsData[config.lightId].specular = { config.lightSpecular[0], config.lightSpecular[1], config.lightSpecular[2] };
+                //config.lightsData[config.lightId].position = { config.position[0], config.position[1], config.position[2] };
+
             }
             ImGui::EndTabBar();
         }
@@ -241,19 +311,19 @@ void drawRightPanel(ImGuiIO& io, ConfigContext &config)
         config.focused2 = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow) ? true : false;
         
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-        ImGui::Text("Far plane:"); ImGui::SliderFloat("Fp", &config.far_plane, 0.1f, 200.0f);
-        ImGui::Text("Near plane:"); ImGui::SliderFloat("Np", &config.near_plane, 0.0001f, 10.0f);
+        ImGui::Text("Far plane:"); ImGui::SliderFloat("Fp", &config.zFar, 0.1f, 200.0f);
+        ImGui::Text("Near plane:"); ImGui::SliderFloat("Np", &config.zNear, 0.0001f, 10.0f);
         ImGui::Text("fov:"); ImGui::SliderInt("fov", &config.fov, 10, 120);
         ImGui::Separator();
 
-        ImGui::SliderInt("Translation X", &config.tr_x, -100, 100);
-        ImGui::SliderInt("Translation Y", &config.tr_y, -100, 100);
-        ImGui::SliderInt("Translation Z", &config.tr_z, -100, 100);
-        ImGui::SliderInt("Rotation X", &config.rot_x, 0, 360);
-        ImGui::SliderInt("Rotation Y", &config.rot_y, 0, 360);
-        ImGui::SliderFloat("Camera distance", &config.dist, 0, 360);
-        ImGui::SliderAngle("Camera phi", &config.phi, 0, 360);
-        ImGui::SliderAngle("Camera theta", &config.theta, 0, 360);
+        ImGui::SliderInt("Translation X", &config.xTranslate, -100, 100);
+        ImGui::SliderInt("Translation Y", &config.yTranslate, -100, 100);
+        ImGui::SliderInt("Translation Z", &config.zTranslate, -100, 100);
+        ImGui::SliderInt("Rotation X", &config.xRotate, 0, 360);
+        ImGui::SliderInt("Rotation Y", &config.yRotate, 0, 360);
+        ImGui::SliderFloat("Camera distance", &config.viewDistance, 0, 360);
+        ImGui::SliderAngle("Camera phi", &config.viewPhi, 0, 360);
+        ImGui::SliderAngle("Camera theta", &config.viewTheta, 0, 360);
         ImGui::Separator();
 
         ImGui::Button("Save Image");

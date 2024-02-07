@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <vector>
 #include <map>
 #include <regex>
 #include "ds/forward-list-common.h"
