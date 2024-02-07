@@ -219,13 +219,13 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
             }
 
             if (ImGui::BeginTabItem("Scene")) {
-                if (config.directory) {
+                //if (config.directory) {
                     int i = 0;
                     std::string path = "res/models/";
                     std::vector<std::string> tree;
 
                     folder_content(path, tree, i, config.fileSelection);
-                }
+               // }
 
 
                 //    

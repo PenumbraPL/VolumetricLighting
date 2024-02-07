@@ -28,7 +28,7 @@ struct ConfigContext{
      float position[3];
      float c, l, q;
      float g;
-     std::vector<std::string>* directory;
+     std::vector<std::string> directory;
      std::string fileSelection;
      unsigned int lightId;
      PointLight* lightsData;

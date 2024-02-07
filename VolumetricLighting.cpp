@@ -19,7 +19,6 @@ namespace fs = std::filesystem;
 auto bufferLogger = std::make_shared <debug::BufferLogger>();
 auto fileLogger = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/basic-log.txt", true);
 auto logger = spdlog::logger("multi_sink", {bufferLogger, fileLogger});
-std::vector<std::string> directory;
 
 
 struct WindowInfo 
@@ -37,7 +36,7 @@ ConfigContext panelConfig{
     { 0.4f, 0.7f, 0.0f, 0.5f },
     { 0.0f, 0.0f, 0.0f },
     0.1f, 0.5f, 0.5f, 0.f,
-    &directory,
+    std::vector<std::string>(),
     "./res/models/DamagedHelmet/DamagedHelmet.gltf",
     0, nullptr, 0
 };
