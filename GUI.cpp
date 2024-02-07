@@ -120,20 +120,13 @@ void folder_content(
 
 void drawLeftPanel(ImGuiIO& io, ConfigContext& config) 
 {
-    bool show_demo_window = false;
     static bool show_shader_dialog = false;
-    bool show_another_window = true;
-    static int e = 0;
     static bool selected[3] = { false, false, false };
     //static std::string selected2 = 0;
-    static float g = 0.123f;
-    static float scroll_to_off_px = 0.0f;
 
     if (ImGui::Begin("Control")) {
         config.focused1 = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow) ? true : false;
         
-        static float f = 0.0f;
-        static int counter = 0;
 
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
 
@@ -148,8 +141,8 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
             if (ImGui::BeginTabItem("Debug")) {
                 ImGui::SetNextItemOpen(true, ImGuiCond_Once);
                 if (ImGui::TreeNode("Debug info")) {
-                    int wrap_width = 400;
-                    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+                   // int wrap_width = 400;
+                   // ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
                     unsigned int lines = 20;
                     float scroll_x = ImGui::GetScrollX();

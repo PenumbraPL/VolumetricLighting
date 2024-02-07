@@ -37,10 +37,9 @@ ConfigContext panelConfig{
     { 0.0f, 0.0f, 0.0f },
     0.1f, 0.5f, 0.5f, 0.f,
     std::vector<std::string>(),
-    "./res/models/DamagedHelmet/DamagedHelmet.gltf",
+    "./res/models/Volkswagen/scene.gltf",
     0, nullptr, 0
 };
-// what if lightsData is empty?
 
 
 
@@ -103,6 +102,20 @@ void init(GLFWwindow** windowPtr, ImGuiIO& io)
     }
 }
 
+void draw_imgui(ImGuiIO& io) {
+    // ImGui
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    drawLeftPanel(io, panelConfig);
+    drawRightPanel(io, panelConfig);
+
+    // Rendering
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
 /* ============================================================================= */
 
 
@@ -119,6 +132,14 @@ int main(void)
     lightModel.loadMesh();
     lightModel.createPipeline();
 
+    Environment env;
+    env.loadMesh();
+    env.createPipeline();
+
+    Cloud cld;
+    cld.loadMesh();
+    cld.createPipeline(windowConfig.width, windowConfig.height);
+
     std::vector<Primitive> primitives;
     std::vector<PointLight> lightsData;
     //std::vector<Camera> cameras;
@@ -126,227 +147,214 @@ int main(void)
 
 
     /* ================================================ */
+    do{
+        primitives.clear();
+        lightsData.clear();
+        //ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
 
-    //ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
+        AkDoc* doc;
+        AkVisualScene* scene;
 
-    AkDoc* doc;
-    AkVisualScene* scene;
-
-    std::string scenePath = panelConfig.getModelPath();
-    scenePath += panelConfig.getModelName();
-    if (ak_load(&doc, scenePath.c_str(), NULL) != AK_OK) {
-        logger.error("Document couldn't be loaded\n");
-        exit(EXIT_FAILURE);
-    }
-    else {
-        logger.info(print_coord_system(doc->coordSys));
-        logger.info(print_doc_information(doc->inf, doc->unit));
-        logger.info("==============================================================================\n");
-    }
-    
-
-    AkCamera* camera = nullptr;
-    glm::mat4 View;
-    glm::mat4 Projection;
-    if (doc->scene.visualScene) {
-        scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
-        logger.info("=========================== Visual Scene loaded ==================================================\n");
-        if (scene->name) {
-            std::string sceneInfo = "======================== Scene name: ";
-            sceneInfo += scene->name;
-            sceneInfo += "========================\n";
-            logger.info(sceneInfo);
+        std::string scenePath = panelConfig.getModelPath();
+        scenePath += panelConfig.getModelName();
+        if (ak_load(&doc, scenePath.c_str(), NULL) != AK_OK) {
+            logger.error("Document couldn't be loaded\n");
+            exit(EXIT_FAILURE);
         }
-        float cameraView[16];
-        float cameraProjection[16];
-
-        ak_firstCamera(doc, &camera, cameraView, cameraProjection);
-        if (camera) {
-            View = glm::make_mat4x4(cameraView);
-            Projection = glm::make_mat4x4(cameraProjection);
+        else {
+            logger.info(print_coord_system(doc->coordSys));
+            logger.info(print_doc_information(doc->inf, doc->unit));
+            logger.info("==============================================================================\n");
         }
-        else if (scene->cameras) {
-            if (scene->cameras->first) {
-                camera = (AkCamera*)ak_instanceObject(scene->cameras->first->instance);
+
+
+        AkCamera* camera = nullptr;
+        glm::mat4 View;
+        glm::mat4 Projection;
+        if (doc->scene.visualScene) {
+            scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
+            logger.info("=========================== Visual Scene loaded ==================================================\n");
+            if (scene->name) {
+                std::string sceneInfo = "======================== Scene name: ";
+                sceneInfo += scene->name;
+                sceneInfo += "========================\n";
+                logger.info(sceneInfo);
+            }
+            float cameraView[16];
+            float cameraProjection[16];
+
+            ak_firstCamera(doc, &camera, cameraView, cameraProjection);
+            if (camera) {
+                View = glm::make_mat4x4(cameraView);
+                Projection = glm::make_mat4x4(cameraProjection);
+            }
+            else if (scene->cameras) {
+                if (scene->cameras->first) {
+                    camera = (AkCamera*)ak_instanceObject(scene->cameras->first->instance);
+                }
+            }
+            if (camera) std::cout << "Camera name: " << camera->name << std::endl;
+
+
+            AkNode* node = ak_instanceObjectNode(scene->node);
+            proccess_node(node, primitives); // pointer to pointer?
+        }
+
+
+
+        std::map <void*, unsigned int> bufferViews;
+        std::map <void*, unsigned int> textureViews;
+        std::map <void*, unsigned int> imageViews;
+        bufferViews.clear();
+        textureViews.clear();
+        imageViews.clear();
+
+        // What with and libimages ??
+        int j = 0;
+        FListItem* i = doc->lib.images;
+        if (i) {
+            do {
+                AkImage* img = (AkImage*)i->data;
+                imageViews.insert({ {img, 0} });
+                i = i->next;
+            } while (i);
+            for (auto& u : imageViews) {
+                u.second = j++;
             }
         }
-        if (camera) std::cout << "Camera name: " << camera->name << std::endl;
 
-
-        AkNode* node = ak_instanceObjectNode(scene->node);
-        proccess_node(node, primitives); // pointer to pointer?
-    }
-
-
-
-    std::map <void*, unsigned int> bufferViews;
-    std::map <void*, unsigned int> textureViews;
-    std::map <void*, unsigned int> imageViews;
-
-    // What with and libimages ??
-    int j = 0;
-    FListItem* i = doc->lib.images;
-    if (i) {
-        do {
-            AkImage* img = (AkImage*)i->data;
-            imageViews.insert({ {img, 0} });
-            i = i->next;
-        } while (i);
-        for (auto& u : imageViews) {
-            u.second = j++;
+        j = 0;
+        FListItem* t = doc->lib.textures;
+        if (t) {
+            do {
+                AkTexture* tex = (AkTexture*)t->data;
+                textureViews.insert({ {tex, 0} });
+                t = t->next;
+            } while (t);
+            for (auto& u : textureViews) {
+                u.second = j++;
+            }
         }
-    }
 
-    j = 0;
-    FListItem* t = doc->lib.textures;
-    if (t) {
-        do {
-            AkTexture* tex = (AkTexture*)t->data;
-            textureViews.insert({ {tex, 0} });
-            t = t->next;
-        } while (t);
-        for (auto& u : textureViews) {
-            u.second = j++;
-        }
-    }
-
-    j = 0;
-    FListItem* b = (FListItem*)doc->lib.buffers;
-    if (b) {
-        do {
-            AkBuffer* buf = (AkBuffer*)b->data;
-            bufferViews.insert({ {buf, 0} });
-            b = b->next;
-        } 
-        while (b);
-        for (auto& u : bufferViews) {
-            u.second = j++;
-        }
-    }
-
-
-    /* ======================================================== */
-
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    GLuint* docDataBuffer = (GLuint*) calloc(bufferViews.size(), sizeof(GLuint));
-    glCreateBuffers((GLsizei) bufferViews.size(), docDataBuffer);
-    for (auto &buffer : bufferViews) {
-        unsigned int i = bufferViews[buffer.first];
-        glNamedBufferData(docDataBuffer[i], ((AkBuffer*) buffer.first)->length, ((AkBuffer*) buffer.first)->data, GL_STATIC_DRAW);
-    }
-    
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-
-    for (auto& p : primitives) p.getLocation();
-
-    Environment env;
-    env.loadMesh();
-    env.createPipeline();
-    
-    Cloud cld;
-    cld.loadMesh();
-    cld.createPipeline(width, height);
-
-
-    //glDepthRange(panelConfig.near_plane, panelConfig.far_plane);
-    glDepthFunc(GL_LEQUAL);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-   
-    GLuint lightsBuffer;
-    glGenBuffers(1, &lightsBuffer);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightsBuffer);
-
-    init_lights(lightsData);
-    int lightsBufferSize = (int) sizeof(PointLight) * lightsData.size();
-    unsigned int lightDataSize = (unsigned int) lightsData.size();
-
-    glNamedBufferData(lightsBuffer, sizeof(LightsList) + lightsBufferSize, NULL, GL_DYNAMIC_DRAW);
-    glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
-    glNamedBufferSubData(lightsBuffer, offsetof(LightsList, list), lightsBufferSize, lightsData.data());
-
-
-    logger.info("===================== Main loop ==============================================\n");
-    while (!glfwWindowShouldClose(window)) {
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
-
-        glEnable(GL_DEPTH_TEST); 
-        //glEnable(GL_BLEND);
-
-        glViewport(0, 0, width, height);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glClearColor(0., 1., 1., 1.);
-
-
-        glm::vec3 eye = panelConfig.getView();
-        glm::mat4 LookAt = panelConfig.getLookAt();
-        if (!camera) Projection = panelConfig.getProjection(width, height);
-        panelConfig.lightsData = lightsData.data();
-        panelConfig.lightsSize = lightsData.size();
-
-        env.draw(width, height, Projection, camera);
-
-        glm::vec3 translate = panelConfig.getTranslate();
-        glm::vec3 rotate = panelConfig.getRotate();
-        PointLight newLight = panelConfig.getLight();
-        if (compare_lights(lightsData.data()[panelConfig.lightId], newLight)) {
-            lightsData.data()[panelConfig.lightId] = newLight;
-            LightsList* ptr = (LightsList*)glMapNamedBuffer(lightsBuffer, GL_WRITE_ONLY);
-            memcpy_s((void*)&ptr->list[panelConfig.lightId], sizeof(PointLight), &newLight, sizeof(PointLight));
-            glUnmapNamedBuffer(lightsBuffer);
-            panelConfig.updateLight();
+        j = 0;
+        FListItem* b = (FListItem*)doc->lib.buffers;
+        if (b) {
+            do {
+                AkBuffer* buf = (AkBuffer*)b->data;
+                bufferViews.insert({ {buf, 0} });
+                b = b->next;
+            } while (b);
+            for (auto& u : bufferViews) {
+                u.second = j++;
+            }
         }
 
 
-        for (auto& p : primitives) {
-            p.draw(lightsBuffer, bufferViews, docDataBuffer,
-                eye, LookAt, Projection, translate, rotate);
+        /* ======================================================== */
+
+        GLuint vao;
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+
+        GLuint* docDataBuffer = (GLuint*)calloc(bufferViews.size(), sizeof(GLuint));
+        glCreateBuffers((GLsizei)bufferViews.size(), docDataBuffer);
+        for (auto& buffer : bufferViews) {
+            unsigned int i = bufferViews[buffer.first];
+            glNamedBufferData(docDataBuffer[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
+        }
+        for (auto& p : primitives) p.getLocation();
+
+
+
+        //glDepthRange(panelConfig.near_plane, panelConfig.far_plane);
+        glDepthFunc(GL_LEQUAL);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        GLuint lightsBuffer;
+        glGenBuffers(1, &lightsBuffer);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightsBuffer);
+
+        init_lights(lightsData);
+        int lightsBufferSize = (int)sizeof(PointLight) * lightsData.size();
+        unsigned int lightDataSize = (unsigned int)lightsData.size();
+
+        glNamedBufferData(lightsBuffer, sizeof(LightsList) + lightsBufferSize, NULL, GL_DYNAMIC_DRAW);
+        glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
+        glNamedBufferSubData(lightsBuffer, offsetof(LightsList, list), lightsBufferSize, lightsData.data());
+
+        std::string fileSelected = panelConfig.fileSelection;
+
+        logger.info("===================== Main loop ==============================================\n");
+        while (!glfwWindowShouldClose(window)) {
+            int width, height;
+            glfwGetFramebufferSize(window, &width, &height);
+            glEnable(GL_DEPTH_TEST);
+            //glEnable(GL_BLEND);
+            glViewport(0, 0, width, height);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glClearColor(0., 1., 1., 1.);
+
+
+            if (!camera) Projection = panelConfig.getProjection(width, height);
+            panelConfig.lightsData = lightsData.data();
+            panelConfig.lightsSize = lightsData.size();
+
+
+            env.draw(width, height, Projection, camera);
+
+
+            glm::vec3 eye = panelConfig.getView();
+            glm::mat4 LookAt = panelConfig.getLookAt();
+            glm::vec3 translate = panelConfig.getTranslate();
+            glm::vec3 rotate = panelConfig.getRotate();
+            for (auto& primitive : primitives) {
+                primitive.draw(lightsBuffer, bufferViews, docDataBuffer,
+                    eye, LookAt, Projection, translate, rotate);
+            }
+
+
+            PointLight newLight = panelConfig.getLight();
+            if (compare_lights(lightsData.data()[panelConfig.lightId], newLight)) {
+                lightsData.data()[panelConfig.lightId] = newLight;
+                LightsList* ptr = (LightsList*)glMapNamedBuffer(lightsBuffer, GL_WRITE_ONLY);
+                memcpy_s((void*)&ptr->list[panelConfig.lightId], sizeof(PointLight), &newLight, sizeof(PointLight));
+                glUnmapNamedBuffer(lightsBuffer);
+                panelConfig.updateLight();
+            }
+            for (auto& light : lightsData) {
+                glm::mat4x4 transform = glm::translate(glm::mat4x4(1.f), light.position);
+                lightModel.drawLight(width, height, Projection, camera, transform);
+            }
+
+
+            cld.draw(width, height, Projection, camera, panelConfig.g, lightsBuffer);
+
+
+            draw_imgui(io);
+
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+
+            if (panelConfig.fileSelection != fileSelected) break;
         }
 
-        for (auto& l : lightsData) {
-            glm::mat4x4 transform = glm::translate(glm::mat4x4(1.f), l.position);
-            lightModel.drawLight(width, height, Projection, camera, transform);
-        }
+        /* ======================================================== */
 
-        cld.draw(width, height, Projection, camera, panelConfig.g, lightsBuffer);
+        glBindProgramPipeline(0);
 
+        for (auto& p : primitives) p.deleteTransforms();
+        for (auto& p : primitives) p.deleteTexturesAndSamplers();
+        for (auto& p : primitives) p.deletePipeline();
 
-        // ImGui
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        drawLeftPanel(io, panelConfig);
-        drawRightPanel(io, panelConfig);
-        
-        // Rendering
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
-    
-    /* ======================================================== */
-
-    glBindProgramPipeline(0);
+        glDeleteBuffers((GLsizei)bufferViews.size(), docDataBuffer);
+        free(docDataBuffer);
+        glDeleteVertexArrays(1, &vao);
+        //
+    } while (!glfwWindowShouldClose(window));
 
     env.deletePipeline();
     cld.deletePipeline();
-
-    for (auto& p : primitives) p.deleteTransforms();
-    for (auto& p : primitives) p.deleteTexturesAndSamplers();
-    for (auto& p : primitives) p.deletePipeline();
     lightModel.deletePipeline();
-
-    glDeleteBuffers((GLsizei) bufferViews.size(), docDataBuffer); 
-    free(docDataBuffer);
-    glDeleteVertexArrays(1, &vao);
-    //
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();

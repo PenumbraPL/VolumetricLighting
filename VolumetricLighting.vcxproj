@@ -77,6 +77,8 @@
     <LibraryPath>$(SolutionDir)\lib;$(LibraryPath)</LibraryPath>
     <SourcePath>$(SolutionDir)\src;$(SourcePath)</SourcePath>
     <ReferencePath>$(SolutionDir)\lib;$(ReferencePath)</ReferencePath>
+    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -92,6 +94,8 @@
     <LibraryPath>$(SolutionDir)\lib;$(LibraryPath)</LibraryPath>
     <SourcePath>$(SolutionDir)\src;$(SourcePath)</SourcePath>
     <ReferencePath>$(SolutionDir)\lib;$(ReferencePath)</ReferencePath>
+    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>

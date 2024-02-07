@@ -1,6 +1,6 @@
 #include "GL/glew.h"
 #include "GLFW/glfw3.h"
-#include "pch.h";
+#include "pch.h"
 #include "Models.h"
 #include "GUI.h"
 
@@ -150,12 +150,6 @@ void set_up_color(
 
 void proccess_node(AkNode* node, std::vector<Primitive>& primitives)
 {
-    int offset = 0;
-    int comp_stride = 0;
-    int normalize = 0;
-    int type = 0;
-    int comp_size = 0;
-
     Primitive primitive;
     std::string geo_type;
 
@@ -357,9 +351,9 @@ void format_attribute(GLint attr_location, AkAccessor* acc)
     int comp_size = acc->componentSize;;
     int type = acc->componentType;
     GLuint normalize = acc->normalized ? GL_TRUE : GL_FALSE;
-    size_t offset = acc->byteOffset;
-    int comp_stride = acc->componentBytes;
-    size_t length = acc->byteLength;
+    //size_t offset = acc->byteOffset;
+    //int comp_stride = acc->componentBytes;
+    //size_t length = acc->byteLength;
 
     switch (comp_size) {
     case AK_COMPONENT_SIZE_SCALAR:                comp_size = 1; break;
