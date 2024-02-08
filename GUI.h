@@ -6,44 +6,48 @@
 #include "Light.h"
 #include "pch.h"
 
+
 struct ConfigContext{
-     float zFar;
-     float zNear;
-     int fov;
-     int xTranslate;
-     int yTranslate;
-     int zTranslate;
-     int xRotate;
-     int yRotate;
-     float viewDistance;
-     float viewPhi;
-     float viewTheta;
-     
-     bool focused1;
-     bool focused2;
+    std::string fileSelection;
 
-     float lightAmbient[4];
-     float lightDiffuse[4];
-     float lightSpecular[4];
-     float position[3];
-     float c, l, q;
-     float g;
-     std::vector<std::string> directory;
-     std::string fileSelection;
-     unsigned int lightId;
-     PointLight* lightsData;
-     unsigned int lightsSize;
+    float zFar = 500.f;
+    float zNear = .001f;
+    int fov = 50;
+    int xTranslate = 0;
+    int yTranslate = 0;
+    int zTranslate = 0;
+    int xRotate = 0;
+    int yRotate = 0;
+    float viewDistance = 50;
+    float viewPhi = 0;
+    float viewTheta = 0;
      
+    bool focused = false;
 
-     PointLight getLight();
-     void updateLight();
-     glm::vec3 getTranslate();
-     glm::vec3 getRotate();
-     glm::vec3 getView();
-     glm::mat4 getLookAt();
-     glm::mat4 getProjection(int width, int height);
-     std::string getModelPath();
-     std::string getModelName();
+    float lightAmbient[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
+    float lightDiffuse[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
+    float lightSpecular[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
+    float position[3] = { 0.0f, 0.0f, 0.0f };
+    float c = 0.1f;
+    float l = 0.5f;
+    float q = 0.5f;
+    float g = 0.f;
+
+    std::vector<std::string> directory;
+    unsigned int lightId = 0;
+    std::vector<PointLight>* lightsData = nullptr;
+     
+    PointLight* getLightsData();
+    unsigned int getLightsSize();
+    PointLight getLight();
+    void updateLight();
+    glm::vec3 getTranslate();
+    glm::vec3 getRotate();
+    glm::vec3 getView();
+    glm::mat4 getLookAt();
+    glm::mat4 getProjection(int width, int height);
+    std::string getModelPath();
+    std::string getModelName();
 };
 
 

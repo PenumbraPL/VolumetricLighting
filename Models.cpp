@@ -3,6 +3,8 @@
 #include "Models.h"
 #include "Tools.h"
 
+extern spdlog::logger logger;
+
 
 void* imageLoadFromFile(
     const char* __restrict path,
@@ -43,12 +45,14 @@ void Environment::createPipeline()
 
     char* vertexShader = read_file(vertexShaderPath.c_str());
     if (!vertexShader) {
-        std::cout << "=================== Coulnt find " << vertexShaderPath << " ==============================\n";
+        //std::cout << "=================== Coulnt find " << vertexShaderPath << " ==============================\n";
+        logger.error("=================== Coulnt find " + vertexShaderPath + " ==============================\n");
     }
 
     char* fragmentShader = read_file(fragmentShaderPath.c_str());
     if (!fragmentShader) {
-        std::cout << "=================== Coulnt find " << fragmentShaderPath << " ============================\n";
+        //std::cout << "=================== Coulnt find " << fragmentShaderPath << " ============================\n";
+        logger.error("=================== Coulnt find " + fragmentShaderPath + " ============================\n");
     }
 
     vertexProgram   = glCreateShaderProgramv(GL_VERTEX_SHADER, 1, &vertexShader);
@@ -65,14 +69,16 @@ void Environment::createPipeline()
             GLchar info[1024];
             glGetProgramInfoLog(vertexProgram, 1024, NULL, info);
 
-            fwrite(info, 1024, 1, stdout);
+            //fwrite(info, 1024, 1, stdout);
+            logger.error(info);
         }
         glGetProgramiv(fragmentProgram, GL_LINK_STATUS, &linkageStatus);
         if (!linkageStatus) {
             GLchar info[1024];
             glGetProgramInfoLog(fragmentProgram, 1024, NULL, info);
 
-            fwrite(info, 1024, 1, stdout);
+            //fwrite(info, 1024, 1, stdout);
+            logger.error(info);
         }
     }
 
@@ -103,11 +109,11 @@ void Environment::loadMesh()
     scene_path += "env_sphere.gltf";
 
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
-        std::cout << "Environment mesh couldn't be loaded\n";
+        logger.error("Environment mesh couldn't be loaded\n");
         return;
     }
     if (!doc->scene.visualScene) {
-        std::cout << "Environment mesh couldn't be loaded\n";
+        logger.error("Environment mesh couldn't be loaded\n");
         return;
     }
 
@@ -377,12 +383,12 @@ void Primitive::createPipeline()
 
     char* vertexShader = read_file(vertexShaderPath.c_str());
     if (!vertexShader) {
-        std::cout << "=================== Coulnt find " << vertexShaderPath << " ==============================\n";
+        logger.error("=================== Coulnt find " + vertexShaderPath + " ==============================\n");
     }
 
     char* fragmentShader = read_file(fragmentShaderPath.c_str());
     if (!fragmentShader) {
-        std::cout << "=================== Coulnt find " << fragmentShaderPath << " ============================\n";
+        logger.error("=================== Coulnt find " + fragmentShaderPath + " ============================\n");
     }
 
     createPrograms();
@@ -404,14 +410,16 @@ void Primitive::createPipeline()
             GLchar info[1024];
             glGetProgramInfoLog(programs[VERTEX], 1024, NULL, info);
 
-            fwrite(info, 1024, 1, stdout);
+            //fwrite(info, 1024, 1, stdout);
+            logger.error(info);
         }
         glGetProgramiv(programs[FRAGMENT], GL_LINK_STATUS, &linkageStatus);
         if (!linkageStatus) {
             GLchar info[1024];
             glGetProgramInfoLog(programs[FRAGMENT], 1024, NULL, info);
 
-            fwrite(info, 1024, 1, stdout);
+            //fwrite(info, 1024, 1, stdout);
+            logger.error(info);
         }
     }
 
@@ -477,12 +485,12 @@ void Light::createPipeline()
 
     char* vertexShader = read_file(vertexShaderPath.c_str());
     if (!vertexShader) {
-        std::cout << "=================== Coulnt find " << vertexShaderPath << " ==============================\n";
+        logger.error("=================== Coulnt find " + vertexShaderPath + " ==============================\n");
     }
 
     char* fragmentShader = read_file(fragmentShaderPath.c_str());
     if (!fragmentShader) {
-        std::cout << "=================== Coulnt find " << fragmentShaderPath << " ============================\n";
+        logger.error("=================== Coulnt find " + fragmentShaderPath + " ============================\n");
     }
 
     vertexProgram = glCreateShaderProgramv(GL_VERTEX_SHADER, 1, &vertexShader);
@@ -499,14 +507,16 @@ void Light::createPipeline()
             GLchar info[1024];
             glGetProgramInfoLog(vertexProgram, 1024, NULL, info);
 
-            fwrite(info, 1024, 1, stdout);
+            //fwrite(info, 1024, 1, stdout);
+            logger.error(info);
         }
         glGetProgramiv(fragmentProgram, GL_LINK_STATUS, &linkageStatus);
         if (!linkageStatus) {
             GLchar info[1024];
             glGetProgramInfoLog(fragmentProgram, 1024, NULL, info);
 
-            fwrite(info, 1024, 1, stdout);
+            //fwrite(info, 1024, 1, stdout);
+            logger.error(info);
         }
     }
 
@@ -532,11 +542,11 @@ void Light::loadMesh()
     std::string scene_path = "res/models/";
     scene_path += "lamp.gltf";
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
-        std::cout << "Light mesh couldn't be loaded\n";
+        logger.error("Light mesh couldn't be loaded\n");
         return;
     }
     if (!doc->scene.visualScene) {
-        std::cout << "Light mesh couldn't be loaded\n";
+        logger.error("Light mesh couldn't be loaded\n");
         return;
     }
 
@@ -644,10 +654,10 @@ void Cloud::createPipeline(int width, int height)
     std::string fragmentShaderPath = "res/shaders/depth_frag.glsl";
 
     char* vertexShader = read_file(vertexShaderPath.c_str());
-    if (!vertexShader)  std::cout << "=================== Coulnt find " << vertexShaderPath << " ==============================\n";
+    if (!vertexShader)  logger.error("=================== Coulnt find " + vertexShaderPath + " ==============================\n");
 
     char* fragmentShader = read_file(fragmentShaderPath.c_str());
-    if (!fragmentShader)  std::cout << "=================== Coulnt find " << fragmentShaderPath << " ============================\n";
+    if (!fragmentShader) logger.error("=================== Coulnt find " + fragmentShaderPath + " ============================\n");
 
 
     vertexProgram = glCreateShaderProgramv(GL_VERTEX_SHADER, 1, &vertexShader);
@@ -664,7 +674,8 @@ void Cloud::createPipeline(int width, int height)
             GLchar info[1024];
             glGetProgramInfoLog(vertexProgram, 1024, NULL, info);
 
-            fwrite(info, 1024, 1, stdout);
+            //fwrite(info, 1024, 1, stdout);
+            logger.error(info);
         }
 
         glGetProgramiv(fragmentProgram, GL_LINK_STATUS, &linkageStatus);
@@ -672,7 +683,8 @@ void Cloud::createPipeline(int width, int height)
             GLchar info[1024];
             glGetProgramInfoLog(fragmentProgram, 1024, NULL, info);
 
-            fwrite(info, 1024, 1, stdout);
+            //fwrite(info, 1024, 1, stdout);
+            logger.error(info);
         }
     }
 
@@ -705,11 +717,11 @@ void Cloud::loadMesh()
     std::string scene_path = "res/models/cube/";
     scene_path += "Cube.gltf";
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
-        std::cout << "Cloud mesh couldn't be loaded\n";
+        logger.error("Cloud mesh couldn't be loaded\n");
         return;
     }
     if (!doc->scene.visualScene) {
-        std::cout << "Cloud mesh couldn't be loaded\n";
+        logger.error("Cloud mesh couldn't be loaded\n");
         return;
     }
 

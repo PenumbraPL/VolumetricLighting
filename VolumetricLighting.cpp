@@ -21,25 +21,8 @@ auto fileLogger = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/basi
 auto logger = spdlog::logger("multi_sink", {bufferLogger, fileLogger});
 
 
-struct WindowInfo 
-windowConfig = {
-    1900,
-    1000,
-    "GLTF Viewer",
-    0, 2.f, 0., 0.
-};
-
-ConfigContext panelConfig{
-    500.f, .001f, 50, 0, 0, 0, 0, 0, 50, 0, 0, false, false,
-    { 0.4f, 0.7f, 0.0f, 0.5f },
-    { 0.4f, 0.7f, 0.0f, 0.5f },
-    { 0.4f, 0.7f, 0.0f, 0.5f },
-    { 0.0f, 0.0f, 0.0f },
-    0.1f, 0.5f, 0.5f, 0.f,
-    std::vector<std::string>(),
-    "./res/models/Volkswagen/scene.gltf",
-    0, nullptr, 0
-};
+WindowInfo windowConfig = { 1900, 1000, "GLTF Viewer" };
+ConfigContext panelConfig = { "./res/models/Volkswagen/scene.gltf" };
 
 
 
@@ -80,14 +63,17 @@ void init(GLFWwindow** windowPtr, ImGuiIO& io)
     initialize_GLEW();
 
 
-
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.ConfigWindowsMoveFromTitleBarOnly = true;
+    
     ImGui::StyleColorsDark();
+
     const char* glsl_version = "#version 450";
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+  
+    
 
     int flags;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
@@ -143,7 +129,7 @@ int main(void)
     std::vector<Primitive> primitives;
     std::vector<PointLight> lightsData;
     //std::vector<Camera> cameras;
-
+    panelConfig.lightsData = &lightsData;
 
 
     /* ================================================ */
@@ -279,8 +265,8 @@ int main(void)
         unsigned int lightDataSize = (unsigned int)lightsData.size();
 
         glNamedBufferData(lightsBuffer, sizeof(LightsList) + lightsBufferSize, NULL, GL_DYNAMIC_DRAW);
-        glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
         glNamedBufferSubData(lightsBuffer, offsetof(LightsList, list), lightsBufferSize, lightsData.data());
+        glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
 
         std::string fileSelected = panelConfig.fileSelection;
 
@@ -296,8 +282,8 @@ int main(void)
 
 
             if (!camera) Projection = panelConfig.getProjection(width, height);
-            panelConfig.lightsData = lightsData.data();
-            panelConfig.lightsSize = lightsData.size();
+        /*    panelConfig.lightsData = lightsData.data();
+            panelConfig.lightsSize = lightsData.size();*/
 
 
             env.draw(width, height, Projection, camera);
@@ -312,7 +298,17 @@ int main(void)
                     eye, LookAt, Projection, translate, rotate);
             }
 
-
+            if (panelConfig.getLightsSize() != lightDataSize) {
+                if (panelConfig.getLightsSize() > lightDataSize) {
+                    lightDataSize = panelConfig.getLightsSize();
+                    int lightsBufferSize = (int)sizeof(PointLight) * lightsData.size();
+                    glNamedBufferData(lightsBuffer, sizeof(LightsList) + lightsBufferSize, NULL, GL_DYNAMIC_DRAW);
+                }
+                lightDataSize = panelConfig.getLightsSize();
+                int lightsBufferSize = (int)sizeof(PointLight) * lightsData.size();
+                glNamedBufferSubData(lightsBuffer, offsetof(LightsList, list), lightsBufferSize, lightsData.data());
+                glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
+            }
             PointLight newLight = panelConfig.getLight();
             if (compare_lights(lightsData.data()[panelConfig.lightId], newLight)) {
                 lightsData.data()[panelConfig.lightId] = newLight;

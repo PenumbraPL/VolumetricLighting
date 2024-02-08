@@ -7,16 +7,20 @@ namespace fs = std::filesystem;
 
 extern std::shared_ptr<debug::BufferLogger> bufferLogger;
 
+
+PointLight* ConfigContext::getLightsData() 
+{
+    return lightsData->data();
+}
+
+unsigned int ConfigContext::getLightsSize()
+{
+    return lightsData->size();
+}
+
+
 PointLight ConfigContext::getLight()
 {
-    //glm::vec3 ambient = lightsData[lightId].ambient;
-    //glm::vec3 diffuse = lightsData[lightId].diffuse;
-    //glm::vec3 specular = lightsData[lightId].specular;
-    //glm::vec3 position = lightsData[lightId].position;
-    //float c = lightsData[lightId].constant;
-    //float l = lightsData[lightId].linear;
-    //float q = lightsData[lightId].quadratic;
-
     glm::vec3 ambient = glm::vec3{ lightAmbient[0], lightAmbient[1], lightAmbient[2] };
     glm::vec3 diffuse = glm::vec3{ lightDiffuse[0], lightDiffuse[1], lightDiffuse[2] };
     glm::vec3 specular = glm::vec3{ lightSpecular[0], lightSpecular[1], lightSpecular[2] };
@@ -26,11 +30,12 @@ PointLight ConfigContext::getLight()
     return { position, c, l, q, ambient, diffuse, specular };
 }
 
-void ConfigContext::updateLight() {
-    lightsData[lightId].ambient = { lightAmbient[0], lightAmbient[1], lightAmbient[2] };
-    lightsData[lightId].diffuse = { lightDiffuse[0], lightDiffuse[1], lightDiffuse[2] };
-    lightsData[lightId].specular = { lightSpecular[0], lightSpecular[1], lightSpecular[2] };
-    lightsData[lightId].position = { position[0], position[1], position[2] };
+void ConfigContext::updateLight() 
+{
+    getLightsData()[lightId].ambient = { lightAmbient[0], lightAmbient[1], lightAmbient[2] };
+    getLightsData()[lightId].diffuse = { lightDiffuse[0], lightDiffuse[1], lightDiffuse[2] };
+    getLightsData()[lightId].specular = { lightSpecular[0], lightSpecular[1], lightSpecular[2] };
+    getLightsData()[lightId].position = { position[0], position[1], position[2] };
 }
 
 
@@ -70,19 +75,22 @@ glm::mat4 ConfigContext::getLookAt()
 }
 
 
-glm::mat4 ConfigContext::getProjection(int width, int height) {
+glm::mat4 ConfigContext::getProjection(int width, int height) 
+{
     return glm::perspectiveFov((float)3.14 * fov / 180, (float)width, (float)height, zNear, zFar);
 }
 
 
-std::string ConfigContext::getModelPath() {
-    std::cout << fileSelection.substr(0, fileSelection.find_last_of("/")+1).c_str() << std::endl;
+std::string ConfigContext::getModelPath() 
+{
+    //std::cout << fileSelection.substr(0, fileSelection.find_last_of("/")+1).c_str() << std::endl;
     return fileSelection.substr(0, fileSelection.find_last_of("/")+1);
 }
 
 
-std::string ConfigContext::getModelName() {
-    std::cout << "model name: " << fileSelection.substr(fileSelection.find_last_of("/")+1).c_str() << std::endl;
+std::string ConfigContext::getModelName() 
+{
+    //std::cout << "model name: " << fileSelection.substr(fileSelection.find_last_of("/")+1).c_str() << std::endl;
     return fileSelection.substr(fileSelection.find_last_of("/")+1);
 }
 
@@ -93,11 +101,12 @@ void folder_content(
     std::string& path, 
     std::vector<std::string>& content, 
     int& i, 
-    std::string& selected) 
+    std::string& selected,
+    std::string& extension)
 {
     for (const auto& entry : fs::directory_iterator(path)) {
         if (entry.is_regular_file()) {
-            if (entry.path().filename().extension() == ".gltf") {
+            if (entry.path().filename().extension() == extension) {
                 std::string fileName = entry.path().filename().generic_string();
                 std::string filePath = entry.path().generic_string();
                 content.push_back(filePath);
@@ -110,7 +119,7 @@ void folder_content(
             std::string subpath = entry.path().generic_string();
 
             if (ImGui::TreeNode((void*)(intptr_t)i, entry.path().filename().generic_string().c_str())){
-                folder_content(subpath, content, i, selected);
+                folder_content(subpath, content, i, selected, extension);
                 ImGui::TreePop();
             }
             i++;
@@ -123,10 +132,13 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
     static bool show_shader_dialog = false;
     static bool selected[3] = { false, false, false };
     //static std::string selected2 = 0;
+    static std::string shaderSelection;
+    static std::string lastShaderSelection;
+    static char* fileText[1] = { nullptr };
+
 
     if (ImGui::Begin("Control")) {
-        config.focused1 = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow) ? true : false;
-        
+        config.focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow) ? true : false;
 
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
 
@@ -212,42 +224,55 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
             }
 
             if (ImGui::BeginTabItem("Scene")) {
-                //if (config.directory) {
+                ImGui::SetNextItemOpen(true);
+                if (ImGui::TreeNode("Scenes")) {
+                    //if (config.directory) {
                     int i = 0;
                     std::string path = "res/models/";
                     std::vector<std::string> tree;
+                    std::string extension = ".gltf";
 
-                    folder_content(path, tree, i, config.fileSelection);
-               // }
+                    folder_content(path, tree, i, config.fileSelection, extension);
+                    // }
+                    ImGui::Separator();
+                    ImGui::TreePop();
+                }
+                ImGui::SetNextItemOpen(true);
+                if (ImGui::TreeNode("Shaders")) {
+                    int j = 0;
+                    std::string path2 = "res/shaders/";
+                    std::vector<std::string> tree2;
+                    std::string extension2 = ".glsl";
 
+                    folder_content(path2, tree2, j, shaderSelection, extension2);
+                    ImGui::TreePop();
+                }
 
-                //    
-                //ImGui::Selectable("Scene One", &selected[0]); ImGui::SameLine(300); ImGui::Text(" 2,345 bytes");
-                //ImGui::Selectable("Scene Two", &selected[1]); ImGui::SameLine(300); ImGui::Text("12,345 bytes");
-                //ImGui::Selectable("Scene Three", &selected[2]); ImGui::SameLine(300); ImGui::Text(" 2,345 bytes");
-                //if (selected[1])
-                //    show_shader_dialog = true;
-                //else
-                //    show_shader_dialog = false;
+                    show_shader_dialog = !shaderSelection.empty();
 
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Lights")) {
               
-                for (int i = 0; i < config.lightsSize; i++) {
+                for (int i = 0; i < config.getLightsSize(); i++) {
                     std::string text = "Light " + std::to_string(i);
                     if(ImGui::Selectable(text.c_str(), i == config.lightId)) config.lightId = i;
                 }
                 ImGui::Separator();
-                if(ImGui::Button("Add Light")) config.lightsSize++; 
-                ImGui::SameLine(300); if(ImGui::Button("Delete Light")) config.lightsSize > 0 ? config.lightsSize-- : 0;
+                if(ImGui::Button("Add Light")) config.lightsData->emplace_back(PointLight()); 
+                ImGui::SameLine(300); 
+                if (ImGui::Button("Delete Light")) {
+                    if (config.lightsData->size() > 0) {
+                        config.lightsData->erase(config.lightsData->begin() + config.lightId);
+                    }
+                }
                 ImGui::EndTabItem();
                 ImGui::Separator();
 
-                glm::vec3 ambient = config.lightsData[config.lightId].ambient;
-                glm::vec3 diffuse = config.lightsData[config.lightId].diffuse;
-                glm::vec3 specular = config.lightsData[config.lightId].specular;
-                glm::vec3 position = config.lightsData[config.lightId].position;
+                glm::vec3 ambient = config.getLightsData()[config.lightId].ambient;
+                glm::vec3 diffuse = config.getLightsData()[config.lightId].diffuse;
+                glm::vec3 specular = config.getLightsData()[config.lightId].specular;
+                glm::vec3 position = config.getLightsData()[config.lightId].position;
                 config.lightAmbient[0] = ambient.x;
                 config.lightAmbient[1] = ambient.y;
                 config.lightAmbient[2] = ambient.z;
@@ -271,12 +296,6 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
                 ImGui::SliderFloat("y", &config.position[1], -1.0f, 1.0f);
                 ImGui::SliderFloat("z", &config.position[2], -1.0f, 1.0f);
 
-
-                //config.lightsData[config.lightId].ambient = { config.lightAmbient[0], config.lightAmbient[1], config.lightAmbient[2] };
-                //config.lightsData[config.lightId].diffuse = { config.lightDiffuse[0], config.lightDiffuse[1], config.lightDiffuse[2] };
-                //config.lightsData[config.lightId].specular = { config.lightSpecular[0], config.lightSpecular[1], config.lightSpecular[2] };
-                //config.lightsData[config.lightId].position = { config.position[0], config.position[1], config.position[2] };
-
             }
             ImGui::EndTabBar();
         }
@@ -284,30 +303,57 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
         ImGui::End();
     }
     if (show_shader_dialog) {
-        bool opened = ImGui::Begin("Shader", &show_shader_dialog);
-        static char text[1024 * 16] =
-            "/*\n"
-            " The Pentium F00F bug, shorthand for F0 0F C7 C8,\n"
-            " the hexadecimal encoding of one offending instruction,\n"
-            " more formally, the invalid operand with locked CMPXCHG8B\n"
-            " instruction bug, is a design flaw in the majority of\n"
-            " Intel Pentium, Pentium MMX, and Pentium OverDrive\n"
-            " processors (all in the P5 microarchitecture).\n"
-            "*/\n\n"
-            "label:\n"
-            "\tlock cmpxchg8b eax\n";
+        ImGui::Begin("Shader", &show_shader_dialog);
+
+        static char text[2*4096] = {'\0'};
+        
+        if (shaderSelection != lastShaderSelection) {
+            if (*fileText) free(*fileText);
+            *fileText = read_file(shaderSelection.c_str());
+            if (*fileText) strcpy(text, *fileText);
+            lastShaderSelection = shaderSelection;
+        }
 
         static ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput;
-        ImGui::CheckboxFlags("ImGuiInputTextFlags_ReadOnly", &flags, ImGuiInputTextFlags_ReadOnly);
-        ImGui::CheckboxFlags("ImGuiInputTextFlags_AllowTabInput", &flags, ImGuiInputTextFlags_AllowTabInput);
-        ImGui::CheckboxFlags("ImGuiInputTextFlags_CtrlEnterForNewLine", &flags, ImGuiInputTextFlags_CtrlEnterForNewLine);
+        ImGui::CheckboxFlags("Read only", &flags, ImGuiInputTextFlags_ReadOnly);
+        ImGui::CheckboxFlags("Allow tab input", &flags, ImGuiInputTextFlags_AllowTabInput);
+        ImGui::CheckboxFlags("Ctrl enter for new line", &flags, ImGuiInputTextFlags_CtrlEnterForNewLine);
         ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16), flags);
-        ImGui::Button("Update");
-        ImGui::SameLine(); ImGui::Button("Restore");
+        
+        if (ImGui::Button("Update")) {
+            ImGui::OpenPopup("Update?");           
+        }
+
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        if (ImGui::BeginPopupModal("Update?", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("You will override your file. Do you want to continue?");
+            ImGui::Separator();
+
+            if (ImGui::Button("OK", ImVec2(120, 0))) {
+                FILE* fs;
+                fopen_s(&fs, shaderSelection.c_str(), "wb");
+                unsigned int bufferSize = strlen(text);
+                if (fs && bufferSize) {
+                    fwrite(text, 1, bufferSize, fs);
+                    fclose(fs);
+                }
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SetItemDefaultFocus();
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+            ImGui::EndPopup();
+        }
+        ImGui::SameLine(); 
+        if (ImGui::Button("Restore")) {
+            if(*fileText) strcpy(text, *fileText);
+        }
 
         ImGui::End();
-        if (!opened) {
-            selected[1] = false;
+        if (!show_shader_dialog) {
+            shaderSelection.clear();
+            if (*fileText) free(*fileText);
         }
     }
 }
@@ -315,7 +361,6 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
 void drawRightPanel(ImGuiIO& io, ConfigContext &config) 
 {
     if (ImGui::Begin("View")) {
-        config.focused2 = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow) ? true : false;
         
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
         ImGui::Text("Far plane:"); ImGui::SliderFloat("Fp", &config.zFar, 0.1f, 200.0f);

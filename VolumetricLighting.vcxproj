@@ -430,6 +430,7 @@ Shell32.lib
     <None Include="res\shaders\standard_frag.glsl" />
     <None Include="res\shaders\standard_vec.glsl" />
     <None Include="res\shaders\std_with_ext_light_frag.glsl" />
+    <None Include="res\shaders\test.glsl" />
     <None Include="src\spdlog-1.x\include\spdlog\fmt\bundled\fmt.license.rst" />
   </ItemGroup>
   <ItemGroup>

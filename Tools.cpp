@@ -4,15 +4,22 @@
 #include "Models.h"
 #include "GUI.h"
 
+extern spdlog::logger logger;
+
 
 void initialize_GLEW(void) 
 {
     GLenum err = glewInit();
     if (GLEW_OK != err) {
-        std::cout << "========== [GLEW]: Initialization failed =====================================\n";
-        std::cout << "\tError:" << glewGetErrorString(err);
+        logger.error("========== [GLEW]: Initialization failed =====================================\n");
+        std::string text = "\tError:";
+        text += (const char*) glewGetErrorString(err);
+        logger.error(text);
     }
-    std::cout << "========== [GLEW]: Using GLEW " << glewGetString(GLEW_VERSION) << " =========================================\n";
+    std::string text = "========== [GLEW]: Using GLEW ";
+    text += (const char*)glewGetString(GLEW_VERSION);
+    text += " =========================================\n";
+    logger.info(text);
 
     // glewIsSupported supported from version 1.3
     if (GLEW_VERSION_1_3) {
@@ -28,12 +35,15 @@ void initialize_GLEW(void)
         };
         for (auto& ext : extensionList) {
             if (!glewIsSupported((versionName + " " + ext).c_str())) {
-                std::cout << "========== [GLEW]: For " + versionName + " extension " + ext + " isn't supported \n";
+                text.clear();
+
+                text = "========== [GLEW]: For " + versionName + " extension " + ext + " isn't supported \n";
+                logger.warn(text);
             }
         }
     }
     else {
-        std::cout << "========== [GLEW]: OpenGL's extensions support haven't been verified! ============================\n";
+        logger.warn("========== [GLEW]: OpenGL's extensions support haven't been verified! ============================\n");
     }
 }
 
@@ -183,9 +193,9 @@ void proccess_node(AkNode* node, std::vector<Primitive>& primitives)
                     primitive.ind = (uint32_t*)prim->indices->items;
                     primitive.ind_size = (unsigned int) prim->indices->count;
                 }
-                std::cout << "Mesh name:" << mesh->name << std::endl;   // should i insert mesh->name ??
-                std::cout << "Mesh center:" << mesh->center << std::endl; // same
-                std::cout << "Primitive center: " << prim->center << std::endl;
+                //std::cout << "Mesh name:" << mesh->name << std::endl;   // should i insert mesh->name ??
+                //std::cout << "Mesh center:" << mesh->center << std::endl; // same
+                //std::cout << "Primitive center: " << prim->center << std::endl;
                 int set = prim->input->set;
 
                 if (prim->material) {
@@ -225,7 +235,7 @@ void proccess_node(AkNode* node, std::vector<Primitive>& primitives)
                             break;
                         }
                         };
-                        std::cout << "Is double sized: " << (tch->doubleSided ? "True" : "False");
+                        //std::cout << "Is double sized: " << (tch->doubleSided ? "True" : "False");
                     }
                 }
 
@@ -270,8 +280,8 @@ void proccess_node(AkNode* node, std::vector<Primitive>& primitives)
         // light from gltf file
     }*/
 
-    std::cout << "Node name: " << node->name << std::endl;
-    std::cout << "Node type: " << geo_type << std::endl;
+    //std::cout << "Node name: " << node->name << std::endl;
+    //std::cout << "Node type: " << geo_type << std::endl;
 
     if (node->next) {
         node = node->next;
@@ -406,21 +416,23 @@ GLint check_pipeline_status(GLuint vertex_shader, GLuint fragment_shader)
     GLint v_comp_status, f_comp_status;
     glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &v_comp_status);
     if (!v_comp_status) {
-        char comp_info[1024];
-        memset(comp_info, '\0', 1024);
+        char comp_info[1024] = {'\0'};
+        //memset(comp_info, '\0', 1024);
         //glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, NULL);
         glGetShaderInfoLog(vertex_shader, 1024, NULL, comp_info);
-        std::cout << "Vertex Shader: ";
-        fwrite(comp_info, 1024, 1, stdout);
+        //std::cout << "Vertex Shader: ";
+        //fwrite(comp_info, 1024, 1, stdout);
+        logger.error(comp_info);
     }
     glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &f_comp_status);
     if (!f_comp_status) {
-        char comp_info[1024];
-        memset(comp_info, '\0', 1024);
+        char comp_info[1024] = { '\0' };
+        //memset(comp_info, '\0', 1024);
         //glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, NULL);
         glGetShaderInfoLog(fragment_shader, 1024, NULL, comp_info);
-        std::cout << "Fragment Shader: ";
-        fwrite(comp_info, 1024, 1, stdout);
+        //std::cout << "Fragment Shader: ";
+        //fwrite(comp_info, 1024, 1, stdout);
+        logger.error(comp_info);
     }
     return (!v_comp_status || !f_comp_status) ? 0 : 1;
 }

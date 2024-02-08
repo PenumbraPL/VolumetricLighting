@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "Debug.h"
 
+extern spdlog::logger logger;
 
 namespace debug 
 {
@@ -32,10 +33,11 @@ namespace debug
 
 	void display_logs()
 	{
-		char messageLog[2048];
-		memset(messageLog, '\0', 2048);
+		char messageLog[2048] = {'\0'};
+		//memset(messageLog, '\0', 2048);
 		glGetDebugMessageLog(1, 2048, NULL, NULL, NULL, NULL, NULL, messageLog);
-		fwrite(messageLog, sizeof(char), 2048, stdout);
+		//fwrite(messageLog, sizeof(char), 2048, stdout);
+		logger.warn(messageLog);
 	}
 
 	void callback_basic_info(GLenum source,
@@ -54,9 +56,11 @@ namespace debug
 		case GL_DEBUG_SEVERITY_LOW:			sev = "[Low]"; break;
 		default:							sev = "[Unknown]";
 		}
-
-		std::cout << "Severity: " << sev << " Message: " << message << std::endl
-			<< " ======================================================================== \n";
+		std::string text = "Severity: " + sev + " Message: " + message + 
+			 "\n ======================================================================== \n";
+		logger.warn(text);
+		/*std::cout << "Severity: " << sev << " Message: " << message << std::endl
+			<< " ======================================================================== \n";*/
 	};
 
 	void callback_full_info(GLenum source,
@@ -76,10 +80,15 @@ namespace debug
 		default:							sev = "[Unknown]";
 		}
 
-		std::cout << "Source: " << source << " Type: " << type
-			<< " Id: " << id << " Severity: " << sev << " Length: " << length
-			<< " Message: " << message << std::endl
-			<< " ======================================================================== \n";
+		//std::cout << "Source: " << source << " Type: " << type
+		//	<< " Id: " << id << " Severity: " << sev << " Length: " << length
+		//	<< " Message: " << message << std::endl
+		//	<< " ======================================================================== \n";
+		std::string text = "Source: " + std::to_string(source) + " Type: " + std::to_string(type)
+			+ " Id: " + std::to_string(id)  + " Severity: " + sev + " Length: " + std::to_string(length)
+			+ " Message: " + message
+			+ "\n ======================================================================== \n";
+		logger.warn(text);
 	};
 
 	void fill_callback_list(std::vector<DEBUGPROC>& callback_list) 
@@ -90,7 +99,11 @@ namespace debug
 
 	void glew_callback(int code, const char* description)
 	{
-		std::cout << code << " " << description << std::endl;
+	//	std::cout << code << " " << description << std::endl;
+		std::string text = code + " ";
+		text += description;
+		text += '\n';
+		logger.warn(text);
 	}
 
 	void basic_logfile_example()

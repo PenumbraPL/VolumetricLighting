@@ -710,6 +710,9 @@
       <Filter>Resource Files\shaders\fragment</Filter>
     </None>
     <None Include="ClassDiagram.cd" />
+    <None Include="res\shaders\test.glsl">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\models\cube\Cube_MetallicRoughness.png">
