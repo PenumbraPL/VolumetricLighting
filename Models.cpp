@@ -137,8 +137,8 @@ void Environment::loadMesh()
                 AkMeshPrimitive* primitive = mesh->primitive;
 
                 if (primitive->indices) {
-                    ind = (uint32_t*)primitive->indices->items;
-                    ind_size = (unsigned int) primitive->indices->count;
+                    verticleIndecies = (uint32_t*)primitive->indices->items;
+                    verticleIndeciesSize = (unsigned int) primitive->indices->count;
                 }
 
                 int set = primitive->input->set;
@@ -169,7 +169,6 @@ void Environment::loadMesh()
     glSamplerParameteri(env_sampler, GL_TEXTURE_WRAP_R, GL_CLAMP);
     glSamplerParameteri(env_sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glSamplerParameteri(env_sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
 }
 
 void Environment::draw(int width, int height, glm::mat4 Proj, AkCamera* camera) 
@@ -233,7 +232,7 @@ void Environment::draw(int width, int height, glm::mat4 Proj, AkCamera* camera)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, skybox);
 
-    glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
+    glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
 }
 
 
@@ -249,11 +248,17 @@ void Primitive::getLocation()
     normalsBindingLocation = glGetAttribLocation(vertexProgram, "vNor");
     vertexPosBindingLocation = glGetAttribLocation(vertexProgram, "vPos");
     textureBindingLocation = glGetAttribLocation(vertexProgram, "vTex");
-    isTexBindingLocation = glGetUniformLocation(fragmentProgram, "isTexture");
     prjBindingLocation = glGetUniformLocation(vertexProgram, "PRJ");
     cameraBindingLocation = glGetUniformLocation(fragmentProgram, "camera");
     gBindingLocation = glGetUniformLocation(fragmentProgram, "G");
     camDirBindingLocation = glGetUniformLocation(fragmentProgram, "direction");
+    metalicBindingLocation = glGetUniformLocation(fragmentProgram, "_metalic");
+    roughnessBindingLocation = glGetUniformLocation(fragmentProgram, "_roughness");
+    albedoBindingLocation = glGetUniformLocation(fragmentProgram, "_albedo_color");
+    aoBindingLocation = glGetUniformLocation(fragmentProgram, "ao_color");
+
+    isTexBindingLocation = glGetUniformLocation(fragmentProgram, "_is_tex_bound");
+
 
     if (mvpBindingLocation != -1) glEnableVertexAttribArray(mvpBindingLocation);
     if (vertexPosBindingLocation != -1) glEnableVertexAttribArray(vertexPosBindingLocation);
@@ -263,6 +268,10 @@ void Primitive::getLocation()
     if (prjBindingLocation != -1) glEnableVertexAttribArray(prjBindingLocation);
     if (cameraBindingLocation != -1) glEnableVertexAttribArray(cameraBindingLocation);
 
+    if (metalicBindingLocation != -1) glEnableVertexAttribArray(metalicBindingLocation);
+    if (roughnessBindingLocation != -1) glEnableVertexAttribArray(roughnessBindingLocation);
+    if (albedoBindingLocation != -1) glEnableVertexAttribArray(albedoBindingLocation);
+    if (aoBindingLocation != -1) glEnableVertexAttribArray(aoBindingLocation);
 
     if (vertexPosBindingLocation != -1) format_attribute(vertexPosBindingLocation, pos);
     if (normalsBindingLocation != -1) format_attribute(normalsBindingLocation, nor);
@@ -308,8 +317,18 @@ void Primitive::draw(
     glProgramUniform1f(programs[FRAGMENT], gBindingLocation, panelConfig.g);
     glProgramUniform3fv(programs[FRAGMENT], camDirBindingLocation, 1, glm::value_ptr(camera_dir));
 
-    if (!textures[ALBEDO]) {
-        glProgramUniform1ui(programs[FRAGMENT], isTexBindingLocation, GL_FALSE);
+    {
+        glm::ivec4 isTex;
+        isTex.r = textures[MET_ROUGH] ? 1 : 0;
+        isTex.g = textures[MET_ROUGH] ? 1 : 0;
+        isTex.b = textures[ALBEDO] ? 1 : 0;
+        isTex.a = 0;
+        glProgramUniform4iv(programs[FRAGMENT], isTexBindingLocation, 1, glm::value_ptr(isTex));
+
+        glProgramUniform1f(programs[FRAGMENT], roughnessBindingLocation, colors[MET_ROUGH].r);
+        glProgramUniform1f(programs[FRAGMENT], metalicBindingLocation, colors[MET_ROUGH].g);
+       // glProgramUniform1f(programs[FRAGMENT], aoBindingLocation, colors[AO].x);
+        glProgramUniform4fv(programs[FRAGMENT], albedoBindingLocation, 1, glm::value_ptr(colors[ALBEDO]));
     }
 
     int j = bufferViews[pos->buffer];
@@ -350,7 +369,7 @@ void Primitive::draw(
         }*/
     }
 
-    glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
+    glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
 }
 
 float* Primitive::setTransform(void) 
@@ -447,16 +466,16 @@ void Primitive::deletePrograms()
 GLuint* Primitive::createTextures() 
 {
     textures = (GLuint*)calloc(8, sizeof(GLuint));
-    if(textures) memset(textures, 0, 8);
+    if(textures) memset(textures, 0, sizeof(GLuint) * 8);
     texturesType = (GLuint*)calloc(8, sizeof(GLuint));
-    if(texturesType) memset(texturesType, 0, 8);
+    if(texturesType) memset(texturesType, 0, sizeof(GLuint) * 8);
     return textures;
 }
 
 GLuint* Primitive::createSamplers() 
 {
     samplers = (GLuint*)calloc(8, sizeof(GLuint));
-    if(samplers) memset(samplers, 0, 8);
+    if(samplers) memset(samplers, 0, sizeof(GLuint) * 8);
     return samplers;
 }
 
@@ -561,8 +580,8 @@ void Light::loadMesh()
                 AkMeshPrimitive* primitive = mesh->primitive;
 
                 if (primitive->indices) {
-                    ind = (uint32_t*)primitive->indices->items;
-                    ind_size = (unsigned int) primitive->indices->count;
+                    verticleIndecies = (uint32_t*)primitive->indices->items;
+                    verticleIndeciesSize = (unsigned int) primitive->indices->count;
                 }
 
                 int set = primitive->input->set;
@@ -637,7 +656,7 @@ void Light::drawLight(
     glBindVertexBuffer(binding_point, primitiveDataBuffer, pos->accessor->byteOffset, pos->accessor->componentBytes);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
+    glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
@@ -745,8 +764,8 @@ void Cloud::loadMesh()
                 AkMeshPrimitive* primitive = mesh->primitive;
 
                 if (primitive->indices) {
-                    ind = (uint32_t*)primitive->indices->items;
-                    ind_size = (unsigned int) primitive->indices->count;
+                    verticleIndecies = (uint32_t*)primitive->indices->items;
+                    verticleIndeciesSize = (unsigned int) primitive->indices->count;
                 }
 
                 int set = primitive->input->set;
@@ -851,7 +870,7 @@ void Cloud::draw(
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
-    glDrawElements(GL_TRIANGLES, ind_size, GL_UNSIGNED_INT, ind);
+    glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
     glDisable(GL_BLEND);
     glDisable(GL_CULL_FACE);
 }

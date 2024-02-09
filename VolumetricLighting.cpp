@@ -18,11 +18,12 @@ namespace fs = std::filesystem;
 
 auto bufferLogger = std::make_shared <debug::BufferLogger>();
 auto fileLogger = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/basic-log.txt", true);
-auto logger = spdlog::logger("multi_sink", {bufferLogger, fileLogger});
+//auto consoleLogger = std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>();
+auto logger = spdlog::logger("multi_sink", {bufferLogger, fileLogger/*, consoleLogger*/});
 
 
 WindowInfo windowConfig = { 1900, 1000, "GLTF Viewer" };
-ConfigContext panelConfig = { "./res/models/Volkswagen/scene.gltf" };
+ConfigContext panelConfig = { "./res/models/Sample2/scene.gltf" };
 
 
 

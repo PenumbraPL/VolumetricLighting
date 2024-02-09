@@ -1,4 +1,5 @@
 #version 450 core
+#define NR_POINT_LIGHTS 1
 
 layout (binding = 0) uniform sampler2D amb_tex;
 layout (binding = 1) uniform sampler2D emi_tex;
@@ -9,9 +10,23 @@ layout (binding = 5) uniform sampler2D mr_tex;
 layout (binding = 6) uniform sampler2D alb_tex;
 layout (binding = 7) uniform sampler2D sp_dif_tex;
 layout (binding = 8) uniform sampler2D tex_envmap;
+layout (binding = 9) uniform sampler2D ao_tex;
+
+out vec4 color;
+
+const float PI = 3.14159265359;
+
+uniform float ao_color = 1.;
+uniform vec3 camera;
+
+uniform float _metalic = 1.f;
+uniform float _roughness = 1.f;
+uniform vec4 _albedo_color = vec4(1.f, 1.f, 1.f, 1.f);
+uniform ivec4 _is_tex_bound = ivec4(1, 1, 1, 0);
 
 
-in VS_OUT{
+in VS_OUT
+{
     vec3 _normal;
     vec3 _color;
     vec2 _texCoords;
@@ -20,13 +35,8 @@ in VS_OUT{
 } fs_in;
 
 
-out vec4 color;
-
-uniform float ao = 1.;
-
-#define NR_POINT_LIGHTS 1
-
-struct PointLight {    
+struct PointLight 
+{    
     vec3 position;
     
     float constant;
@@ -37,14 +47,12 @@ struct PointLight {
     vec3 diffuse;
     vec3 specular;
 };
-layout (binding = 0, std140) buffer lights{
+layout (binding = 0, std140) buffer lights
+{
     uint size;
     PointLight list[];
 };
-uniform vec3 camera;
 
-
-const float PI = 3.14159265359;
 
 vec3 Fresnel(float cosTheta, vec3 F0)
 {
@@ -87,12 +95,12 @@ float Geometry(vec3 N, vec3 V, vec3 L, float roughness)
 }
 
 
-
 void main()
-{		
-    float met_color = texture(mr_tex, fs_in._texCoords).g;
-    float rough_color = texture(mr_tex, fs_in._texCoords).r;
-    vec3 alb_color = pow(texture(alb_tex, fs_in._texCoords).rgb, vec3(2.2, 2.2, 2.2));
+{
+    float met_color = bool(_is_tex_bound.x) ? texture(mr_tex, fs_in._texCoords).g : _metalic;
+    float rough_color = bool(_is_tex_bound.y) ? texture(mr_tex, fs_in._texCoords).r : _roughness;
+    vec3 alb_color =  bool(_is_tex_bound.z) ? pow(texture(alb_tex, fs_in._texCoords).rgb, vec3(2.2, 2.2, 2.2)) : _albedo_color.xyz;
+    float ao = bool(_is_tex_bound.w) ? texture(ao_tex, fs_in._texCoords).r : ao_color;
 
     vec3 N = normalize(fs_in._normal);
     vec3 V = normalize(camera - fs_in._position);
@@ -125,7 +133,7 @@ void main()
     vec3 col = ambient + Lo;
 	
     col /= (col + vec3(1.0));
-    col = pow(col, vec3(1.0/2.2));  
+    col = pow(col, vec3(1.0/2.2));
    
     color = vec4(col, 1.0);
 }

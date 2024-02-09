@@ -63,12 +63,16 @@ GLuint wrap_mode(AkWrapMode& wrap) {
 
 void set_up_color(
     AkColorDesc* colordesc,
-    AkMeshPrimitive* prim,
-    GLuint* sampler,
-    GLuint* texture,
-    GLuint* texturesType,
+    AkMeshPrimitive* prim, 
+    Primitive& primitive,
+    enum TextureType type,
     ConfigContext& panelConfig) 
 {
+    GLuint* sampler = &primitive.samplers[type];
+    GLuint* texture = &primitive.textures[type];
+    GLuint* texturesType = &primitive.texturesType[type];
+    glm::vec4* colors = &primitive.colors[type];
+
     if (colordesc) {
         if (colordesc->texture) {
             AkTextureRef* tex = colordesc->texture;
@@ -152,6 +156,14 @@ void set_up_color(
                 }
             }
         }
+        if (colordesc->color) {
+            glm::vec4 rgba;
+            rgba.r = colordesc->color->rgba.R;
+            rgba.g = colordesc->color->rgba.G;
+            rgba.b = colordesc->color->rgba.B;
+            rgba.a = colordesc->color->rgba.A;
+            *colors = rgba;
+        }
     }
 }
 
@@ -190,8 +202,8 @@ void proccess_node(AkNode* node, std::vector<Primitive>& primitives)
                 default:                              prim_type = GL_POINTS; break;
                 }
                 if (prim->indices) {
-                    primitive.ind = (uint32_t*)prim->indices->items;
-                    primitive.ind_size = (unsigned int) prim->indices->count;
+                    primitive.verticleIndecies = (uint32_t*)prim->indices->items;
+                    primitive.verticleIndeciesSize = (unsigned int) prim->indices->count;
                 }
                 //std::cout << "Mesh name:" << mesh->name << std::endl;   // should i insert mesh->name ??
                 //std::cout << "Mesh center:" << mesh->center << std::endl; // same
@@ -203,22 +215,27 @@ void proccess_node(AkNode* node, std::vector<Primitive>& primitives)
                     AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
                     AkTechniqueFxCommon* tch = ef->profile->technique->common;
                     if (tch) {
-                        set_up_color(tch->ambient, prim, &primitive.samplers[AMBIENT], &primitive.textures[AMBIENT], &primitive.texturesType[AMBIENT], panelConfig);
-                        set_up_color(tch->emission, prim, &primitive.samplers[EMISIVE], &primitive.textures[EMISIVE], &primitive.texturesType[EMISIVE], panelConfig);
-                        set_up_color(tch->diffuse, prim, &primitive.samplers[DIFFUSE], &primitive.textures[DIFFUSE], &primitive.texturesType[DIFFUSE], panelConfig);
-                        set_up_color(tch->specular, prim, &primitive.samplers[SPECULAR], &primitive.textures[SPECULAR], &primitive.texturesType[SPECULAR], panelConfig);
+                        set_up_color(tch->ambient, prim, primitive, AMBIENT, panelConfig);
+                        set_up_color(tch->emission, prim, primitive, EMISIVE, panelConfig);
+                        set_up_color(tch->diffuse, prim, primitive, DIFFUSE, panelConfig);
+                        set_up_color(tch->specular, prim, primitive, SPECULAR, panelConfig);
+                        //add more
 
                         switch (tch->type) {
                         case AK_MATERIAL_METALLIC_ROUGHNESS: {
                             AkMetallicRoughness* mr = (AkMetallicRoughness*)tch;
                             AkColorDesc alb_cd;
                             AkColorDesc mr_cd;
+                            AkColor col;
+                            mr_cd.color = &col;
+
                             alb_cd.color = &mr->albedo;
                             alb_cd.texture = mr->albedoTex;
-                            mr_cd.color = &mr->albedo;//&mr->roughness;
+                            mr_cd.color->rgba.R = mr->metallic;
+                            mr_cd.color->rgba.G = mr->roughness;
                             mr_cd.texture = mr->metalRoughTex;
-                            set_up_color(&alb_cd, prim, &primitive.samplers[ALBEDO], &primitive.textures[ALBEDO], &primitive.texturesType[ALBEDO], panelConfig);
-                            set_up_color(&mr_cd, prim, &primitive.samplers[MAT_ROUGH], &primitive.textures[MAT_ROUGH], &primitive.texturesType[MAT_ROUGH], panelConfig);
+                            set_up_color(&alb_cd, prim, primitive, ALBEDO, panelConfig);
+                            set_up_color(&mr_cd, prim, primitive, MET_ROUGH, panelConfig);
                             break;
                         }
 
@@ -230,8 +247,8 @@ void proccess_node(AkNode* node, std::vector<Primitive>& primitives)
                             sg_cd.texture = sg->specGlossTex;
                             dif_cd.color = &sg->diffuse;
                             dif_cd.texture = sg->diffuseTex;
-                            set_up_color(&sg_cd, prim, &primitive.samplers[SP_GLOSSINESS], &primitive.textures[SP_GLOSSINESS], &primitive.texturesType[SP_GLOSSINESS], panelConfig);
-                            set_up_color(&dif_cd, prim, &primitive.samplers[SP_DIFFUSE], &primitive.textures[SP_DIFFUSE], &primitive.texturesType[SP_DIFFUSE], panelConfig);
+                            set_up_color(&sg_cd, prim, primitive, SP_GLOSSINESS, panelConfig);
+                            set_up_color(&dif_cd, prim, primitive, SP_DIFFUSE, panelConfig);
                             break;
                         }
                         };
