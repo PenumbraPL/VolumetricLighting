@@ -131,42 +131,44 @@ int main(void)
     std::vector<PointLight> lightsData;
     //std::vector<Camera> cameras;
     panelConfig.lightsData = &lightsData;
-
+    Scene scenes;
 
     /* ================================================ */
     do{
-        primitives.clear();
-        lightsData.clear();
-        //ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
+        //primitives.clear();
+        //lightsData.clear();
+        ////ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
 
-        AkDoc* doc;
+        //AkDoc* doc;
+        //AkVisualScene* scene;
+
+        //std::string scenePath = panelConfig.getModelPath();
+        //scenePath += panelConfig.getModelName();
+        //if (ak_load(&doc, scenePath.c_str(), NULL) != AK_OK) {
+        //    logger.error("Document couldn't be loaded\n");
+        //    exit(EXIT_FAILURE);
+        //}
+        //else {
+        //    logger.info(print_coord_system(doc->coordSys));
+        //    logger.info(print_doc_information(doc->inf, doc->unit));
+        //    logger.info("==============================================================================\n");
+        //}
+
+        AkDoc* doc = scenes.loadScene(panelConfig.getModelPath(), panelConfig.getModelName());
         AkVisualScene* scene;
-
-        std::string scenePath = panelConfig.getModelPath();
-        scenePath += panelConfig.getModelName();
-        if (ak_load(&doc, scenePath.c_str(), NULL) != AK_OK) {
-            logger.error("Document couldn't be loaded\n");
-            exit(EXIT_FAILURE);
-        }
-        else {
-            logger.info(print_coord_system(doc->coordSys));
-            logger.info(print_doc_information(doc->inf, doc->unit));
-            logger.info("==============================================================================\n");
-        }
-
-
+        
         AkCamera* camera = nullptr;
         glm::mat4 View;
         glm::mat4 Projection;
         if (doc->scene.visualScene) {
             scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
-            logger.info("=========================== Visual Scene loaded ==================================================\n");
-            if (scene->name) {
-                std::string sceneInfo = "======================== Scene name: ";
-                sceneInfo += scene->name;
-                sceneInfo += "========================\n";
-                logger.info(sceneInfo);
-            }
+            //logger.info("=========================== Visual Scene loaded ==================================================\n");
+            //if (scene->name) {
+            //    std::string sceneInfo = "======================== Scene name: ";
+            //    sceneInfo += scene->name;
+            //    sceneInfo += "========================\n";
+            //    logger.info(sceneInfo);
+            //}
             float cameraView[16];
             float cameraProjection[16];
 
@@ -183,60 +185,61 @@ int main(void)
             if (camera) std::cout << "Camera name: " << camera->name << std::endl;
 
 
-            AkNode* node = ak_instanceObjectNode(scene->node);
-            proccess_node(node, primitives); // pointer to pointer?
+            //AkNode* node = ak_instanceObjectNode(scene->node);
+            //proccess_node(node, primitives); // pointer to pointer?
         }
 
+        
+        scenes.allocAll(doc);
 
+        //std::map <void*, unsigned int> bufferViews;
+        //std::map <void*, unsigned int> textureViews;
+        //std::map <void*, unsigned int> imageViews;
+        //bufferViews.clear();
+        //textureViews.clear();
+        //imageViews.clear();
 
-        std::map <void*, unsigned int> bufferViews;
-        std::map <void*, unsigned int> textureViews;
-        std::map <void*, unsigned int> imageViews;
-        bufferViews.clear();
-        textureViews.clear();
-        imageViews.clear();
+        //// What with and libimages ??
+        //int j = 0;
+        //FListItem* i = doc->lib.images;
+        //if (i) {
+        //    do {
+        //        AkImage* img = (AkImage*)i->data;
+        //        imageViews.insert({ {img, 0} });
+        //        i = i->next;
+        //    } while (i);
+        //    for (auto& u : imageViews) {
+        //        u.second = j++;
+        //    }
+        //}
 
-        // What with and libimages ??
-        int j = 0;
-        FListItem* i = doc->lib.images;
-        if (i) {
-            do {
-                AkImage* img = (AkImage*)i->data;
-                imageViews.insert({ {img, 0} });
-                i = i->next;
-            } while (i);
-            for (auto& u : imageViews) {
-                u.second = j++;
-            }
-        }
+        //j = 0;
+        //FListItem* t = doc->lib.textures;
+        //if (t) {
+        //    do {
+        //        AkTexture* tex = (AkTexture*)t->data;
+        //        textureViews.insert({ {tex, 0} });
+        //        t = t->next;
+        //    } while (t);
+        //    for (auto& u : textureViews) {
+        //        u.second = j++;
+        //    }
+        //}
 
-        j = 0;
-        FListItem* t = doc->lib.textures;
-        if (t) {
-            do {
-                AkTexture* tex = (AkTexture*)t->data;
-                textureViews.insert({ {tex, 0} });
-                t = t->next;
-            } while (t);
-            for (auto& u : textureViews) {
-                u.second = j++;
-            }
-        }
+        //j = 0;
+        //FListItem* b = (FListItem*)doc->lib.buffers;
+        //if (b) {
+        //    do {
+        //        AkBuffer* buf = (AkBuffer*)b->data;
+        //        bufferViews.insert({ {buf, 0} });
+        //        b = b->next;
+        //    } while (b);
+        //    for (auto& u : bufferViews) {
+        //        u.second = j++;
+        //    }
+        //}
 
-        j = 0;
-        FListItem* b = (FListItem*)doc->lib.buffers;
-        if (b) {
-            do {
-                AkBuffer* buf = (AkBuffer*)b->data;
-                bufferViews.insert({ {buf, 0} });
-                b = b->next;
-            } while (b);
-            for (auto& u : bufferViews) {
-                u.second = j++;
-            }
-        }
-
-
+        std::map <void*, unsigned int>& bufferViews = scenes.bufferViews;
         /* ======================================================== */
 
         GLuint vao;

@@ -661,6 +661,411 @@ void Light::drawLight(
 }
 
 
+/* ================================================= */
+
+
+
+    void Drawable::createPipeline(std::string shaderPath[5])
+    {
+        char* shader[5];
+        glGenProgramPipelines(1, &pipeline);
+        GLint linkageStatus;
+
+        for (int i = 0; i < 5; i++) {
+            if (shaderPath[i].empty()) {
+                shader[i] = read_file(shaderPath[i].c_str());
+                if (!shader[i]) {
+                    logger.error("=================== Coulnt find " + shaderPath[i] + " ==============================\n");
+                }
+                programs[i] = glCreateShaderProgramv(ds[i], 1, &shader[i]);
+                free(shader[i]);
+
+                glGetProgramiv(programs[i], GL_LINK_STATUS, &linkageStatus);
+                if (!linkageStatus) {
+                    GLchar info[1024];
+                    glGetProgramInfoLog(programs[i], 1024, NULL, info);
+                    logger.error(info);
+                }
+                glUseProgramStages(pipeline, dsb[i], programs[i]);
+            }
+        }
+    }
+
+    void Drawable::deletePipeline()
+    {
+        for (int i = 0; i < 5; i++) {
+            if(programs[i]) glDeleteProgram(programs[i]);
+        } // program[i] == 0 ?
+
+        glBindProgramPipeline(0);
+        glDeleteProgramPipelines(1, &pipeline);
+    }
+    
+    void Drawable::loadMatrix(AkNode* node)
+    {
+        float* t1 = (float*)calloc(16, sizeof(float));
+        float* t2 = (float*)calloc(16, sizeof(float));
+        ak_transformCombineWorld(node, t1);
+        ak_transformCombine(node, t2);
+        worldTransform = glm::make_mat4x4(t1);
+        localTransform = glm::make_mat4x4(t2);
+        free(t1);
+        free(t2);
+    }
+
+    // TO DO: everything setup here should be placed in one class
+    void Drawable::processMesh(AkMeshPrimitive* primitive, Primitive& drawPrimitive)
+    {
+        if (primitive->indices) {
+            verticleIndecies = (uint32_t*)primitive->indices->items;
+            verticleIndeciesSize = (unsigned int)primitive->indices->count;
+        }
+
+        int set = primitive->input->set;
+        AkInput* wgs = ak_meshInputGet(primitive, "WEIGHTS", set);
+        AkInput* jts = ak_meshInputGet(primitive, "JOINTS", set);
+        AkInput* pos = ak_meshInputGet(primitive, "POSITION", set);
+        AkInput* tex = ak_meshInputGet(primitive, "TEXCOORD", set); // if indexed then multiple parts to proccess
+        AkInput* nor = ak_meshInputGet(primitive, "NORMAL", set);
+
+        AkInput* col = ak_meshInputGet(primitive, "COLOR", set);
+        AkInput* tan = ak_meshInputGet(primitive, "TANGENT", set);
+
+        //std::cout << ak_meshInputCount(mesh) << std::endl;
+
+        /* === diff === */
+
+        accessor[AccessorTypes::POSITION] = pos ? pos->accessor : nullptr;
+        accessor[AccessorTypes::TEXTURES] = tex ? tex->accessor : nullptr;
+        accessor[AccessorTypes::NORMALS] = nor ? nor->accessor : nullptr;
+        accessor[AccessorTypes::WEIGTHS] = wgs ? wgs->accessor : nullptr;
+        accessor[AccessorTypes::JOINTS] = jts ? jts->accessor : nullptr;
+        accessor[AccessorTypes::COLORS] = col ? col->accessor : nullptr;
+        accessor[AccessorTypes::TANGENTS] = tan ? tan->accessor : nullptr;
+
+
+
+        if (primitive->material) {
+            AkMaterial* mat = primitive->material;
+            AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
+            AkTechniqueFxCommon* tch = ef->profile->technique->common;
+            if (tch) {
+                set_up_color(tch->ambient, primitive, drawPrimitive, TextureType::AMBIENT, panelConfig);
+                set_up_color(tch->emission, primitive, drawPrimitive, TextureType::EMISIVE, panelConfig);
+                set_up_color(tch->diffuse, primitive, drawPrimitive, TextureType::DIFFUSE, panelConfig);
+                set_up_color(tch->specular, primitive, drawPrimitive, TextureType::SPECULAR, panelConfig);
+
+                switch (tch->type) {
+                case AK_MATERIAL_METALLIC_ROUGHNESS: {
+                    AkMetallicRoughness* mr = (AkMetallicRoughness*)tch;
+                    AkColorDesc alb_cd;
+                    AkColorDesc mr_cd;
+                    alb_cd.color = &mr->albedo;
+                    alb_cd.texture = mr->albedoTex;
+                    mr_cd.color = &mr->albedo;//&mr->roughness;
+                    mr_cd.texture = mr->metalRoughTex;
+                    set_up_color(&alb_cd, primitive, drawPrimitive, TextureType::ALBEDO, panelConfig);
+                    set_up_color(&mr_cd, primitive, drawPrimitive, TextureType::MET_ROUGH, panelConfig);
+                    break;
+                }
+
+                case AK_MATERIAL_SPECULAR_GLOSSINES: {
+                    AkSpecularGlossiness* sg = (AkSpecularGlossiness*)tch;
+                    AkColorDesc sg_cd;
+                    AkColorDesc dif_cd;
+                    sg_cd.color = &sg->specular;
+                    sg_cd.texture = sg->specGlossTex;
+                    dif_cd.color = &sg->diffuse;
+                    dif_cd.texture = sg->diffuseTex;
+                    set_up_color(&sg_cd, primitive, drawPrimitive, TextureType::SP_GLOSSINESS, panelConfig);
+                    set_up_color(&dif_cd, primitive, drawPrimitive, TextureType::SP_DIFFUSE, panelConfig);
+                    break;
+                }
+                };
+            }
+        }
+    }
+
+    void Drawable::getLocation()
+    {
+        //GLuint& vertexProgram = programs[VERTEX];
+        //GLuint& fragmentProgram = programs[FRAGMENT];
+        //// TO DO
+        //mvpBindingLocation = glGetUniformLocation(vertexProgram, "MVP");
+        //normalsBindingLocation = glGetAttribLocation(vertexProgram, "vNor");
+        //vertexPosBindingLocation = glGetAttribLocation(vertexProgram, "vPos");
+        //textureBindingLocation = glGetAttribLocation(vertexProgram, "vTex");
+        //prjBindingLocation = glGetUniformLocation(vertexProgram, "PRJ");
+        //cameraBindingLocation = glGetUniformLocation(fragmentProgram, "camera");
+        //gBindingLocation = glGetUniformLocation(fragmentProgram, "G");
+        //camDirBindingLocation = glGetUniformLocation(fragmentProgram, "direction");
+        //metalicBindingLocation = glGetUniformLocation(fragmentProgram, "_metalic");
+        //roughnessBindingLocation = glGetUniformLocation(fragmentProgram, "_roughness");
+        //albedoBindingLocation = glGetUniformLocation(fragmentProgram, "_albedo_color");
+        //aoBindingLocation = glGetUniformLocation(fragmentProgram, "ao_color");
+
+        //isTexBindingLocation = glGetUniformLocation(fragmentProgram, "_is_tex_bound");
+
+
+        //if (mvpBindingLocation != -1) glEnableVertexAttribArray(mvpBindingLocation);
+        //if (vertexPosBindingLocation != -1) glEnableVertexAttribArray(vertexPosBindingLocation);
+        //if (normalsBindingLocation != -1) glEnableVertexAttribArray(normalsBindingLocation);
+        //if (textureBindingLocation != -1) glEnableVertexAttribArray(textureBindingLocation);
+        //if (isTexBindingLocation != -1) glEnableVertexAttribArray(isTexBindingLocation);
+        //if (prjBindingLocation != -1) glEnableVertexAttribArray(prjBindingLocation);
+        //if (cameraBindingLocation != -1) glEnableVertexAttribArray(cameraBindingLocation);
+
+        //if (metalicBindingLocation != -1) glEnableVertexAttribArray(metalicBindingLocation);
+        //if (roughnessBindingLocation != -1) glEnableVertexAttribArray(roughnessBindingLocation);
+        //if (albedoBindingLocation != -1) glEnableVertexAttribArray(albedoBindingLocation);
+        //if (aoBindingLocation != -1) glEnableVertexAttribArray(aoBindingLocation);
+
+        //if (vertexPosBindingLocation != -1) format_attribute(vertexPosBindingLocation, pos);
+        //if (normalsBindingLocation != -1) format_attribute(normalsBindingLocation, nor);
+        //if (textureBindingLocation != -1) format_attribute(textureBindingLocation, tex);
+        //glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
+    }
+
+
+    void Drawable::allocUnique()
+    {
+        unsigned int bs = std::size(accessor) - std::count(std::begin(accessor), std::end(accessor), nullptr);
+        //check what is avalable and insert it into gpu buffer
+        primitiveDataBuffer = (GLuint*)calloc(bs, sizeof(GLuint));
+        // delete
+        if (primitiveDataBuffer) {
+            glCreateBuffers(bs, primitiveDataBuffer);
+            // is nessesery ?
+            int i = 0;
+            for (auto& a : accessor) {
+                if (a) {
+                    glNamedBufferData(primitiveDataBuffer[i++], a->buffer->length, a->buffer->data, GL_STATIC_DRAW);
+                }
+            }
+        }
+    }
+
+    void Drawable::allocAll(AkDoc* doc)
+    {
+        std::map <void*, unsigned int> bufferViews;
+        std::map <void*, unsigned int> textureViews;
+        std::map <void*, unsigned int> imageViews;
+        bufferViews.clear();
+        textureViews.clear();
+        imageViews.clear();
+
+        // What with and libimages ??
+        int j = 0;
+        FListItem* i = doc->lib.images;
+        if (i) {
+            do {
+                AkImage* img = (AkImage*)i->data;
+                imageViews.insert({ {img, 0} });
+                i = i->next;
+            } while (i);
+            for (auto& u : imageViews) {
+                u.second = j++;
+            }
+        }
+
+        j = 0;
+        FListItem* t = doc->lib.textures;
+        if (t) {
+            do {
+                AkTexture* tex = (AkTexture*)t->data;
+                textureViews.insert({ {tex, 0} });
+                t = t->next;
+            } while (t);
+            for (auto& u : textureViews) {
+                u.second = j++;
+            }
+        }
+
+        j = 0;
+        FListItem* b = (FListItem*)doc->lib.buffers;
+        if (b) {
+            do {
+                AkBuffer* buf = (AkBuffer*)b->data;
+                bufferViews.insert({ {buf, 0} });
+                b = b->next;
+            } while (b);
+            for (auto& u : bufferViews) {
+                u.second = j++;
+            }
+        }
+
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+
+        GLuint* docDataBuffer = (GLuint*)calloc(bufferViews.size(), sizeof(GLuint));
+        glCreateBuffers((GLsizei)bufferViews.size(), docDataBuffer);
+        for (auto& buffer : bufferViews) {
+            unsigned int i = bufferViews[buffer.first];
+            glNamedBufferData(docDataBuffer[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
+        }
+    }
+
+    void Drawable::processNode(AkNode* node, std::vector<Primitive>& primitives)
+    {
+        Primitive drawPrimitive;
+        //drawPrimitive.createPipeline();
+        drawPrimitive.createSamplers();
+        drawPrimitive.createTextures();
+        loadMatrix(node);
+        if (node->geometry) {
+            AkGeometry* geometry = ak_instanceObjectGeom(node);
+            AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
+            if ((AkGeometryType)geometry->gdata->type) {
+                if (mesh) {
+                    AkMeshPrimitive* primitive = mesh->primitive;
+                    processMesh(primitive, drawPrimitive);
+                    primitives.push_back(drawPrimitive);
+                }
+            }
+            if (node->next) {
+                node = node->next;
+                processNode(node, primitives);
+            }
+            if (node->chld) {
+                node = node->chld;
+                processNode(node, primitives);
+            }
+        }
+    }
+
+    void Drawable::loadMesh(std::string scenePath, std::string sceneName)
+    {
+        //scenePath += sceneName;
+        //AkDoc* doc;
+        //if (ak_load(&doc, scenePath.c_str(), NULL) != AK_OK) {
+        //    logger.error("Environment mesh couldn't be loaded\n");
+        //    return;
+        //}
+        //if (!doc->scene.visualScene) {
+        //    logger.error("Environment mesh couldn't be loaded\n");
+        //    return;
+        //}
+
+        //AkVisualScene* scene;
+        //scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
+        //AkNode* node = ak_instanceObjectNode(scene->node);
+        //processNode(node, p);
+        //allocAll(doc);
+    }
+
+    void Drawable::draw(int width, int height, glm::mat4 Proj, AkCamera* camera) {
+
+    }
+
+
+/* ================================================ */
+
+    AkDoc* Scene::loadScene(std::string scenePath, std::string sceneName)
+    {
+        primitives.clear();
+
+        scenePath += sceneName;
+        AkDoc* doc;
+        if (ak_load(&doc, scenePath.c_str(), NULL) != AK_OK) {
+            logger.error("Document couldn't be loaded\n");
+            exit(EXIT_FAILURE);
+        }
+        else {
+            logger.info(print_coord_system(doc->coordSys));
+            logger.info(print_doc_information(doc->inf, doc->unit));
+            logger.info("==============================================================================\n");
+        }
+
+        AkVisualScene* scene;
+        scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
+        if (!doc->scene.visualScene) {
+            logger.error("================================== Scene couldnt be loaded! ===============\n");
+            exit(EXIT_FAILURE);
+        }
+        else {
+            std::string sceneInfo = "======================== Scene name: ";
+            sceneInfo += scene->name;
+            sceneInfo += "========================\n";
+            logger.info(sceneInfo);
+        }
+
+        AkNode* node = ak_instanceObjectNode(scene->node);
+        Drawable d;
+        d.processNode(node, primitives);
+
+        return doc;
+        //allocAll(doc);
+    }
+    
+    Scene::~Scene()
+    {
+        for (auto& primitive : primitives) {
+            //primitive.deletePrograms();
+            //primitive.deletePipeline();
+            primitive.deleteTexturesAndSamplers();
+        }
+    }
+
+    void Scene::allocAll(AkDoc* doc)
+    {
+        bufferViews.clear();
+        textureViews.clear();
+        imageViews.clear();
+
+        // What with and libimages ??
+        int j = 0;
+        FListItem* i = doc->lib.images;
+        if (i) {
+            do {
+                AkImage* img = (AkImage*)i->data;
+                imageViews.insert({ {img, 0} });
+                i = i->next;
+            } while (i);
+            for (auto& u : imageViews) {
+                u.second = j++;
+            }
+        }
+
+        j = 0;
+        FListItem* t = doc->lib.textures;
+        if (t) {
+            do {
+                AkTexture* tex = (AkTexture*)t->data;
+                textureViews.insert({ {tex, 0} });
+                t = t->next;
+            } while (t);
+            for (auto& u : textureViews) {
+                u.second = j++;
+            }
+        }
+
+        j = 0;
+        FListItem* b = (FListItem*)doc->lib.buffers;
+        if (b) {
+            do {
+                AkBuffer* buf = (AkBuffer*)b->data;
+                bufferViews.insert({ {buf, 0} });
+                b = b->next;
+            } while (b);
+            for (auto& u : bufferViews) {
+                u.second = j++;
+            }
+        }
+    }
+    void Scene::a()
+    {
+        //  glGenVertexArrays(1, &vao);
+         // glBindVertexArray(vao);
+
+        GLuint* docDataBuffer = (GLuint*)calloc(bufferViews.size(), sizeof(GLuint));
+        glCreateBuffers((GLsizei)bufferViews.size(), docDataBuffer);
+        for (auto& buffer : bufferViews) {
+            unsigned int i = bufferViews[buffer.first];
+            glNamedBufferData(docDataBuffer[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
+        }
+    }
+
+
 /* ================================================ */
 
 

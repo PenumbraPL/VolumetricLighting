@@ -310,8 +310,7 @@ void proccess_node(AkNode* node, std::vector<Primitive>& primitives)
     }
 }
 
-
-
+//void proccess_node(AkNode* node, std::vector<Drawable>& primitives)
 
 std::string print_coord_system(AkCoordSys* coord) 
 {
