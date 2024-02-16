@@ -252,6 +252,10 @@ struct Scene {
     void allocAll(AkDoc* doc);
     GLuint* parseBuffors();
     AkCamera* camera(AkDoc* doc);
+    void updateLights(GLuint lightsBuffer, unsigned int lightDataSize, ConfigContext& panelConfig);
+    void initLights();
+    bool compare_lights(PointLight& old_light, PointLight& new_light);
+    bool compare_lights(LightsList& old_light, LightsList& new_light);
 };
 
 

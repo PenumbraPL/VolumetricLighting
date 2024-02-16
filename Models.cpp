@@ -930,6 +930,50 @@ void Light::drawLight(
 
 /* ================================================ */
 
+    void Scene::updateLights(GLuint lightsBuffer, unsigned int lightDataSize, ConfigContext& panelConfig) {
+        if (panelConfig.getLightsSize() != lightDataSize) {
+            if (panelConfig.getLightsSize() > lightDataSize) {
+                lightDataSize = panelConfig.getLightsSize();
+                int lightsBufferSize = (int)sizeof(PointLight) * lights.size();
+                glNamedBufferData(lightsBuffer, sizeof(LightsList) + lightsBufferSize, NULL, GL_DYNAMIC_DRAW);
+            }
+            lightDataSize = panelConfig.getLightsSize();
+            int lightsBufferSize = (int)sizeof(PointLight) * lights.size();
+            glNamedBufferSubData(lightsBuffer, offsetof(LightsList, list), lightsBufferSize, lights.data());
+            glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
+        }
+        PointLight newLight = panelConfig.getLight();
+        if (compare_lights(lights.data()[panelConfig.lightId], newLight)) {
+            lights.data()[panelConfig.lightId] = newLight;
+            LightsList* ptr = (LightsList*)glMapNamedBuffer(lightsBuffer, GL_WRITE_ONLY);
+            memcpy_s((void*)&ptr->list[panelConfig.lightId], sizeof(PointLight), &newLight, sizeof(PointLight));
+            glUnmapNamedBuffer(lightsBuffer);
+            panelConfig.updateLight();
+        }
+    }
+
+    void Scene::initLights() {
+        lights.clear();
+        lights.push_back({ glm::vec3(1.5f, 1.5f, 1.5f), 0.1f, 0.5f, 0.5f, glm::vec3(1.f, 1.f, 1.f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(1.f, 1.f, 1.f) });
+        lights.push_back({ glm::vec3(-1.5f, -1.5f, 1.5f), 0.1f, 0.5f, 0.5f, glm::vec3(1.f, .9f, .8f), glm::vec3(.7f, .5f, .4f), glm::vec3(.3f, .2f, .1f) });
+        lights.push_back({ glm::vec3(1.5f, -1.5f, 1.5f), 0.1f, 0.5f, 0.5f, glm::vec3(1.f, .9f, .8f), glm::vec3(.7f, .5f, .4f), glm::vec3(.3f, .2f, .1f) });
+    }
+
+
+    bool Scene::compare_lights(PointLight& old_light, PointLight& new_light)
+    {
+        return memcmp(&old_light, &new_light, sizeof(PointLight));
+    }
+
+    bool Scene::compare_lights(LightsList& old_light, LightsList& new_light)
+    {
+        if (old_light.size != new_light.size) return true;
+
+        return memcmp(&old_light.list, &new_light.list, old_light.size * sizeof(PointLight));
+    }
+
+
+
     AkCamera* Scene::camera(AkDoc* doc) {
         AkVisualScene* scene;
         AkCamera* cam = nullptr;

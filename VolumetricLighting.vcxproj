@@ -201,7 +201,6 @@ Shell32.lib
     <ClCompile Include="Draw.cpp" />
     <ClCompile Include="GUI.cpp" />
     <ClCompile Include="IO.cpp" />
-    <ClCompile Include="Light.cpp" />
     <ClCompile Include="Models.cpp" />
     <ClCompile Include="src\imgui\backends\imgui_impl_glfw.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>

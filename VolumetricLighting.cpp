@@ -134,9 +134,7 @@ int main(void)
 
     /* ================================================ */
     do{
-        ////ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
-        lightsData.clear();
-        
+        ////ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);        
         AkDoc* doc = scenes.loadScene(panelConfig.getModelPath(), panelConfig.getModelName());
         AkCamera* camera = scenes.camera(doc);
         glm::mat4& View = scenes.cameraEye.View;
@@ -169,7 +167,8 @@ int main(void)
         glGenBuffers(1, &lightsBuffer);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightsBuffer);
 
-        init_lights(lightsData);
+        scenes.initLights();
+        //init_lights(lightsData);
         int lightsBufferSize = (int)sizeof(PointLight) * lightsData.size();
         unsigned int lightDataSize = (unsigned int)lightsData.size();
 
@@ -215,26 +214,8 @@ int main(void)
                 primitive.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
             }
 
-            /* ===================== */
-            if (panelConfig.getLightsSize() != lightDataSize) {
-                if (panelConfig.getLightsSize() > lightDataSize) {
-                    lightDataSize = panelConfig.getLightsSize();
-                    int lightsBufferSize = (int)sizeof(PointLight) * lightsData.size();
-                    glNamedBufferData(lightsBuffer, sizeof(LightsList) + lightsBufferSize, NULL, GL_DYNAMIC_DRAW);
-                }
-                lightDataSize = panelConfig.getLightsSize();
-                int lightsBufferSize = (int)sizeof(PointLight) * lightsData.size();
-                glNamedBufferSubData(lightsBuffer, offsetof(LightsList, list), lightsBufferSize, lightsData.data());
-                glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
-            }
-            PointLight newLight = panelConfig.getLight();
-            if (compare_lights(lightsData.data()[panelConfig.lightId], newLight)) {
-                lightsData.data()[panelConfig.lightId] = newLight;
-                LightsList* ptr = (LightsList*)glMapNamedBuffer(lightsBuffer, GL_WRITE_ONLY);
-                memcpy_s((void*)&ptr->list[panelConfig.lightId], sizeof(PointLight), &newLight, sizeof(PointLight));
-                glUnmapNamedBuffer(lightsBuffer);
-                panelConfig.updateLight();
-            }
+
+            scenes.updateLights(lightsBuffer, lightDataSize, panelConfig);
             for (auto& light : lightsData) {
                 glm::mat4x4 transform = glm::translate(glm::mat4x4(1.f), light.position);
                 lightModel.drawLight(width, height, Projection, camera, transform);

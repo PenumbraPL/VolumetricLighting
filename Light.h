@@ -16,8 +16,3 @@ struct LightsList {
     unsigned int size;
     alignas(16) PointLight list[];
 };
-
-
-void init_lights(std::vector<PointLight>& lightsData);
-bool compare_lights(PointLight & old_light, PointLight & new_light);
-bool compare_lights(LightsList & old_light, LightsList & new_light);
