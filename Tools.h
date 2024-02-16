@@ -14,6 +14,7 @@ void set_up_color(
     enum TextureType type,
     ConfigContext& panelConfig);
 void proccess_node(AkNode* node, std::vector<Primitive>& primitives);
+void proccess_node(AkNode* node, std::vector<Drawable>& primitives);
 void format_attribute(GLint attr_location, AkAccessor* acc);
 char* read_file(const char* file_name);
 std::string print_coord_system(AkCoordSys* coord);

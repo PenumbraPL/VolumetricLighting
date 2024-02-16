@@ -168,20 +168,17 @@ struct Drawable {
     Drawable() {}
     ~Drawable(){}
 
-
     GLuint programs[5];
     GLuint pipeline;
     AkAccessor* accessor[7];
 
-    GLuint* bindingLocations;
     uint32_t* verticleIndecies = nullptr;
     unsigned int verticleIndeciesSize;
     GLuint* primitiveDataBuffer;
+    GLuint textures[8] = { 0 };
+    GLuint texturesType[8] = { 0 };
+    GLuint samplers[8] = { 0 };
 
-    GLuint* textures = nullptr;
-    GLuint* texturesType = nullptr;
-    GLuint* samplers = nullptr;
-    // alloc
     glm::vec4 colors[8] = { glm::vec4(0) };
 
     glm::mat4 worldTransform;
@@ -192,24 +189,7 @@ struct Drawable {
     DrawShader ds[5] = { DRAW_VERTEX, DRAW_FRAGMENT, DRAW_TESS_CTR, DRAW_TESS_EV, DRAW_GEOMETRY };
     DrawShaderBit dsb[5] = { DRAW_VERTEX_BIT, DRAW_FRAGMENT_BIT, DRAW_TESS_CTR_BIT, DRAW_TESS_EV_BIT , DRAW_GEOMETRY_BIT };
 
-    virtual void createPipeline(std::string shaderPath[5]);
-    virtual void deletePipeline();
-    virtual void loadMatrix(AkNode* node, Drawable& primitive);
-    virtual void processMesh(AkMeshPrimitive* primitive, Drawable& drawPrimitive);
-    void allocUnique();
-    void allocAll(AkDoc* doc);
-    void processNode(AkNode* node, std::vector<Drawable>& primitives);
-    virtual void loadMesh(std::string scenePath, std::string sceneName);
-    void draw(
-        GLuint& lights_buffer,
-        std::map <void*, unsigned int>& bufferViews,
-        GLuint* buffers,
-        glm::vec3& eye,
-        glm::mat4& LookAt,
-        glm::mat4& Projection,
-        glm::vec3& translate,
-        glm::vec3& rotate);
-
+    // malloc + getname
     GLuint mvpBindingLocation,
         prjBindingLocation,
         cameraBindingLocation,
@@ -223,14 +203,38 @@ struct Drawable {
         roughnessBindingLocation,
         albedoBindingLocation,
         aoBindingLocation;
+    GLuint** bindingLocationIndecies;
 
-    void getLocation();
-    GLuint* createTextures();
-    GLuint* createSamplers();
-    void deleteTexturesAndSamplers();
-    void deleteTransforms();
+    void createPipeline(std::string shaderPath[5]);
+    void deletePipeline();
+    void loadMatrix(AkNode* node);
+    virtual void processMesh(AkMeshPrimitive* primitive);
+    virtual void draw(
+        GLuint& lights_buffer,
+        std::map <void*, unsigned int>& bufferViews,
+        GLuint* docDataBuffer,
+        glm::vec3& eye,
+        glm::mat4& MVP,
+        glm::mat4& Projection);
+
+    virtual void getLocation(std::vector<const char*> uniformNames[5]);
+    virtual void deleteTexturesAndSamplers(); // how many to delete?
+
+private:
+    void allocUnique(); // unused
 };
 
+
+struct Camera {
+    glm::mat4x4 localTransform;
+    glm::mat4x4 worldTransform;
+    glm::vec4 viewDirection;
+    float zNear;
+    float zFar;
+    int fov;
+    glm::mat4 View;
+    glm::mat4 Projection;
+};
 
 
 struct Scene {
@@ -238,13 +242,16 @@ struct Scene {
 
     //std::vector<Primitive> primitives;
     std::vector<Drawable> primitives;
+    Camera cameraEye;
+    std::vector<PointLight> lights;
     std::map <void*, unsigned int> bufferViews;
     std::map <void*, unsigned int> textureViews;
     std::map <void*, unsigned int> imageViews;
 
     AkDoc* loadScene(std::string scenePath, std::string sceneName);
     void allocAll(AkDoc* doc);
-    void a();
+    GLuint* parseBuffors();
+    AkCamera* camera(AkDoc* doc);
 };
 
 
@@ -279,15 +286,6 @@ struct Light {
         glm::mat4x4& transform);
 };
 
-
-struct Camera {
-    glm::mat4x4 localTransform;
-    glm::mat4x4 worldTransform;
-    glm::vec4 viewDirection;
-    float zNear;
-    float zFar;
-    int fov;
-};
 
 
 struct Cloud {

@@ -127,11 +127,10 @@ int main(void)
     cld.loadMesh();
     cld.createPipeline(windowConfig.width, windowConfig.height);
 
-    //std::vector<Primitive> primitives;
-    std::vector<PointLight> lightsData;
-    //std::vector<Camera> cameras;
-    panelConfig.lightsData = &lightsData;
     Scene scenes;
+    std::vector<PointLight>& lightsData= scenes.lights;
+    panelConfig.lightsData = &scenes.lights;
+
 
     /* ================================================ */
     do{
@@ -139,51 +138,26 @@ int main(void)
         lightsData.clear();
         
         AkDoc* doc = scenes.loadScene(panelConfig.getModelPath(), panelConfig.getModelName());
-        AkVisualScene* scene;
-        
-        AkCamera* camera = nullptr;
-        glm::mat4 View;
-        glm::mat4 Projection;
-        if (doc->scene.visualScene) {
-            scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
-
-            float cameraView[16];
-            float cameraProjection[16];
-            ak_firstCamera(doc, &camera, cameraView, cameraProjection);
-            if (camera) {
-                View = glm::make_mat4x4(cameraView);
-                Projection = glm::make_mat4x4(cameraProjection);
-            }
-            else if (scene->cameras) {
-                if (scene->cameras->first) {
-                    camera = (AkCamera*)ak_instanceObject(scene->cameras->first->instance);
-                }
-            }
-            if (camera) std::cout << "Camera name: " << camera->name << std::endl;
-        }
-
-        
+        AkCamera* camera = scenes.camera(doc);
+        glm::mat4& View = scenes.cameraEye.View;
+        glm::mat4& Projection = scenes.cameraEye.Projection;
         scenes.allocAll(doc);
 
         std::vector<Drawable>& primitives = scenes.primitives;
         std::string pipeline[5];
         pipeline[VERTEX] = { "res/shaders/standard_vec.glsl" };
         pipeline[FRAGMENT] = { "res/shaders/pbr_with_ext_light_frag.glsl" };
-        for (auto& p : primitives) p.createPipeline(pipeline);
+        for (auto& primitive : primitives) primitive.createPipeline(pipeline);
         std::map <void*, unsigned int>& bufferViews = scenes.bufferViews;
-        /* ======================================================== */
+        GLuint* docDataBuffer = scenes.parseBuffors();
 
-        GLuint vao;
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
 
-        GLuint* docDataBuffer = (GLuint*)calloc(bufferViews.size(), sizeof(GLuint));
-        glCreateBuffers((GLsizei)bufferViews.size(), docDataBuffer);
-        for (auto& buffer : bufferViews) {
-            unsigned int i = bufferViews[buffer.first];
-            glNamedBufferData(docDataBuffer[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
-        }
-        for (auto& p : primitives) p.getLocation();
+        std::vector<const char*> uniformNames[5] = {
+            {"MVP", "PRJ"},
+            {"camera", "G", "direction", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound"},
+            {}, {}, {}
+        };
+        for (auto& primitive : primitives) primitive.getLocation(uniformNames);
 
 
 
@@ -217,9 +191,6 @@ int main(void)
 
 
             if (!camera) Projection = panelConfig.getProjection(width, height);
-        /*    panelConfig.lightsData = lightsData.data();
-            panelConfig.lightsSize = lightsData.size();*/
-
 
             env.draw(width, height, Projection, camera);
 
@@ -228,11 +199,23 @@ int main(void)
             glm::mat4 LookAt = panelConfig.getLookAt();
             glm::vec3 translate = panelConfig.getTranslate();
             glm::vec3 rotate = panelConfig.getRotate();
+            glm::mat4 localTransform = glm::mat4(1.);
+
+            glm::mat4 View =
+                glm::rotate(
+                    glm::rotate(
+                        glm::translate(localTransform,
+                            translate)
+                        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+                    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
+            glm::mat4 MVP = LookAt * View * Model;
+
             for (auto& primitive : primitives) {
-                primitive.draw(lightsBuffer, bufferViews, docDataBuffer,
-                    eye, LookAt, Projection, translate, rotate);
+                primitive.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
             }
 
+            /* ===================== */
             if (panelConfig.getLightsSize() != lightDataSize) {
                 if (panelConfig.getLightsSize() > lightDataSize) {
                     lightDataSize = panelConfig.getLightsSize();
@@ -256,13 +239,12 @@ int main(void)
                 glm::mat4x4 transform = glm::translate(glm::mat4x4(1.f), light.position);
                 lightModel.drawLight(width, height, Projection, camera, transform);
             }
-
+            /* ===================== */
 
             cld.draw(width, height, Projection, camera, panelConfig.g, lightsBuffer);
 
 
             draw_imgui(io);
-
             glfwSwapBuffers(window);
             glfwPollEvents();
 
@@ -273,14 +255,19 @@ int main(void)
 
         glBindProgramPipeline(0);
 
-        for (auto& p : primitives) p.deleteTransforms();
         for (auto& p : primitives) p.deleteTexturesAndSamplers();
         for (auto& p : primitives) p.deletePipeline();
 
         glDeleteBuffers((GLsizei)bufferViews.size(), docDataBuffer);
-        free(docDataBuffer);
-        glDeleteVertexArrays(1, &vao);
-        //
+        if(docDataBuffer) free(docDataBuffer);
+        
+        for (auto& primitive : primitives) {
+            for (int i = VERTEX; i <= GEOMETRY; i++) {
+                if(primitive.bindingLocationIndecies[i]) free(primitive.bindingLocationIndecies[i]);
+            }
+            free(primitive.bindingLocationIndecies);
+        }
+
     } while (!glfwWindowShouldClose(window));
 
     env.deletePipeline();

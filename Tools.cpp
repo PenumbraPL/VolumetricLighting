@@ -419,7 +419,30 @@ void proccess_node(AkNode* node, std::vector<Primitive>& primitives)
     }
 }
 
-//void proccess_node(AkNode* node, std::vector<Drawable>& primitives)
+void proccess_node(AkNode* node, std::vector<Drawable>& primitives)
+{
+    Drawable primitive;
+    primitive.loadMatrix(node);
+
+    if (node->geometry) {
+        AkGeometry* geometry = ak_instanceObjectGeom(node);
+        AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
+        if ((AkGeometryType)geometry->gdata->type) {
+            if (mesh) {
+                primitive.processMesh(mesh->primitive);
+                primitives.push_back(primitive);
+            }
+        }
+        if (node->next) {
+            node = node->next;
+            proccess_node(node, primitives);
+        }
+        if (node->chld) {
+            node = node->chld;
+            proccess_node(node, primitives);
+        }
+    }
+}
 
 std::string print_coord_system(AkCoordSys* coord) 
 {
