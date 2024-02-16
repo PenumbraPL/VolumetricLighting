@@ -170,6 +170,115 @@ void set_up_color(
 
 
 
+void set_up_color(
+    AkColorDesc* colordesc,
+    AkMeshPrimitive* prim,
+    Drawable& primitive,
+    enum TextureType type,
+    ConfigContext& panelConfig)
+{
+    GLuint* sampler = &primitive.samplers[type];
+    GLuint* texture = &primitive.textures[type];
+    GLuint* texturesType = &primitive.texturesType[type];
+    glm::vec4* colors = &primitive.colors[type];
+
+    if (colordesc) {
+        if (colordesc->texture) {
+            AkTextureRef* tex = colordesc->texture;
+            if (tex->texture) {
+                AkSampler* samp = tex->texture->sampler;
+                if (!samp) return;
+
+                AkTypeId type = tex->texture->type;
+
+                GLuint texture_type;
+                GLuint minfilter, magfilter, mipfilter;
+                GLuint wrap_t, wrap_s, wrap_p;
+                switch (type) {
+                case AKT_SAMPLER1D:     texture_type = GL_TEXTURE_1D; break;
+                case AKT_SAMPLER2D:     texture_type = GL_TEXTURE_2D; break;
+                case AKT_SAMPLER3D:     texture_type = GL_TEXTURE_3D; break;
+                case AKT_SAMPLER_CUBE:  texture_type = GL_TEXTURE_CUBE_MAP; break;
+                case AKT_SAMPLER_RECT:  texture_type = GL_TEXTURE_RECTANGLE; break;
+                case AKT_SAMPLER_DEPTH: texture_type = GL_TEXTURE_2D; break;
+                    break;
+                }
+                wrap_t = wrap_mode(samp->wrapT);
+                wrap_s = wrap_mode(samp->wrapS);
+                wrap_p = wrap_mode(samp->wrapP);
+
+                switch (samp->minfilter) {
+                case AK_MINFILTER_LINEAR:       minfilter = GL_LINEAR; break;
+                case AK_MINFILTER_NEAREST:      minfilter = GL_NEAREST; break;
+                case AK_LINEAR_MIPMAP_NEAREST:  minfilter = GL_LINEAR_MIPMAP_NEAREST; break;
+                case AK_LINEAR_MIPMAP_LINEAR:   minfilter = GL_LINEAR_MIPMAP_LINEAR; break;
+                case AK_NEAREST_MIPMAP_NEAREST: minfilter = GL_NEAREST_MIPMAP_NEAREST; break;
+                case AK_NEAREST_MIPMAP_LINEAR:  minfilter = GL_NEAREST_MIPMAP_LINEAR; break;
+                }
+
+                switch (samp->magfilter) {
+                case AK_MAGFILTER_LINEAR:   magfilter = GL_LINEAR; break;
+                case AK_MAGFILTER_NEAREST:  magfilter = GL_NEAREST; break;
+                }
+
+                switch (samp->mipfilter) {
+                case AK_MIPFILTER_LINEAR:    mipfilter = GL_LINEAR; break;
+                case AK_MIPFILTER_NEAREST:   mipfilter = GL_NEAREST; break;
+                case AK_MIPFILTER_NONE:      mipfilter = GL_NONE; break;
+                }
+
+                glCreateSamplers(1, sampler);
+                glSamplerParameteri(*sampler, GL_TEXTURE_WRAP_S, wrap_s);
+                glSamplerParameteri(*sampler, GL_TEXTURE_WRAP_T, wrap_t);
+                glSamplerParameteri(*sampler, GL_TEXTURE_WRAP_R, wrap_p);
+                glSamplerParameteri(*sampler, GL_TEXTURE_MIN_FILTER, minfilter);
+                glSamplerParameteri(*sampler, GL_TEXTURE_MAG_FILTER, magfilter);
+
+
+                AkInput* tex_coord = ak_meshInputGet(prim, tex->coordInputName, tex->slot); //
+                int components = 0;
+                int width = 0;
+                int height = 0;
+                char path[128] = { '\0' };
+                memcpy_s(path, 128, panelConfig.getModelPath().c_str(), strlen(panelConfig.getModelPath().c_str()));
+                //char path[128] = { PATH };
+                const char* f_path = tex->texture->image->initFrom->ref;
+                memcpy_s(path + strlen(path), 128 - strlen(path), f_path, strlen(f_path));
+                char* image = (char*)imageLoadFromFile(path, &width, &height, &components);
+
+                if (image) {
+                    glCreateTextures(texture_type, 1, texture);
+                    *texturesType = texture_type;
+                    if (std::string::npos != std::string(path).find(".jpg", 0)) {
+                        glTextureStorage2D(*texture, 1, GL_RGB8, width, height);
+                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
+                    }
+                    if (std::string::npos != std::string(path).find(".jpeg", 0)) {
+                        glTextureStorage2D(*texture, 1, GL_RGB8, width, height);
+                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
+                    }
+                    if (std::string::npos != std::string(path).find(".png", 0)) {
+                        glTextureStorage2D(*texture, 1, GL_RGBA8, width, height);
+                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image);
+                    }
+                    stbi_image_free(image);
+                }
+            }
+        }
+        if (colordesc->color) {
+            glm::vec4 rgba;
+            rgba.r = colordesc->color->rgba.R;
+            rgba.g = colordesc->color->rgba.G;
+            rgba.b = colordesc->color->rgba.B;
+            rgba.a = colordesc->color->rgba.A;
+            *colors = rgba;
+        }
+    }
+}
+
+
+
+
 void proccess_node(AkNode* node, std::vector<Primitive>& primitives)
 {
     Primitive primitive;

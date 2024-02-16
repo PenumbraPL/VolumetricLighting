@@ -672,7 +672,7 @@ void Light::drawLight(
         GLint linkageStatus;
 
         for (int i = 0; i < 5; i++) {
-            if (shaderPath[i].empty()) {
+            if (!shaderPath[i].empty()) {
                 shader[i] = read_file(shaderPath[i].c_str());
                 if (!shader[i]) {
                     logger.error("=================== Coulnt find " + shaderPath[i] + " ==============================\n");
@@ -701,24 +701,24 @@ void Light::drawLight(
         glDeleteProgramPipelines(1, &pipeline);
     }
     
-    void Drawable::loadMatrix(AkNode* node)
+    void Drawable::loadMatrix(AkNode* node, Drawable& primitive)
     {
         float* t1 = (float*)calloc(16, sizeof(float));
         float* t2 = (float*)calloc(16, sizeof(float));
         ak_transformCombineWorld(node, t1);
         ak_transformCombine(node, t2);
-        worldTransform = glm::make_mat4x4(t1);
-        localTransform = glm::make_mat4x4(t2);
+        primitive.worldTransform = glm::make_mat4x4(t1);
+        primitive.localTransform = glm::make_mat4x4(t2);
         free(t1);
         free(t2);
     }
 
     // TO DO: everything setup here should be placed in one class
-    void Drawable::processMesh(AkMeshPrimitive* primitive, Primitive& drawPrimitive)
+    void Drawable::processMesh(AkMeshPrimitive* primitive, Drawable& drawPrimitive)
     {
         if (primitive->indices) {
-            verticleIndecies = (uint32_t*)primitive->indices->items;
-            verticleIndeciesSize = (unsigned int)primitive->indices->count;
+            drawPrimitive.verticleIndecies = (uint32_t*)primitive->indices->items;
+            drawPrimitive.verticleIndeciesSize = (unsigned int)primitive->indices->count;
         }
 
         int set = primitive->input->set;
@@ -735,15 +735,13 @@ void Light::drawLight(
 
         /* === diff === */
 
-        accessor[AccessorTypes::POSITION] = pos ? pos->accessor : nullptr;
-        accessor[AccessorTypes::TEXTURES] = tex ? tex->accessor : nullptr;
-        accessor[AccessorTypes::NORMALS] = nor ? nor->accessor : nullptr;
-        accessor[AccessorTypes::WEIGTHS] = wgs ? wgs->accessor : nullptr;
-        accessor[AccessorTypes::JOINTS] = jts ? jts->accessor : nullptr;
-        accessor[AccessorTypes::COLORS] = col ? col->accessor : nullptr;
-        accessor[AccessorTypes::TANGENTS] = tan ? tan->accessor : nullptr;
-
-
+        drawPrimitive.accessor[POSITION] = pos ? pos->accessor : nullptr;
+        drawPrimitive.accessor[TEXTURES] = tex ? tex->accessor : nullptr;
+        drawPrimitive.accessor[NORMALS] = nor ? nor->accessor : nullptr;
+        drawPrimitive.accessor[WEIGTHS] = wgs ? wgs->accessor : nullptr;
+        drawPrimitive.accessor[JOINTS] = jts ? jts->accessor : nullptr;
+        drawPrimitive.accessor[COLORS] = col ? col->accessor : nullptr;
+        drawPrimitive.accessor[TANGENTS] = tan ? tan->accessor : nullptr;
 
         if (primitive->material) {
             AkMaterial* mat = primitive->material;
@@ -786,45 +784,6 @@ void Light::drawLight(
         }
     }
 
-    void Drawable::getLocation()
-    {
-        //GLuint& vertexProgram = programs[VERTEX];
-        //GLuint& fragmentProgram = programs[FRAGMENT];
-        //// TO DO
-        //mvpBindingLocation = glGetUniformLocation(vertexProgram, "MVP");
-        //normalsBindingLocation = glGetAttribLocation(vertexProgram, "vNor");
-        //vertexPosBindingLocation = glGetAttribLocation(vertexProgram, "vPos");
-        //textureBindingLocation = glGetAttribLocation(vertexProgram, "vTex");
-        //prjBindingLocation = glGetUniformLocation(vertexProgram, "PRJ");
-        //cameraBindingLocation = glGetUniformLocation(fragmentProgram, "camera");
-        //gBindingLocation = glGetUniformLocation(fragmentProgram, "G");
-        //camDirBindingLocation = glGetUniformLocation(fragmentProgram, "direction");
-        //metalicBindingLocation = glGetUniformLocation(fragmentProgram, "_metalic");
-        //roughnessBindingLocation = glGetUniformLocation(fragmentProgram, "_roughness");
-        //albedoBindingLocation = glGetUniformLocation(fragmentProgram, "_albedo_color");
-        //aoBindingLocation = glGetUniformLocation(fragmentProgram, "ao_color");
-
-        //isTexBindingLocation = glGetUniformLocation(fragmentProgram, "_is_tex_bound");
-
-
-        //if (mvpBindingLocation != -1) glEnableVertexAttribArray(mvpBindingLocation);
-        //if (vertexPosBindingLocation != -1) glEnableVertexAttribArray(vertexPosBindingLocation);
-        //if (normalsBindingLocation != -1) glEnableVertexAttribArray(normalsBindingLocation);
-        //if (textureBindingLocation != -1) glEnableVertexAttribArray(textureBindingLocation);
-        //if (isTexBindingLocation != -1) glEnableVertexAttribArray(isTexBindingLocation);
-        //if (prjBindingLocation != -1) glEnableVertexAttribArray(prjBindingLocation);
-        //if (cameraBindingLocation != -1) glEnableVertexAttribArray(cameraBindingLocation);
-
-        //if (metalicBindingLocation != -1) glEnableVertexAttribArray(metalicBindingLocation);
-        //if (roughnessBindingLocation != -1) glEnableVertexAttribArray(roughnessBindingLocation);
-        //if (albedoBindingLocation != -1) glEnableVertexAttribArray(albedoBindingLocation);
-        //if (aoBindingLocation != -1) glEnableVertexAttribArray(aoBindingLocation);
-
-        //if (vertexPosBindingLocation != -1) format_attribute(vertexPosBindingLocation, pos);
-        //if (normalsBindingLocation != -1) format_attribute(normalsBindingLocation, nor);
-        //if (textureBindingLocation != -1) format_attribute(textureBindingLocation, tex);
-        //glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
-    }
 
 
     void Drawable::allocUnique()
@@ -905,13 +864,13 @@ void Light::drawLight(
         }
     }
 
-    void Drawable::processNode(AkNode* node, std::vector<Primitive>& primitives)
+    void Drawable::processNode(AkNode* node, std::vector<Drawable>& primitives)
     {
-        Primitive drawPrimitive;
+        Drawable drawPrimitive;
         //drawPrimitive.createPipeline();
         drawPrimitive.createSamplers();
         drawPrimitive.createTextures();
-        loadMatrix(node);
+        loadMatrix(node, drawPrimitive);
         if (node->geometry) {
             AkGeometry* geometry = ak_instanceObjectGeom(node);
             AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
@@ -953,8 +912,172 @@ void Light::drawLight(
         //allocAll(doc);
     }
 
-    void Drawable::draw(int width, int height, glm::mat4 Proj, AkCamera* camera) {
+    void Drawable::draw(
+        GLuint& lights_buffer,
+        std::map <void*, unsigned int>& bufferViews,
+        GLuint* buffers,
+        glm::vec3& eye,
+        glm::mat4& LookAt,
+        glm::mat4& Projection,
+        glm::vec3& translate,
+        glm::vec3& rotate)
+    {
+        //glm::vec3 eye;
+        //glm::mat4 LookAt, Projection;
+        //glm::vec3 translate, rotate;
 
+        glBindProgramPipeline(pipeline);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lights_buffer);
+
+        glm::mat4 View =
+            glm::rotate(
+                glm::rotate(
+                    glm::translate( localTransform
+                        , translate)
+                    , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+                rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
+        glm::mat4 MVP = LookAt * View * Model;
+        glm::vec3 camera_view = glm::vec4(eye, 1.0);
+        glm::vec3 camera_dir = glm::vec3(0.) - eye;
+
+        glProgramUniformMatrix4fv(programs[VERTEX], mvpBindingLocation, 1, GL_FALSE, glm::value_ptr(MVP));
+        glProgramUniformMatrix4fv(programs[VERTEX], prjBindingLocation, 1, GL_FALSE, glm::value_ptr(Projection));
+        glProgramUniform3fv(programs[FRAGMENT], cameraBindingLocation, 1, glm::value_ptr(camera_view));
+        glProgramUniform1f(programs[FRAGMENT], gBindingLocation, panelConfig.g);
+        glProgramUniform3fv(programs[FRAGMENT], camDirBindingLocation, 1, glm::value_ptr(camera_dir));
+
+        {
+            glm::ivec4 isTex;
+            isTex.r = textures[MET_ROUGH] ? 1 : 0;
+            isTex.g = textures[MET_ROUGH] ? 1 : 0;
+            isTex.b = textures[ALBEDO] ? 1 : 0;
+            isTex.a = 0;
+            glProgramUniform4iv(programs[FRAGMENT], isTexBindingLocation, 1, glm::value_ptr(isTex));
+
+            glProgramUniform1f(programs[FRAGMENT], roughnessBindingLocation, colors[MET_ROUGH].r);
+            glProgramUniform1f(programs[FRAGMENT], metalicBindingLocation, colors[MET_ROUGH].g);
+            // glProgramUniform1f(programs[FRAGMENT], aoBindingLocation, colors[AO].x);
+            glProgramUniform4fv(programs[FRAGMENT], albedoBindingLocation, 1, glm::value_ptr(colors[ALBEDO]));
+        }
+
+        int j = bufferViews[accessor[POSITION]->buffer];
+        int binding_point = 0;
+        glVertexAttribBinding(vertexPosBindingLocation, binding_point);
+        glBindVertexBuffer(binding_point, buffers[j], accessor[POSITION]->byteOffset, accessor[POSITION]->componentBytes);
+
+        if (normalsBindingLocation != -1) {
+            j = bufferViews[accessor[NORMALS]->buffer];
+            binding_point = 1;
+            glVertexAttribBinding(normalsBindingLocation, binding_point);
+            glBindVertexBuffer(binding_point, buffers[j], accessor[NORMALS]->byteOffset, accessor[NORMALS]->componentBytes);
+        }
+
+        if (textureBindingLocation != -1) {
+            j = bufferViews[accessor[TEXTURES]->buffer];
+            binding_point = 2;
+            glVertexAttribBinding(textureBindingLocation, binding_point);
+            glBindVertexBuffer(binding_point, buffers[j], accessor[TEXTURES]->byteOffset, accessor[TEXTURES]->componentBytes);
+        }
+        for (unsigned int type = AMBIENT; type < TT_SIZE; type++) {
+            GLuint sampler = samplers[(TextureType)type];
+            GLuint texture = textures[(TextureType)type];
+            if (sampler && texture) {
+                //glProgramUniform1ui(programs[FRAGMENT], is_tex_location, GL_TRUE);
+                glBindSampler(type, sampler);
+                glActiveTexture(GL_TEXTURE0 + type);
+                glBindTexture(texturesType[type], texture);
+            }
+            else {
+                glActiveTexture(GL_TEXTURE0 + type);
+                glBindTexture(GL_TEXTURE_2D, 0); // needs change
+            }
+
+            /*
+            else {
+                glProgramUniform1ui(programs[FRAGMENT], is_tex_location, GL_FALSE);
+            }*/
+        }
+
+        glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
+    }
+
+
+    void Drawable::deleteTransforms()
+    {
+    }
+
+
+    void Drawable::getLocation()
+    {
+        GLuint& vertexProgram = programs[VERTEX];
+        GLuint& fragmentProgram = programs[FRAGMENT];
+        // TO DO
+        mvpBindingLocation = glGetUniformLocation(vertexProgram, "MVP");
+        normalsBindingLocation = glGetAttribLocation(vertexProgram, "vNor");
+        vertexPosBindingLocation = glGetAttribLocation(vertexProgram, "vPos");
+        textureBindingLocation = glGetAttribLocation(vertexProgram, "vTex");
+        prjBindingLocation = glGetUniformLocation(vertexProgram, "PRJ");
+        cameraBindingLocation = glGetUniformLocation(fragmentProgram, "camera");
+        gBindingLocation = glGetUniformLocation(fragmentProgram, "G");
+        camDirBindingLocation = glGetUniformLocation(fragmentProgram, "direction");
+        metalicBindingLocation = glGetUniformLocation(fragmentProgram, "_metalic");
+        roughnessBindingLocation = glGetUniformLocation(fragmentProgram, "_roughness");
+        albedoBindingLocation = glGetUniformLocation(fragmentProgram, "_albedo_color");
+        aoBindingLocation = glGetUniformLocation(fragmentProgram, "ao_color");
+
+        isTexBindingLocation = glGetUniformLocation(fragmentProgram, "_is_tex_bound");
+
+
+        if (mvpBindingLocation != 0xFFFFFFFF) glEnableVertexAttribArray(mvpBindingLocation);
+        if (vertexPosBindingLocation != 0xFFFFFFFF) glEnableVertexAttribArray(vertexPosBindingLocation);
+        if (normalsBindingLocation != 0xFFFFFFFF) glEnableVertexAttribArray(normalsBindingLocation);
+        if (textureBindingLocation != 0xFFFFFFFF) glEnableVertexAttribArray(textureBindingLocation);
+        if (isTexBindingLocation != 0xFFFFFFFF) glEnableVertexAttribArray(isTexBindingLocation);
+        if (prjBindingLocation != 0xFFFFFFFF) glEnableVertexAttribArray(prjBindingLocation);
+        if (cameraBindingLocation != 0xFFFFFFFF) glEnableVertexAttribArray(cameraBindingLocation);
+
+        if (metalicBindingLocation != 0xFFFFFFFF) glEnableVertexAttribArray(metalicBindingLocation);
+        if (roughnessBindingLocation != 0xFFFFFFFF) glEnableVertexAttribArray(roughnessBindingLocation);
+        if (albedoBindingLocation != 0xFFFFFFFF) glEnableVertexAttribArray(albedoBindingLocation);
+        if (aoBindingLocation != 0xFFFFFFFF) glEnableVertexAttribArray(aoBindingLocation);
+
+        if (vertexPosBindingLocation != 0xFFFFFFFF) format_attribute(vertexPosBindingLocation, accessor[POSITION]);
+        if (normalsBindingLocation != 0xFFFFFFFF) format_attribute(normalsBindingLocation, accessor[NORMALS]);
+        if (textureBindingLocation != 0xFFFFFFFF) format_attribute(textureBindingLocation, accessor[TEXTURES]);
+        //glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
+    }
+
+    GLuint* Drawable::createTextures()
+    {
+        textures = (GLuint*)calloc(8, sizeof(GLuint));
+        if (textures) memset(textures, 0, sizeof(GLuint) * 8);
+        texturesType = (GLuint*)calloc(8, sizeof(GLuint));
+        if (texturesType) memset(texturesType, 0, sizeof(GLuint) * 8);
+        return textures;
+    }
+
+    GLuint* Drawable::createSamplers()
+    {
+        samplers = (GLuint*)calloc(8, sizeof(GLuint));
+        if (samplers) memset(samplers, 0, sizeof(GLuint) * 8);
+        return samplers;
+    }
+
+    void Drawable::deleteTexturesAndSamplers()
+    {
+        if (textures) {
+            glDeleteTextures(8, textures);
+            free(textures);
+        }
+        if (texturesType) {
+            free(texturesType);
+        }
+        if (samplers) {
+            glDeleteSamplers(8, samplers);
+            free(samplers);
+        }
     }
 
 
@@ -1002,7 +1125,7 @@ void Light::drawLight(
         for (auto& primitive : primitives) {
             //primitive.deletePrograms();
             //primitive.deletePipeline();
-            primitive.deleteTexturesAndSamplers();
+            //primitive.deleteTexturesAndSamplers();
         }
     }
 

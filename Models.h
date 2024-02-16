@@ -39,18 +39,18 @@ enum AccessorTypes {
 
 enum DrawShader {
     DRAW_VERTEX = GL_VERTEX_SHADER,
+    DRAW_FRAGMENT = GL_FRAGMENT_SHADER,
     DRAW_TESS_CTR = GL_TESS_CONTROL_SHADER,
     DRAW_TESS_EV = GL_TESS_EVALUATION_SHADER,
-    DRAW_GEOMETRY = GL_GEOMETRY_SHADER,
-    DRAW_FRAGMENT = GL_FRAGMENT_SHADER
+    DRAW_GEOMETRY = GL_GEOMETRY_SHADER
 };
 
 enum DrawShaderBit {
     DRAW_VERTEX_BIT = GL_VERTEX_SHADER_BIT,
+    DRAW_FRAGMENT_BIT = GL_FRAGMENT_SHADER_BIT,
     DRAW_TESS_CTR_BIT = GL_TESS_CONTROL_SHADER_BIT,
     DRAW_TESS_EV_BIT = GL_TESS_EVALUATION_SHADER_BIT,
-    DRAW_GEOMETRY_BIT = GL_GEOMETRY_SHADER_BIT,
-    DRAW_FRAGMENT_BIT = GL_FRAGMENT_SHADER_BIT
+    DRAW_GEOMETRY_BIT = GL_GEOMETRY_SHADER_BIT
 };
 
 
@@ -189,19 +189,46 @@ struct Drawable {
 
     GLuint vao;
 
-    DrawShader ds[5] = { DRAW_VERTEX, DRAW_TESS_CTR, DRAW_TESS_EV, DRAW_GEOMETRY, DRAW_FRAGMENT };
-    DrawShaderBit dsb[5] = { DRAW_VERTEX_BIT, DRAW_TESS_CTR_BIT, DRAW_TESS_EV_BIT , DRAW_GEOMETRY_BIT, DRAW_FRAGMENT_BIT };
+    DrawShader ds[5] = { DRAW_VERTEX, DRAW_FRAGMENT, DRAW_TESS_CTR, DRAW_TESS_EV, DRAW_GEOMETRY };
+    DrawShaderBit dsb[5] = { DRAW_VERTEX_BIT, DRAW_FRAGMENT_BIT, DRAW_TESS_CTR_BIT, DRAW_TESS_EV_BIT , DRAW_GEOMETRY_BIT };
 
     virtual void createPipeline(std::string shaderPath[5]);
     virtual void deletePipeline();
-    virtual void loadMatrix(AkNode* node);
-    virtual void processMesh(AkMeshPrimitive* primitive, Primitive& drawPrimitive);
-    virtual void getLocation();
+    virtual void loadMatrix(AkNode* node, Drawable& primitive);
+    virtual void processMesh(AkMeshPrimitive* primitive, Drawable& drawPrimitive);
     void allocUnique();
     void allocAll(AkDoc* doc);
-    void processNode(AkNode* node, std::vector<Primitive>& primitives);
+    void processNode(AkNode* node, std::vector<Drawable>& primitives);
     virtual void loadMesh(std::string scenePath, std::string sceneName);
-    void draw(int width, int height, glm::mat4 Proj, AkCamera* camera);
+    void draw(
+        GLuint& lights_buffer,
+        std::map <void*, unsigned int>& bufferViews,
+        GLuint* buffers,
+        glm::vec3& eye,
+        glm::mat4& LookAt,
+        glm::mat4& Projection,
+        glm::vec3& translate,
+        glm::vec3& rotate);
+
+    GLuint mvpBindingLocation,
+        prjBindingLocation,
+        cameraBindingLocation,
+        gBindingLocation,
+        isTexBindingLocation,
+        camDirBindingLocation,
+        vertexPosBindingLocation,
+        normalsBindingLocation,
+        textureBindingLocation;
+    GLuint metalicBindingLocation,
+        roughnessBindingLocation,
+        albedoBindingLocation,
+        aoBindingLocation;
+
+    void getLocation();
+    GLuint* createTextures();
+    GLuint* createSamplers();
+    void deleteTexturesAndSamplers();
+    void deleteTransforms();
 };
 
 
@@ -209,8 +236,8 @@ struct Drawable {
 struct Scene {
     ~Scene();
 
-    std::vector<Primitive> primitives;
-    //std::vector<Drawable> primitives;
+    //std::vector<Primitive> primitives;
+    std::vector<Drawable> primitives;
     std::map <void*, unsigned int> bufferViews;
     std::map <void*, unsigned int> textureViews;
     std::map <void*, unsigned int> imageViews;

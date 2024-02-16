@@ -127,7 +127,7 @@ int main(void)
     cld.loadMesh();
     cld.createPipeline(windowConfig.width, windowConfig.height);
 
-    std::vector<Primitive> primitives;
+    //std::vector<Primitive> primitives;
     std::vector<PointLight> lightsData;
     //std::vector<Camera> cameras;
     panelConfig.lightsData = &lightsData;
@@ -135,25 +135,9 @@ int main(void)
 
     /* ================================================ */
     do{
-        //primitives.clear();
-        //lightsData.clear();
         ////ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
-
-        //AkDoc* doc;
-        //AkVisualScene* scene;
-
-        //std::string scenePath = panelConfig.getModelPath();
-        //scenePath += panelConfig.getModelName();
-        //if (ak_load(&doc, scenePath.c_str(), NULL) != AK_OK) {
-        //    logger.error("Document couldn't be loaded\n");
-        //    exit(EXIT_FAILURE);
-        //}
-        //else {
-        //    logger.info(print_coord_system(doc->coordSys));
-        //    logger.info(print_doc_information(doc->inf, doc->unit));
-        //    logger.info("==============================================================================\n");
-        //}
-
+        lightsData.clear();
+        
         AkDoc* doc = scenes.loadScene(panelConfig.getModelPath(), panelConfig.getModelName());
         AkVisualScene* scene;
         
@@ -162,16 +146,9 @@ int main(void)
         glm::mat4 Projection;
         if (doc->scene.visualScene) {
             scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
-            //logger.info("=========================== Visual Scene loaded ==================================================\n");
-            //if (scene->name) {
-            //    std::string sceneInfo = "======================== Scene name: ";
-            //    sceneInfo += scene->name;
-            //    sceneInfo += "========================\n";
-            //    logger.info(sceneInfo);
-            //}
+
             float cameraView[16];
             float cameraProjection[16];
-
             ak_firstCamera(doc, &camera, cameraView, cameraProjection);
             if (camera) {
                 View = glm::make_mat4x4(cameraView);
@@ -183,62 +160,16 @@ int main(void)
                 }
             }
             if (camera) std::cout << "Camera name: " << camera->name << std::endl;
-
-
-            //AkNode* node = ak_instanceObjectNode(scene->node);
-            //proccess_node(node, primitives); // pointer to pointer?
         }
 
         
         scenes.allocAll(doc);
 
-        //std::map <void*, unsigned int> bufferViews;
-        //std::map <void*, unsigned int> textureViews;
-        //std::map <void*, unsigned int> imageViews;
-        //bufferViews.clear();
-        //textureViews.clear();
-        //imageViews.clear();
-
-        //// What with and libimages ??
-        //int j = 0;
-        //FListItem* i = doc->lib.images;
-        //if (i) {
-        //    do {
-        //        AkImage* img = (AkImage*)i->data;
-        //        imageViews.insert({ {img, 0} });
-        //        i = i->next;
-        //    } while (i);
-        //    for (auto& u : imageViews) {
-        //        u.second = j++;
-        //    }
-        //}
-
-        //j = 0;
-        //FListItem* t = doc->lib.textures;
-        //if (t) {
-        //    do {
-        //        AkTexture* tex = (AkTexture*)t->data;
-        //        textureViews.insert({ {tex, 0} });
-        //        t = t->next;
-        //    } while (t);
-        //    for (auto& u : textureViews) {
-        //        u.second = j++;
-        //    }
-        //}
-
-        //j = 0;
-        //FListItem* b = (FListItem*)doc->lib.buffers;
-        //if (b) {
-        //    do {
-        //        AkBuffer* buf = (AkBuffer*)b->data;
-        //        bufferViews.insert({ {buf, 0} });
-        //        b = b->next;
-        //    } while (b);
-        //    for (auto& u : bufferViews) {
-        //        u.second = j++;
-        //    }
-        //}
-
+        std::vector<Drawable>& primitives = scenes.primitives;
+        std::string pipeline[5];
+        pipeline[VERTEX] = { "res/shaders/standard_vec.glsl" };
+        pipeline[FRAGMENT] = { "res/shaders/pbr_with_ext_light_frag.glsl" };
+        for (auto& p : primitives) p.createPipeline(pipeline);
         std::map <void*, unsigned int>& bufferViews = scenes.bufferViews;
         /* ======================================================== */
 
