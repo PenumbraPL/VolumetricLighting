@@ -53,3 +53,11 @@ struct ConfigContext{
 
 void drawLeftPanel(ImGuiIO& io, ConfigContext& config);
 void drawRightPanel(ImGuiIO& io, ConfigContext& config);
+
+class GUI {
+public:
+    GUI();
+
+private:
+    ImGuiIO& io;
+};

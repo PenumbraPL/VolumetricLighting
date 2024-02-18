@@ -20,3 +20,8 @@ char* read_file(const char* file_name);
 std::string print_coord_system(AkCoordSys* coord);
 std::string print_doc_information(AkDocInf* inf, AkUnit* unit);
 GLint check_pipeline_status(GLuint vertex_shader, GLuint fragment_shader);
+
+/* ============================== */
+void setPointer(GLuint program, GLint& mvpBindingLocation, GLint& vertexPosBindingLocation, GLint& vcol_location);
+void setPointer2(GLuint program, GLint& mvpBindingLocation, GLint& vertexPosBindingLocation, GLint& vcol_location);
+void setPointer3(GLuint program, GLint& mvpBindingLocation, GLint& vertexPosBindingLocation, GLint& vcol_location);

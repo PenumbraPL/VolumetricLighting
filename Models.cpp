@@ -673,7 +673,7 @@ void Light::drawLight(
 
         glGenVertexArrays(1, &vao);
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = VERTEX; i <= GEOMETRY; i++) {
             if (!shaderPath[i].empty()) {
                 shader[i] = read_file(shaderPath[i].c_str());
                 if (!shader[i]) {
@@ -695,14 +695,15 @@ void Light::drawLight(
 
     void Drawable::deletePipeline()
     {
-        for (int i = 0; i < 5; i++) {
-            if(programs[i]) glDeleteProgram(programs[i]);
+        glBindProgramPipeline(0);
+
+        for (int i = VERTEX; i <= GEOMETRY; i++) {
+            if (programs[i]) glDeleteProgram(programs[i]);
         } // program[i] == 0 ?
 
-        glBindProgramPipeline(0);
         glDeleteProgramPipelines(1, &pipeline);
         glDeleteVertexArrays(1, &vao);
-    }
+    } // delete(primtitiveDataBuffer)?
     
     void Drawable::loadMatrix(AkNode* node)
     {
@@ -793,23 +794,47 @@ void Light::drawLight(
 
     void Drawable::allocUnique()
     {
-        unsigned int bs = std::size(accessor) - std::count(std::begin(accessor), std::end(accessor), nullptr);
+        //unsigned int bs = std::size(accessor) - std::count(std::begin(accessor), std::end(accessor), nullptr);
         //check what is avalable and insert it into gpu buffer
-        primitiveDataBuffer = (GLuint*)calloc(bs, sizeof(GLuint));
-        // delete
-        if (primitiveDataBuffer) {
-            glCreateBuffers(bs, primitiveDataBuffer);
+        //glCreateBuffers(bs, primitiveDataBuffer);
+        //primitiveDataBuffer = (GLuint*)calloc(bs, sizeof(GLuint));
+        //// delete
+        //if (primitiveDataBuffer) {
             // is nessesery ?
-            int i = 0;
-            for (auto& a : accessor) {
-                if (a) {
-                    glNamedBufferData(primitiveDataBuffer[i++], a->buffer->length, a->buffer->data, GL_STATIC_DRAW);
+            
+            for (int i = 0; i < 7; i++) {
+                if (accessor[i]) {
+                    glCreateBuffers(1, &primitiveDataBuffer[i]);
+                    glNamedBufferData(primitiveDataBuffer[i], accessor[i]->buffer->length, accessor[i]->buffer->data, GL_STATIC_DRAW);
                 }
             }
-        }
+        //}
     }
 
-
+    void Drawable::bindVertexArray()
+    {
+        if (vertexPosBindingLocation != 0xFFFFFFFF) {
+            format_attribute(vertexPosBindingLocation, accessor[POSITION]);
+            glEnableVertexArrayAttrib(vao, vertexPosBindingLocation);
+        }
+        else {
+            glDisableVertexArrayAttrib(vao, vertexPosBindingLocation);
+        }
+        if (normalsBindingLocation != 0xFFFFFFFF) {
+            format_attribute(normalsBindingLocation, accessor[NORMALS]);
+            glEnableVertexArrayAttrib(vao, normalsBindingLocation);
+        }
+        else {
+            glDisableVertexArrayAttrib(vao, normalsBindingLocation);
+        }
+        if (textureBindingLocation != 0xFFFFFFFF) {
+            format_attribute(textureBindingLocation, accessor[TEXTURES]);
+            glEnableVertexArrayAttrib(vao, textureBindingLocation);
+        }
+        else {
+            glDisableVertexArrayAttrib(vao, textureBindingLocation);
+        }
+    }
 
     void Drawable::draw(
         GLuint& lights_buffer,
@@ -819,21 +844,23 @@ void Light::drawLight(
         glm::mat4& MVP,
         glm::mat4& Projection)
     {
+        bindVertexArray();
+
         glBindVertexArray(vao);
         glBindProgramPipeline(pipeline);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lights_buffer);
 
-        glm::vec3 camera_view = glm::vec4(eye, 1.0);
+        glm::vec3 camera_view = eye;
         glm::vec3 camera_dir = glm::vec3(0.) - eye;
 
-        glm::mat4 MVPPos = MVP * localTransform;
+        glm::mat4 MVPPos = MVP * localTransform; // check is it correct?
 
         glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MVPPos));
         glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(Projection));
         glProgramUniform3fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][0], 1, glm::value_ptr(camera_view));
-        glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][1], panelConfig.g);
-        glProgramUniform3fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][2], 1, glm::value_ptr(camera_dir));
+        //glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][1], panelConfig.g);
+        //glProgramUniform3fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][1], 1, glm::value_ptr(camera_dir));
 
         {
             glm::ivec4 isTex;
@@ -842,11 +869,11 @@ void Light::drawLight(
             isTex.b = textures[ALBEDO] ? 1 : 0;
             isTex.a = 0;
 
-            glProgramUniform4iv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][7], 1, glm::value_ptr(isTex));
-            glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][4], colors[MET_ROUGH].r);
-            glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][3], colors[MET_ROUGH].g);
-            // glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][6], colors[AO].x);
-            glProgramUniform4fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][5], 1, glm::value_ptr(colors[ALBEDO]));
+            glProgramUniform4iv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][5], 1, glm::value_ptr(isTex));
+            glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][2], colors[MET_ROUGH].r);
+            glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][1], colors[MET_ROUGH].g);
+            //glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][4], colors[AO].x);
+            glProgramUniform4fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][3], 1, glm::value_ptr(colors[ALBEDO]));
         }
 
         // if ?
@@ -893,26 +920,24 @@ void Light::drawLight(
 
     void Drawable::getLocation(std::vector<const char*> uniformNames[5])
     {
-        bindingLocationIndecies = (GLuint**) calloc(5 , sizeof(GLuint*));
         for (int i = VERTEX; i <= GEOMETRY; i++) {
-            if(uniformNames[i].size()) bindingLocationIndecies[i] = (GLuint*) calloc(uniformNames[i].size(), sizeof(GLuint));
-            glGetUniformIndices(programs[i], uniformNames[i].size(), uniformNames[i].data(), bindingLocationIndecies[i]);
-        }
-
-        for (int i = VERTEX; i <= GEOMETRY; i++) {
-            for (int j = 0; j < uniformNames[i].size(); j++) {
-                if (bindingLocationIndecies[i][j] != 0xFFFFFFFF) {
-                    glEnableVertexAttribArray(bindingLocationIndecies[i][j]);
-                }
+            if (uniformNames[i].size()) {
+                bindingLocationIndecies[i] = (GLuint*)calloc(uniformNames[i].size(), sizeof(GLuint));
+                glGetUniformIndices(programs[i], uniformNames[i].size(), uniformNames[i].data(), bindingLocationIndecies[i]);
             }
         }
+
+        //for (int i = VERTEX; i <= GEOMETRY; i++) {
+        //    for (int j = 0; j < uniformNames[i].size(); j++) {
+        //        if (bindingLocationIndecies[i][j] != 0xFFFFFFFF) {
+        //            glEnableVertexAttribArray(bindingLocationIndecies[i][j]);
+        //        }
+        //    }
+        //}
         vertexPosBindingLocation = glGetAttribLocation(programs[VERTEX], "vPos");
         normalsBindingLocation = glGetAttribLocation(programs[VERTEX], "vNor");
         textureBindingLocation = glGetAttribLocation(programs[VERTEX], "vTex");
 
-        if (vertexPosBindingLocation != 0xFFFFFFFF) format_attribute(vertexPosBindingLocation, accessor[POSITION]);
-        if (normalsBindingLocation != 0xFFFFFFFF) format_attribute(normalsBindingLocation, accessor[NORMALS]);
-        if (textureBindingLocation != 0xFFFFFFFF) format_attribute(textureBindingLocation, accessor[TEXTURES]);
         //glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
     }
 
@@ -1311,6 +1336,385 @@ void Cloud::draw(
     binding_point = 1;
     glVertexAttribBinding(vtex_location, binding_point);
     glBindVertexBuffer(binding_point, primitiveDataBuffer[binding_point], tex->accessor->byteOffset, tex->accessor->componentBytes);
+
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
+    glDisable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+}
+
+
+
+
+
+/* ====================================== */
+
+void L::loadMesh()
+{
+    AkDoc* doc;
+    AkVisualScene* scene;
+
+    std::string scene_path = "res/models/";
+    scene_path += "lamp.gltf";
+    if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
+        logger.error("Light mesh couldn't be loaded\n");
+        return;
+    }
+    if (!doc->scene.visualScene) {
+        logger.error("Light mesh couldn't be loaded\n");
+        return;
+    }
+
+    scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
+    AkNode* node = ak_instanceObjectNode(scene->node);
+    loadMatrix(node);
+
+    if (node->geometry) {
+        AkGeometry* geometry = ak_instanceObjectGeom(node);
+        AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
+        if ((AkGeometryType)geometry->gdata->type) {
+            if (mesh) {
+                processMesh(mesh->primitive);
+                allocUnique();
+            };
+        }
+    }
+}
+//
+//void L::getLocation(std::vector<const char*> uniformNames[5])
+//{
+//
+//}
+//mvpBindingLocation = glGetUniformLocation(vertexProgram, "MVP");
+//GLuint vcol_location = glGetAttribLocation(vertexProgram, "vCol");
+//GLuint vertexPosBindingLocation = glGetAttribLocation(vertexProgram, "vPos");
+
+//if (vertexPosBindingLocation != -1) format_attribute(vertexPosBindingLocation, pos->accessor);
+//if (vcol_location != -1) format_attribute(vcol_location, nor->accessor);
+
+//if (mvpBindingLocation != -1) glEnableVertexAttribArray(mvpBindingLocation);
+//if (vertexPosBindingLocation != -1) glEnableVertexAttribArray(vertexPosBindingLocation);
+//if (vcol_location != -1) glEnableVertexAttribArray(vcol_location);
+
+
+void L::draw(
+    GLuint& lights_buffer,
+    std::map <void*, unsigned int>& bufferViews,
+    GLuint* docDataBuffer,
+    glm::vec3& eye,
+    glm::mat4& MVP,
+    glm::mat4& Projection)
+{
+    //std::vector<const char*> uniformNames[5] = { {"MVP"}, {}, {}, {}, {} };
+    //getLocation(uniformNames);
+
+    //float r = 0.1f * panelConfig.viewDistance;
+    //float phi = panelConfig.viewPhi;
+    //float theta = panelConfig.viewTheta;
+
+    //glm::mat4x4 Projection;
+
+    //glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
+    //eye = glm::vec3(eye.z, eye.y, eye.x);
+
+    //glm::vec3 north = glm::vec3(0., 1., 0.);
+    //float correctedTheta = glm::fmod(glm::abs(theta), 6.28f);
+    //if (correctedTheta > 3.14 / 2. && correctedTheta < 3.14 * 3. / 2.) {
+    //    north = glm::vec3(0., -1., 0.);
+    //}
+
+    //glm::vec3 translate = glm::vec3(panelConfig.xTranslate * 0.1, panelConfig.yTranslate * 0.1, panelConfig.zTranslate * 0.1);
+    //glm::vec3 rotate = glm::vec3(3.14 * panelConfig.xRotate / 180, 3.14 * panelConfig.yRotate / 180, 0.f);
+
+
+
+    //glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
+    //if (!camera) Projection = glm::perspectiveFov((float)3.14 * panelConfig.fov / 180, (float)width, (float)height, panelConfig.zNear, panelConfig.zFar);
+    //else Projection = Proj;
+
+
+    //glm::mat4 View =
+    //    glm::rotate(
+    //        glm::rotate(
+    //            glm::translate(
+    //                transform//localTransform
+    //                , translate)
+    //            , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+    //        rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+    //glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.2f));
+    //glm::mat4 MVP = Projection * LookAt * View * Model;
+
+    bindVertexArray();
+    GLuint vcolLocation = glGetAttribLocation(programs[VERTEX], "vCol");
+    if (vcolLocation != 0xFFFFFFFF) {
+        //format_attribute(vcolLocation, accessor[COLORS]);
+        glEnableVertexArrayAttrib(vao, vcolLocation);
+    }
+    glBindVertexArray(vao);
+    glBindProgramPipeline(pipeline);
+
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MVP));
+
+    int binding_point = 0;
+    glVertexAttribBinding(vertexPosBindingLocation, binding_point);
+    glBindVertexBuffer(binding_point, primitiveDataBuffer[POSITION], accessor[POSITION]->byteOffset, accessor[POSITION]->componentBytes);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+
+
+void E::loadMesh()
+{
+    AkDoc* doc;
+    AkVisualScene* scene;
+
+    std::string scene_path = "res/models/environment/";
+    scene_path += "env_sphere.gltf";
+
+    if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
+        logger.error("Environment mesh couldn't be loaded\n");
+        return;
+    }
+    if (!doc->scene.visualScene) {
+        logger.error("Environment mesh couldn't be loaded\n");
+        return;
+    }
+
+    scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
+    AkNode* node = ak_instanceObjectNode(scene->node);
+    loadMatrix(node);
+
+    if (node->geometry) {
+        AkGeometry* geometry = ak_instanceObjectGeom(node);
+        AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
+        if ((AkGeometryType)geometry->gdata->type) {
+            if (mesh) {
+                processMesh(mesh->primitive);
+                allocUnique();
+            }
+        }
+    }
+
+    glCreateTextures(GL_TEXTURE_2D, 1, &skybox);
+    int width, height, comp;
+    char* skybox_image = (char*)imageLoadFromFile("res/models/environment/Environment.jpg", &width, &height, &comp);
+    glTextureStorage2D(skybox, 1, GL_RGB8, width, height);
+    glTextureSubImage2D(skybox, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, skybox_image);
+
+    stbi_image_free(skybox_image);
+    glGenSamplers(1, &env_sampler);
+    glSamplerParameteri(env_sampler, GL_TEXTURE_WRAP_S, GL_CLAMP);
+    glSamplerParameteri(env_sampler, GL_TEXTURE_WRAP_T, GL_CLAMP);
+    glSamplerParameteri(env_sampler, GL_TEXTURE_WRAP_R, GL_CLAMP);
+    glSamplerParameteri(env_sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glSamplerParameteri(env_sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+}
+
+//mvpBindingLocation = glGetUniformLocation(vertexProgram, "MVP");
+//GLuint textureBindingLocation = glGetAttribLocation(vertexProgram, "vTex");
+//GLuint vertexPosBindingLocation = glGetAttribLocation(vertexProgram, "vPos");
+//
+//if (vertexPosBindingLocation != -1) format_attribute(vertexPosBindingLocation, pos->accessor);
+//if (textureBindingLocation != -1) format_attribute(textureBindingLocation, tex->accessor);
+//
+//if (mvpBindingLocation != -1) glEnableVertexAttribArray(mvpBindingLocation);
+//if (vertexPosBindingLocation != -1) glEnableVertexAttribArray(vertexPosBindingLocation);
+//if (textureBindingLocation != -1) glEnableVertexAttribArray(textureBindingLocation);
+
+
+void E::draw(
+    GLuint& lights_buffer,
+    std::map <void*, unsigned int>& bufferViews,
+    GLuint* docDataBuffer,
+    glm::vec3& eye,
+    glm::mat4& MVP,
+    glm::mat4& Projection)
+{
+
+
+    //float r = 0.1f * panelConfig.viewDistance;
+    //float phi = panelConfig.viewPhi;
+    //float theta = panelConfig.viewTheta;
+
+    //glm::mat4x4 Projection;
+
+    //glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
+    //eye = glm::vec3(eye.z, eye.y, eye.x);
+
+    //glm::vec3 north = glm::vec3(0., 1., 0.);
+    //float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
+    //if (corrected_theta > 3.14 / 2. && corrected_theta < 3.14 * 3. / 2.) {
+    //    north = glm::vec3(0., -1., 0.);
+    //}
+
+    //glm::vec3 translate = glm::vec3(0., 0., 0.);// glm::vec3(panelConfig.tr_x * 0.1, panelConfig.tr_y * 0.1, panelConfig.tr_z * 0.1);
+    //glm::vec3 rotate = glm::vec3(0., 0., 0.);//glm::vec3(3.14 * panelConfig.xRotate / 180, 3.14 * panelConfig.yRotate / 180, 0.f);
+
+    //glBindProgramPipeline(pipeline);
+
+    //glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
+    //if (!camera) Projection = glm::perspectiveFov((float)3.14 * panelConfig.fov / 180, (float)width, (float)height, panelConfig.zNear, panelConfig.zFar);
+    //else Projection = Proj;
+
+    //glm::mat4 View = glm::rotate(
+    //    glm::rotate(
+    //        glm::translate(
+    //            localTransform
+    //            , translate)
+    //        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+    //    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+    //glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
+    //MVP = Projection * LookAt * View * Model;
+
+    bindVertexArray();
+    glBindVertexArray(vao);
+    glBindProgramPipeline(pipeline);
+
+    glm::mat4 envMVP = MVP * localTransform;
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MVP));
+
+    int binding_point = 0;
+    glVertexAttribBinding(vertexPosBindingLocation, binding_point);
+    glBindVertexBuffer(binding_point, primitiveDataBuffer[POSITION], accessor[POSITION]->byteOffset, accessor[POSITION]->componentBytes);
+
+    binding_point = 1;
+    glVertexAttribBinding(textureBindingLocation, binding_point);
+    glBindVertexBuffer(binding_point, primitiveDataBuffer[TEXTURES], accessor[TEXTURES]->byteOffset, accessor[TEXTURES]->componentBytes);
+
+
+    glBindSampler(0, env_sampler);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, skybox);
+
+    glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
+}
+
+
+void C::loadMesh()
+{
+    AkDoc* doc;
+    AkVisualScene* scene;
+
+    std::string scene_path = "res/models/cube/";
+    scene_path += "Cube.gltf";
+    if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
+        logger.error("Cloud mesh couldn't be loaded\n");
+        return;
+    }
+    if (!doc->scene.visualScene) {
+        logger.error("Cloud mesh couldn't be loaded\n");
+        return;
+    }
+
+    scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
+    AkNode* node = ak_instanceObjectNode(scene->node);
+    loadMatrix(node);
+
+    if (node->geometry) {
+        AkGeometry* geometry = ak_instanceObjectGeom(node);
+        AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
+        if ((AkGeometryType)geometry->gdata->type) {
+            if (mesh) {
+                processMesh(mesh->primitive);
+                allocUnique();
+            };
+        }
+    }
+}
+
+//
+//mvpBindingLocation = glGetUniformLocation(vertexProgram, "MVP");
+//prjBindingLocation = glGetUniformLocation(vertexProgram, "PRJ");
+//GLuint gBindingLocation = glGetUniformLocation(fragmentProgram, "G");
+//GLuint cameraBindingLocation = glGetUniformLocation(fragmentProgram, "camera");
+//
+//GLuint vtex_location = glGetAttribLocation(vertexProgram, "vTex");
+//GLuint vertexPosBindingLocation = glGetAttribLocation(vertexProgram, "vPos");
+//
+//if (vertexPosBindingLocation != -1) format_attribute(vertexPosBindingLocation, pos->accessor);
+//if (vtex_location != -1) format_attribute(vtex_location, tex->accessor);
+//
+//if (mvpBindingLocation != -1) glEnableVertexAttribArray(mvpBindingLocation);
+//if (prjBindingLocation != -1) glEnableVertexAttribArray(prjBindingLocation);
+//if (vertexPosBindingLocation != -1) glEnableVertexAttribArray(vertexPosBindingLocation);
+//if (vtex_location != -1) glEnableVertexAttribArray(vtex_location);
+
+void C::draw(
+    GLuint& lights_buffer,
+    std::map <void*, unsigned int>& bufferViews,
+    GLuint* docDataBuffer,
+    glm::vec3& eye,
+    glm::mat4& MVP,
+    glm::mat4& Projection)
+{
+
+
+    //float r = 0.1f * panelConfig.viewDistance;
+    //float phi = panelConfig.viewPhi;
+    //float theta = panelConfig.viewTheta;
+
+    //glm::mat4x4 Projection;
+
+    //glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
+    //eye = glm::vec3(eye.z, eye.y, eye.x);
+
+    //glm::vec3 north = glm::vec3(0., 1., 0.);
+    //float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
+    //if (corrected_theta > 3.14 / 2. && corrected_theta < 3.14 * 3. / 2.) {
+    //    north = glm::vec3(0., -1., 0.);
+    //}
+
+    //glm::vec3 translate = glm::vec3(0., 0., 0.);// glm::vec3(panelConfig.tr_x * 0.1, panelConfig.tr_y * 0.1, panelConfig.tr_z * 0.1);
+    //glm::vec3 rotate = glm::vec3(0., 0., 0.);//glm::vec3(3.14 * panelConfig.xRotate / 180, 3.14 * panelConfig.yRotate / 180, 0.f);
+
+        //glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
+    //if (!camera) {
+    //    Projection = glm::perspectiveFov((float)3.14 * panelConfig.fov / 180, (float)width, (float)height, panelConfig.zNear, panelConfig.zFar);
+    //}
+    //else {
+    //    Projection = Proj;
+    //}
+
+    //glm::mat4 View =
+    //    glm::rotate(
+    //        glm::rotate(
+    //            glm::translate(
+    //                localTransform
+    //                , translate)
+    //            , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+    //        rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+    //glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f));
+    //MVP = LookAt * View * Model;
+
+    bindVertexArray();
+    glBindVertexArray(vao);
+    glBindProgramPipeline(pipeline);
+
+    glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][0], g);
+    glProgramUniform3fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][1], 1, glm::value_ptr(eye));
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightbuffer);
+
+
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MVP));
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(Projection));
+
+    for (unsigned int texturesType = AMBIENT; texturesType < TT_SIZE; texturesType++) {
+        glActiveTexture(GL_TEXTURE0 + texturesType);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    int binding_point = 0;
+    glVertexAttribBinding(vertexPosBindingLocation, binding_point);
+    glBindVertexBuffer(binding_point, primitiveDataBuffer[POSITION], accessor[POSITION]->byteOffset, accessor[POSITION]->componentBytes);
+
+    binding_point = 1;
+    glVertexAttribBinding(textureBindingLocation, binding_point);
+    glBindVertexBuffer(binding_point, primitiveDataBuffer[TEXTURES], accessor[TEXTURES]->byteOffset, accessor[TEXTURES]->componentBytes);
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);

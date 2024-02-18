@@ -4,9 +4,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "pch.h"
 
+//#include "backends/imgui_impl_glfw.h"
+//#include "backends/imgui_impl_opengl3.h"
+
 //#define GLEW_STATIC
 #include "GUI.h"
-#include "Draw.h"
 #include "IO.h"
 #include "Tools.h"
 #include "Light.h"
@@ -18,8 +20,8 @@ namespace fs = std::filesystem;
 
 auto bufferLogger = std::make_shared <debug::BufferLogger>();
 auto fileLogger = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/basic-log.txt", true);
-//auto consoleLogger = std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>();
-auto logger = spdlog::logger("multi_sink", {bufferLogger, fileLogger/*, consoleLogger*/});
+auto consoleLogger = std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>();
+auto logger = spdlog::logger("multi_sink", {bufferLogger, fileLogger, consoleLogger});
 
 
 WindowInfo windowConfig = { 1900, 1000, "GLTF Viewer" };
@@ -89,8 +91,8 @@ void init(GLFWwindow** windowPtr, ImGuiIO& io)
     }
 }
 
-void draw_imgui(ImGuiIO& io) {
-    // ImGui
+void draw_imgui(ImGuiIO& io) 
+{
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -98,7 +100,6 @@ void draw_imgui(ImGuiIO& io) {
     drawLeftPanel(io, panelConfig);
     drawRightPanel(io, panelConfig);
 
-    // Rendering
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
@@ -115,17 +116,31 @@ int main(void)
     ImGuiIO& io = ImGui::GetIO();
     init(&window, io);
 
-    Light lightModel;
+    L lightModel;
     lightModel.loadMesh();
-    lightModel.createPipeline();
+    std::string lightsPipeline[5] = { "res/shaders/lamp_vec.glsl", "res/shaders/lamp_frag.glsl" };
+    lightModel.createPipeline(lightsPipeline);
+    std::vector<const char*> uniformNames[5] =
+    {{"MVP", "PRJ"}, {"G", "camera"}, {}, {}, {} };
+    lightModel.getLocation(uniformNames);
 
-    Environment env;
+
+    E env;
     env.loadMesh();
-    env.createPipeline();
+    std::string envPipeline[5] = { "res/shaders/environment_vec.glsl", "res/shaders/environment_frag.glsl" };
+    env.createPipeline(envPipeline);
+    //env.createPipeline();
+    std::vector<const char*> envUniformNames[5] = {{"MVP"}, {}, {}, {}, {}};
+    env.getLocation(envUniformNames);
 
-    Cloud cld;
+
+    C cld;
     cld.loadMesh();
-    cld.createPipeline(windowConfig.width, windowConfig.height);
+    std::string cloudPipeline[5] = { "res/shaders/standard_vec.glsl", "res/shaders/depth_frag.glsl" };
+    cld.createPipeline(cloudPipeline);
+    std::vector<const char*> cldUniformNames[5] =
+    { {"MVP", "PRJ"}, {"G", "camera"}, {}, {}, {} };
+    cld.getLocation(cldUniformNames);
 
     Scene scenes;
     std::vector<PointLight>& lightsData= scenes.lights;
@@ -152,7 +167,7 @@ int main(void)
 
         std::vector<const char*> uniformNames[5] = {
             {"MVP", "PRJ"},
-            {"camera", "G", "direction", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound"},
+            {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound"},
             {}, {}, {}
         };
         for (auto& primitive : primitives) primitive.getLocation(uniformNames);
@@ -188,12 +203,8 @@ int main(void)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glClearColor(0., 1., 1., 1.);
 
-
             if (!camera) Projection = panelConfig.getProjection(width, height);
-
-            env.draw(width, height, Projection, camera);
-
-
+            
             glm::vec3 eye = panelConfig.getView();
             glm::mat4 LookAt = panelConfig.getLookAt();
             glm::vec3 translate = panelConfig.getTranslate();
@@ -210,20 +221,48 @@ int main(void)
             glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
             glm::mat4 MVP = LookAt * View * Model;
 
+
+            glm::mat4 envMVP = LookAt * env.localTransform * glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
+            //env.draw(width, height, Projection, camera);
+            env.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
+
+
             for (auto& primitive : primitives) {
                 primitive.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
             }
-
+       
+            
 
             scenes.updateLights(lightsBuffer, lightDataSize, panelConfig);
             for (auto& light : lightsData) {
-                glm::mat4x4 transform = glm::translate(glm::mat4x4(1.f), light.position);
-                lightModel.drawLight(width, height, Projection, camera, transform);
+                //glm::mat4x4 transform = glm::rotate(
+                //    glm::rotate(
+                //        glm::translate(glm::mat4x4(1.f), light.position)
+                //, rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+                //    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+                ////lightModel.drawLight(width, height, Projection, camera, transform);
+                //View = transform;
+                //Model = glm::scale(glm::mat4(1.0f), glm::vec3(.2f));
+                //MVP = LookAt * View * Model;
+                lightModel.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
             }
             /* ===================== */
 
-            cld.draw(width, height, Projection, camera, panelConfig.g, lightsBuffer);
+            //translate = glm::vec3(0., 0., 0.);// glm::vec3(panelConfig.tr_x * 0.1, panelConfig.tr_y * 0.1, panelConfig.tr_z * 0.1);
+            //rotate = glm::vec3(0., 0., 0.);//glm::vec3(3.14 * panelConfig.xRotate / 180, 3.14 * panelConfig.yRotate / 180, 0.f);
 
+            //View =
+            //    glm::rotate(
+            //        glm::rotate(
+            //            glm::translate(
+            //                cld.localTransform
+            //                , translate)
+            //            , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+            //        rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+         //   Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f));
+          //  MVP = LookAt * View * Model;
+            //cld.draw(width, height, Projection, camera, panelConfig.g, lightsBuffer);
+            //cld.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
 
             draw_imgui(io);
             glfwSwapBuffers(window);
@@ -246,7 +285,6 @@ int main(void)
             for (int i = VERTEX; i <= GEOMETRY; i++) {
                 if(primitive.bindingLocationIndecies[i]) free(primitive.bindingLocationIndecies[i]);
             }
-            free(primitive.bindingLocationIndecies);
         }
 
     } while (!glfwWindowShouldClose(window));

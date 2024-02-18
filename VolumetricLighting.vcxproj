@@ -198,7 +198,6 @@ Shell32.lib
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Debug.cpp" />
-    <ClCompile Include="Draw.cpp" />
     <ClCompile Include="GUI.cpp" />
     <ClCompile Include="IO.cpp" />
     <ClCompile Include="Models.cpp" />
@@ -235,7 +234,6 @@ Shell32.lib
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Debug.h" />
-    <ClInclude Include="Draw.h" />
     <ClInclude Include="GUI.h" />
     <ClInclude Include="include\ak\animation.h" />
     <ClInclude Include="include\ak\assetkit.h" />

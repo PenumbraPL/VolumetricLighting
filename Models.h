@@ -174,10 +174,10 @@ struct Drawable {
 
     uint32_t* verticleIndecies = nullptr;
     unsigned int verticleIndeciesSize;
-    GLuint* primitiveDataBuffer;
+    GLuint primitiveDataBuffer[7] = { 0xffffffff };
     GLuint textures[8] = { 0 };
     GLuint texturesType[8] = { 0 };
-    GLuint samplers[8] = { 0 };
+    GLuint samplers[8] = { 0 }; // alloc ?
 
     glm::vec4 colors[8] = { glm::vec4(0) };
 
@@ -189,21 +189,10 @@ struct Drawable {
     DrawShader ds[5] = { DRAW_VERTEX, DRAW_FRAGMENT, DRAW_TESS_CTR, DRAW_TESS_EV, DRAW_GEOMETRY };
     DrawShaderBit dsb[5] = { DRAW_VERTEX_BIT, DRAW_FRAGMENT_BIT, DRAW_TESS_CTR_BIT, DRAW_TESS_EV_BIT , DRAW_GEOMETRY_BIT };
 
-    // malloc + getname
-    GLuint mvpBindingLocation,
-        prjBindingLocation,
-        cameraBindingLocation,
-        gBindingLocation,
-        isTexBindingLocation,
-        camDirBindingLocation,
-        vertexPosBindingLocation,
-        normalsBindingLocation,
-        textureBindingLocation;
-    GLuint metalicBindingLocation,
-        roughnessBindingLocation,
-        albedoBindingLocation,
-        aoBindingLocation;
-    GLuint** bindingLocationIndecies;
+    GLuint vertexPosBindingLocation;
+    GLuint normalsBindingLocation;
+    GLuint textureBindingLocation;
+    GLuint* bindingLocationIndecies[5] = { nullptr };
 
     void createPipeline(std::string shaderPath[5]);
     void deletePipeline();
@@ -216,12 +205,68 @@ struct Drawable {
         glm::vec3& eye,
         glm::mat4& MVP,
         glm::mat4& Projection);
-
+    void bindVertexArray();
     virtual void getLocation(std::vector<const char*> uniformNames[5]);
     virtual void deleteTexturesAndSamplers(); // how many to delete?
 
-private:
-    void allocUnique(); // unused
+protected:
+    void allocUnique();
+};
+
+
+struct P : public Drawable {
+    virtual void draw(
+        GLuint& lights_buffer,
+        std::map <void*, unsigned int>& bufferViews,
+        GLuint* docDataBuffer,
+        glm::vec3& eye,
+        glm::mat4& MVP,
+        glm::mat4& Projection);
+}; // without change (maybe declaration of paths?
+
+struct L : public Drawable {
+    enum LightType { POSITIONAL, DIRECTIONAL, AREA } light_type = POSITIONAL;
+    glm::vec4 direction = glm::vec4(0, 0, 0, 0);
+    glm::vec3 color = glm::vec3(1.0, 1.0, 1.0);
+    float intensity = 1.0;
+
+    void loadMesh();
+    virtual void draw(
+        GLuint& lights_buffer,
+        std::map <void*, unsigned int>& bufferViews,
+        GLuint* docDataBuffer,
+        glm::vec3& eye,
+        glm::mat4& MVP,
+        glm::mat4& Projection);
+};
+
+struct E : public Drawable {
+    GLuint skybox;
+    GLuint env_sampler;
+    
+    void loadMesh();
+    virtual void draw(
+        GLuint& lights_buffer,
+        std::map <void*, unsigned int>& bufferViews,
+        GLuint* docDataBuffer,
+        glm::vec3& eye,
+        glm::mat4& MVP,
+        glm::mat4& Projection);
+};
+
+struct C : public Drawable {
+    GLuint depthBuffer;
+    GLuint lightbuffer;
+    GLuint g;
+    
+    void loadMesh();
+    virtual void draw(
+        GLuint& lights_buffer,
+        std::map <void*, unsigned int>& bufferViews,
+        GLuint* docDataBuffer,
+        glm::vec3& eye,
+        glm::mat4& MVP,
+        glm::mat4& Projection);
 };
 
 
