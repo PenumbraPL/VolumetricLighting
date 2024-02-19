@@ -7,13 +7,13 @@
 extern spdlog::logger logger;
 
 
-void initialize_GLEW(void) 
+void initialize_GLEW(void)
 {
     GLenum err = glewInit();
     if (GLEW_OK != err) {
         logger.error("========== [GLEW]: Initialization failed =====================================");
         std::string text = "\tError:";
-        text += (const char*) glewGetErrorString(err);
+        text += (const char*)glewGetErrorString(err);
         logger.error(text);
     }
     std::string text = "========== [GLEW]: Using GLEW ";

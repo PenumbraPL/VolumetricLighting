@@ -31,11 +31,15 @@ ConfigContext panelConfig = { "./res/models/Sample2/scene.gltf" };
 
 /* ============================================================================= */
 
+
+
+
 void init(GLFWwindow** windowPtr, ImGuiIO& io)
 {
-    logger.info("========== Initialization started ============================================\n");
+    logger.set_pattern("%^[%L][%s:%#]%$  %v ");
+    logger.info("========== Initialization started ============================================");
     if (!glfwInit()) {
-        logger.error("========== [GLFW]: Initialization failed =====================================\n");
+        logger.error("========== [GLFW]: Initialization failed =====================================");
         exit(EXIT_FAILURE);
     }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
@@ -46,8 +50,8 @@ void init(GLFWwindow** windowPtr, ImGuiIO& io)
     GLFWwindow* window = glfwCreateWindow(windowConfig.width, windowConfig.height, windowConfig.title, NULL, NULL);
     if (!window) {
         glfwTerminate();
-        logger.warn("========== [GLFW]: Terminated ================================================\n");
-        logger.error("========== [GLFW]: Window initialization failed ==============================\n");
+        logger.warn("========== [GLFW]: Terminated ================================================");
+        logger.error("========== [GLFW]: Window initialization failed ==============================");
         exit(EXIT_FAILURE);
     }
     *windowPtr = window;
@@ -81,13 +85,13 @@ void init(GLFWwindow** windowPtr, ImGuiIO& io)
     int flags;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
-        logger.info("========== [GLFW]: Debug context initialize successful =======================\n");
+        logger.info("========== [GLFW]: Debug context initialize successful =======================");
         std::vector<DEBUGPROC> callbacks;
         debug::fill_callback_list(callbacks);
         debug::debug_init(callbacks);
     }
     else {
-        logger.warn("========== [GLFW]: Debug context initialize unsuccessful =====================\n");
+        logger.warn("========== [GLFW]: Debug context initialize unsuccessful =====================");
     }
 }
 
@@ -189,7 +193,7 @@ int main(void)
 
         std::string fileSelected = panelConfig.fileSelection;
 
-        logger.info("===================== Main loop ==============================================\n");
+        logger.info("===================== Main loop ==============================================");
         while (!glfwWindowShouldClose(window)) {
             int width, height;
             glfwGetFramebufferSize(window, &width, &height);
@@ -288,7 +292,7 @@ int main(void)
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     glfwTerminate();
-    logger.info("========== [GLFW]: Terminated ================================================\n");
-    logger.info("===================== Exit succeeded =========================================\n");
+    logger.info("========== [GLFW]: Terminated ================================================");
+    logger.info("===================== Exit succeeded =========================================");
     return 0;
 }

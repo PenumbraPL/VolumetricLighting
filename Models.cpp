@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "Models.h"
 #include "Tools.h"
+#include <spdlog/spdlog.h>
 
 extern spdlog::logger logger;
 
@@ -48,7 +49,7 @@ void Drawable::createPipeline(std::string shaderPath[5])
         if (!shaderPath[i].empty()) {
             shader[i] = read_file(shaderPath[i].c_str());
             if (!shader[i]) {
-                logger.error("=================== Coulnt find " + shaderPath[i] + " ==============================\n");
+                SPDLOG_LOGGER_ERROR(&logger, "=================== Coulnt find " + shaderPath[i] + " ==============================");
             }
             programs[i] = glCreateShaderProgramv(ds[i], 1, &shader[i]);
             free(shader[i]);
@@ -57,7 +58,7 @@ void Drawable::createPipeline(std::string shaderPath[5])
             if (!linkageStatus) {
                 GLchar info[1024];
                 glGetProgramInfoLog(programs[i], 1024, NULL, info);
-                logger.error(info);
+                SPDLOG_LOGGER_ERROR(&logger, info);
             }
             glUseProgramStages(pipeline, dsb[i], programs[i]);
         }
@@ -458,8 +459,6 @@ void Drawable::deleteTexturesAndSamplers()
     }
 
 
-
-
     AkDoc* Scene::loadScene(std::string scenePath, std::string sceneName)
     {
         primitives.clear();
@@ -467,26 +466,26 @@ void Drawable::deleteTexturesAndSamplers()
         scenePath += sceneName;
         AkDoc* doc;
         if (ak_load(&doc, scenePath.c_str(), NULL) != AK_OK) {
-            logger.error("Document couldn't be loaded\n");
+            SPDLOG_LOGGER_ERROR(&logger, "Document couldn't be loaded");
             exit(EXIT_FAILURE);
         }
         else {
             logger.info(print_coord_system(doc->coordSys));
             logger.info(print_doc_information(doc->inf, doc->unit));
-            logger.info("==============================================================================\n");
+            logger.info("==============================================================================");
         }
 
         AkVisualScene* scene;
         scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
         if (!doc->scene.visualScene) {
-            logger.error("================================== Scene couldnt be loaded! ===============\n");
+            SPDLOG_LOGGER_ERROR(&logger, "================================== Scene couldnt be loaded! ===============");
             exit(EXIT_FAILURE);
         }
         else {
             std::string sceneInfo = "======================== Scene name: ";
             sceneInfo += scene->name;
-            sceneInfo += "========================\n";
-            logger.info(sceneInfo);
+            sceneInfo += "========================";
+            SPDLOG_LOGGER_INFO(&logger, sceneInfo);
         }
 
         AkNode* node = ak_instanceObjectNode(scene->node);
@@ -576,11 +575,11 @@ void Light::loadMesh()
     std::string scene_path = "res/models/";
     scene_path += "lamp.gltf";
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
-        logger.error("Light mesh couldn't be loaded\n");
+        SPDLOG_LOGGER_ERROR(&logger, "Light mesh couldn't be loaded\n");
         return;
     }
     if (!doc->scene.visualScene) {
-        logger.error("Light mesh couldn't be loaded\n");
+        SPDLOG_LOGGER_ERROR(&logger, "Light mesh couldn't be loaded\n");
         return;
     }
 
@@ -642,11 +641,11 @@ void Environment::loadMesh()
     scene_path += "env_sphere.gltf";
 
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
-        logger.error("Environment mesh couldn't be loaded\n");
+        SPDLOG_LOGGER_ERROR(&logger, "Environment mesh couldn't be loaded\n");
         return;
     }
     if (!doc->scene.visualScene) {
-        logger.error("Environment mesh couldn't be loaded\n");
+        SPDLOG_LOGGER_ERROR(&logger, "Environment mesh couldn't be loaded\n");
         return;
     }
 
@@ -724,11 +723,11 @@ void Cloud::loadMesh()
     std::string scene_path = "res/models/cube/";
     scene_path += "Cube.gltf";
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
-        logger.error("Cloud mesh couldn't be loaded\n");
+        SPDLOG_LOGGER_ERROR(&logger, "Cloud mesh couldn't be loaded\n");
         return;
     }
     if (!doc->scene.visualScene) {
-        logger.error("Cloud mesh couldn't be loaded\n");
+        SPDLOG_LOGGER_ERROR(&logger, "Cloud mesh couldn't be loaded\n");
         return;
     }
 
