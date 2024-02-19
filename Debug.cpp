@@ -57,7 +57,7 @@ namespace debug
 		default:							sev = "[Unknown]";
 		}
 		std::string text = "Severity: " + sev + " Message: " + message + 
-			 "\n ======================================================================== \n";
+			 "\n ========================================================================";
 		logger.warn(text);
 		/*std::cout << "Severity: " << sev << " Message: " << message << std::endl
 			<< " ======================================================================== \n";*/
@@ -87,7 +87,7 @@ namespace debug
 		std::string text = "Source: " + std::to_string(source) + " Type: " + std::to_string(type)
 			+ " Id: " + std::to_string(id)  + " Severity: " + sev + " Length: " + std::to_string(length)
 			+ " Message: " + message
-			+ "\n ======================================================================== \n";
+			+ "\n ========================================================================";
 		logger.warn(text);
 	};
 
@@ -102,7 +102,6 @@ namespace debug
 	//	std::cout << code << " " << description << std::endl;
 		std::string text = code + " ";
 		text += description;
-		text += '\n';
 		logger.warn(text);
 	}
 

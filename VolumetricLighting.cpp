@@ -136,7 +136,7 @@ int main(void)
 
     C cld;
     cld.loadMesh();
-    std::string cloudPipeline[5] = { "res/shaders/standard_vec.glsl", "res/shaders/depth_frag.glsl" };
+    std::string cloudPipeline[5] = { "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" };
     cld.createPipeline(cloudPipeline);
     std::vector<const char*> cldUniformNames[5] =
     { {"MVP", "PRJ"}, {"G", "camera"}, {}, {}, {} };
@@ -171,8 +171,6 @@ int main(void)
             {}, {}, {}
         };
         for (auto& primitive : primitives) primitive.getLocation(uniformNames);
-
-
 
         //glDepthRange(panelConfig.near_plane, panelConfig.far_plane);
         glDepthFunc(GL_LEQUAL);
@@ -218,13 +216,12 @@ int main(void)
                             translate)
                         , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
                     rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-            glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
-            glm::mat4 MVP = LookAt * View * Model;
+            //glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
+            glm::mat4 MVP = LookAt * View;// *Model;
+            glm::mat4 envMVP = Projection * LookAt * View;// *Model;
 
-
-            glm::mat4 envMVP = LookAt * env.localTransform * glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
             //env.draw(width, height, Projection, camera);
-            env.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
+            env.draw(lightsBuffer, bufferViews, docDataBuffer, eye, envMVP, Projection);
 
 
             for (auto& primitive : primitives) {
@@ -235,15 +232,15 @@ int main(void)
 
             scenes.updateLights(lightsBuffer, lightDataSize, panelConfig);
             for (auto& light : lightsData) {
-                //glm::mat4x4 transform = glm::rotate(
-                //    glm::rotate(
-                //        glm::translate(glm::mat4x4(1.f), light.position)
-                //, rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
-                //    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-                ////lightModel.drawLight(width, height, Projection, camera, transform);
-                //View = transform;
-                //Model = glm::scale(glm::mat4(1.0f), glm::vec3(.2f));
-                //MVP = LookAt * View * Model;
+                glm::mat4x4 transform = glm::rotate(
+                    glm::rotate(
+                        glm::translate(localTransform, light.position)
+                , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+                    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+                //lightModel.drawLight(width, height, Projection, camera, transform);
+                glm::mat4 View = transform;
+                glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(.2f));
+                glm::mat4 MVP = Projection * LookAt * View * Model;
                 lightModel.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
             }
             /* ===================== */
@@ -251,18 +248,19 @@ int main(void)
             //translate = glm::vec3(0., 0., 0.);// glm::vec3(panelConfig.tr_x * 0.1, panelConfig.tr_y * 0.1, panelConfig.tr_z * 0.1);
             //rotate = glm::vec3(0., 0., 0.);//glm::vec3(3.14 * panelConfig.xRotate / 180, 3.14 * panelConfig.yRotate / 180, 0.f);
 
-            //View =
-            //    glm::rotate(
-            //        glm::rotate(
-            //            glm::translate(
-            //                cld.localTransform
-            //                , translate)
-            //            , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
-            //        rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-         //   Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f));
-          //  MVP = LookAt * View * Model;
+            View =
+                glm::rotate(
+                    glm::rotate(
+                        glm::translate(
+                            cld.localTransform
+                            , translate)
+                        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+                    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f));
+            MVP = LookAt * View * Model;
             //cld.draw(width, height, Projection, camera, panelConfig.g, lightsBuffer);
-            //cld.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
+            cld.g = panelConfig.g;
+            cld.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
 
             draw_imgui(io);
             glfwSwapBuffers(window);
@@ -275,8 +273,8 @@ int main(void)
 
         glBindProgramPipeline(0);
 
-        for (auto& p : primitives) p.deleteTexturesAndSamplers();
-        for (auto& p : primitives) p.deletePipeline();
+        for (auto& primitive : primitives) primitive.deleteTexturesAndSamplers();
+        for (auto& primitive : primitives) primitive.deletePipeline();
 
         glDeleteBuffers((GLsizei)bufferViews.size(), docDataBuffer);
         if(docDataBuffer) free(docDataBuffer);

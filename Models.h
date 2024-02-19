@@ -168,7 +168,7 @@ struct Drawable {
     Drawable() {}
     ~Drawable(){}
 
-    GLuint programs[5];
+    GLuint programs[5] = { 0xffffffff };
     GLuint pipeline;
     AkAccessor* accessor[7];
 
@@ -194,6 +194,12 @@ struct Drawable {
     GLuint textureBindingLocation;
     GLuint* bindingLocationIndecies[5] = { nullptr };
 
+
+    std::map <void*, unsigned int> bufferViews;
+    std::map <void*, unsigned int> textureViews;
+    std::map <void*, unsigned int> imageViews;
+    GLuint* docDataBuffer;
+
     void createPipeline(std::string shaderPath[5]);
     void deletePipeline();
     void loadMatrix(AkNode* node);
@@ -206,6 +212,10 @@ struct Drawable {
         glm::mat4& MVP,
         glm::mat4& Projection);
     void bindVertexArray();
+    void bindVertexBuffer(std::map <void*, unsigned int>& bufferViews, GLuint* docDataBuffer);
+    void bindTextures();
+    GLuint* parseBuffors();
+    void allocAll(AkDoc* doc);
     virtual void getLocation(std::vector<const char*> uniformNames[5]);
     virtual void deleteTexturesAndSamplers(); // how many to delete?
 
@@ -255,9 +265,7 @@ struct E : public Drawable {
 };
 
 struct C : public Drawable {
-    GLuint depthBuffer;
-    GLuint lightbuffer;
-    GLuint g;
+    float g = 0.;
     
     void loadMesh();
     virtual void draw(

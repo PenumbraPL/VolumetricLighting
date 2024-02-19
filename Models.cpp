@@ -698,12 +698,13 @@ void Light::drawLight(
         glBindProgramPipeline(0);
 
         for (int i = VERTEX; i <= GEOMETRY; i++) {
-            if (programs[i]) glDeleteProgram(programs[i]);
+            if (programs[i] != 0xFFFFFFFF) glDeleteProgram(programs[i]);
         } // program[i] == 0 ?
 
         glDeleteProgramPipelines(1, &pipeline);
         glDeleteVertexArrays(1, &vao);
     } // delete(primtitiveDataBuffer)?
+
     
     void Drawable::loadMatrix(AkNode* node)
     {
@@ -813,26 +814,18 @@ void Light::drawLight(
 
     void Drawable::bindVertexArray()
     {
+        glBindVertexArray(vao);
         if (vertexPosBindingLocation != 0xFFFFFFFF) {
             format_attribute(vertexPosBindingLocation, accessor[POSITION]);
             glEnableVertexArrayAttrib(vao, vertexPosBindingLocation);
-        }
-        else {
-            glDisableVertexArrayAttrib(vao, vertexPosBindingLocation);
         }
         if (normalsBindingLocation != 0xFFFFFFFF) {
             format_attribute(normalsBindingLocation, accessor[NORMALS]);
             glEnableVertexArrayAttrib(vao, normalsBindingLocation);
         }
-        else {
-            glDisableVertexArrayAttrib(vao, normalsBindingLocation);
-        }
         if (textureBindingLocation != 0xFFFFFFFF) {
             format_attribute(textureBindingLocation, accessor[TEXTURES]);
             glEnableVertexArrayAttrib(vao, textureBindingLocation);
-        }
-        else {
-            glDisableVertexArrayAttrib(vao, textureBindingLocation);
         }
     }
 
@@ -854,7 +847,9 @@ void Light::drawLight(
         glm::vec3 camera_view = eye;
         glm::vec3 camera_dir = glm::vec3(0.) - eye;
 
-        glm::mat4 MVPPos = MVP * localTransform; // check is it correct?
+        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
+        glm::mat4 MVPPos = MVP * Model * localTransform; // check is it correct?
+
 
         glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MVPPos));
         glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(Projection));
@@ -876,12 +871,118 @@ void Light::drawLight(
             glProgramUniform4fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][3], 1, glm::value_ptr(colors[ALBEDO]));
         }
 
-        // if ?
-        int j = bufferViews[accessor[POSITION]->buffer];
-        int binding_point = 0;
-        glVertexAttribBinding(vertexPosBindingLocation, binding_point);
-        glBindVertexBuffer(binding_point, docDataBuffer[j], accessor[POSITION]->byteOffset, accessor[POSITION]->componentBytes);
+        bindVertexBuffer(bufferViews, docDataBuffer);
+        bindTextures();
 
+        glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
+    }
+
+
+
+    void Drawable::getLocation(std::vector<const char*> uniformNames[5])
+    {
+        for (int i = VERTEX; i <= GEOMETRY; i++) {
+            if (uniformNames[i].size()) {
+                bindingLocationIndecies[i] = (GLuint*)calloc(uniformNames[i].size(), sizeof(GLuint));
+                for (int j = 0; j < uniformNames[i].size(); j++) {
+                    bindingLocationIndecies[i][j] = glGetUniformLocation(programs[i], uniformNames[i].data()[j]);
+                }
+                //glGetUniformIndices(programs[i], uniformNames[i].size(), uniformNames[i].data(), bindingLocationIndecies[i]);
+            }
+        }
+
+        //for (int i = VERTEX; i <= GEOMETRY; i++) {
+        //    for (int j = 0; j < uniformNames[i].size(); j++) {
+        //        if (bindingLocationIndecies[i][j] != 0xFFFFFFFF) {
+        //            glEnableVertexAttribArray(bindingLocationIndecies[i][j]);
+        //        }
+        //    }
+        //}
+
+        vertexPosBindingLocation = glGetAttribLocation(programs[VERTEX], "vPos");
+        normalsBindingLocation = glGetAttribLocation(programs[VERTEX], "vNor");
+        textureBindingLocation = glGetAttribLocation(programs[VERTEX], "vTex");
+
+        //glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
+    }
+
+
+
+    void Drawable::allocAll(AkDoc* doc)
+    {
+        bufferViews.clear();
+        textureViews.clear();
+        imageViews.clear();
+
+        // What with and libimages ??
+        int j = 0;
+        FListItem* i = doc->lib.images;
+        if (i) {
+            do {
+                AkImage* img = (AkImage*)i->data;
+                imageViews.insert({ {img, 0} });
+                i = i->next;
+            } while (i);
+            for (auto& u : imageViews) {
+                u.second = j++;
+            }
+        }
+
+        j = 0;
+        FListItem* t = doc->lib.textures;
+        if (t) {
+            do {
+                AkTexture* tex = (AkTexture*)t->data;
+                textureViews.insert({ {tex, 0} });
+                t = t->next;
+            } while (t);
+            for (auto& u : textureViews) {
+                u.second = j++;
+            }
+        }
+
+        j = 0;
+        FListItem* b = (FListItem*)doc->lib.buffers;
+        if (b) {
+            do {
+                AkBuffer* buf = (AkBuffer*)b->data;
+                bufferViews.insert({ {buf, 0} });
+                b = b->next;
+            } while (b);
+            for (auto& u : bufferViews) {
+                u.second = j++;
+            }
+        }
+    }
+
+    GLuint* Drawable::parseBuffors()
+    {
+        //  glGenVertexArrays(1, &vao);
+         // glBindVertexArray(vao);
+
+        GLuint* docDataBuffer = (GLuint*)calloc(bufferViews.size(), sizeof(GLuint));
+        glCreateBuffers((GLsizei)bufferViews.size(), docDataBuffer);
+        for (auto& buffer : bufferViews) {
+            unsigned int i = bufferViews[buffer.first];
+            glNamedBufferData(docDataBuffer[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
+        }
+        return docDataBuffer;
+    }
+
+
+
+
+    void Drawable::bindVertexBuffer(std::map <void*, unsigned int>& bufferViews, GLuint* docDataBuffer)
+    {
+        int j;
+        int binding_point;
+
+        if (vertexPosBindingLocation != 0xFFFFFFFF) {
+            j = bufferViews[accessor[POSITION]->buffer];
+            binding_point = 0;
+            glVertexAttribBinding(vertexPosBindingLocation, binding_point);
+            glBindVertexBuffer(binding_point, docDataBuffer[j], accessor[POSITION]->byteOffset, accessor[POSITION]->componentBytes);
+        }
         if (normalsBindingLocation != 0xFFFFFFFF) {
             j = bufferViews[accessor[NORMALS]->buffer];
             binding_point = 1;
@@ -895,6 +996,11 @@ void Light::drawLight(
             glVertexAttribBinding(textureBindingLocation, binding_point);
             glBindVertexBuffer(binding_point, docDataBuffer[j], accessor[TEXTURES]->byteOffset, accessor[TEXTURES]->componentBytes);
         }
+    }
+
+
+    void Drawable::bindTextures()
+    {
         for (unsigned int type = AMBIENT; type < TT_SIZE; type++) {
             GLuint sampler = samplers[(TextureType)type];
             GLuint texture = textures[(TextureType)type];
@@ -907,48 +1013,19 @@ void Light::drawLight(
                 glActiveTexture(GL_TEXTURE0 + type);
                 glBindTexture(GL_TEXTURE_2D, 0); // needs change
             }
-            /*
-            else {
-                glProgramUniform1ui(programs[FRAGMENT], is_tex_location, GL_FALSE);
-            }*/
         }
-
-        glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
-    }
-
-
-
-    void Drawable::getLocation(std::vector<const char*> uniformNames[5])
-    {
-        for (int i = VERTEX; i <= GEOMETRY; i++) {
-            if (uniformNames[i].size()) {
-                bindingLocationIndecies[i] = (GLuint*)calloc(uniformNames[i].size(), sizeof(GLuint));
-                glGetUniformIndices(programs[i], uniformNames[i].size(), uniformNames[i].data(), bindingLocationIndecies[i]);
-            }
-        }
-
-        //for (int i = VERTEX; i <= GEOMETRY; i++) {
-        //    for (int j = 0; j < uniformNames[i].size(); j++) {
-        //        if (bindingLocationIndecies[i][j] != 0xFFFFFFFF) {
-        //            glEnableVertexAttribArray(bindingLocationIndecies[i][j]);
-        //        }
-        //    }
-        //}
-        vertexPosBindingLocation = glGetAttribLocation(programs[VERTEX], "vPos");
-        normalsBindingLocation = glGetAttribLocation(programs[VERTEX], "vNor");
-        textureBindingLocation = glGetAttribLocation(programs[VERTEX], "vTex");
-
-        //glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
     }
 
 
     void Drawable::deleteTexturesAndSamplers()
     {
-        if (textures) {
-            glDeleteTextures(8, textures);
-        }
-        if (samplers) {
-            glDeleteSamplers(8, samplers);
+        for (unsigned int type = AMBIENT; type < TT_SIZE; type++) {
+            if (textures[type]) {
+                glDeleteTextures(1, &textures[type]);
+            }
+            if (samplers[type]) {
+                glDeleteSamplers(1, &samplers[type]);
+            }
         }
     }
 
@@ -1376,10 +1453,12 @@ void L::loadMesh()
         if ((AkGeometryType)geometry->gdata->type) {
             if (mesh) {
                 processMesh(mesh->primitive);
-                allocUnique();
+                //allocUnique();
             };
         }
     }
+    allocAll(doc);
+    docDataBuffer = parseBuffors();
 }
 //
 //void L::getLocation(std::vector<const char*> uniformNames[5])
@@ -1406,9 +1485,6 @@ void L::draw(
     glm::mat4& MVP,
     glm::mat4& Projection)
 {
-    //std::vector<const char*> uniformNames[5] = { {"MVP"}, {}, {}, {}, {} };
-    //getLocation(uniformNames);
-
     //float r = 0.1f * panelConfig.viewDistance;
     //float phi = panelConfig.viewPhi;
     //float theta = panelConfig.viewTheta;
@@ -1424,8 +1500,8 @@ void L::draw(
     //    north = glm::vec3(0., -1., 0.);
     //}
 
-    //glm::vec3 translate = glm::vec3(panelConfig.xTranslate * 0.1, panelConfig.yTranslate * 0.1, panelConfig.zTranslate * 0.1);
-    //glm::vec3 rotate = glm::vec3(3.14 * panelConfig.xRotate / 180, 3.14 * panelConfig.yRotate / 180, 0.f);
+    //glm::vec3 translate = glm::vec3(0.);// glm::vec3(panelConfig.xTranslate * 0.1, panelConfig.yTranslate * 0.1, panelConfig.zTranslate * 0.1);
+    //glm::vec3 rotate = glm::vec3(0.);// glm::vec3(3.14 * panelConfig.xRotate / 180, 3.14 * panelConfig.yRotate / 180, 0.f);
 
 
 
@@ -1438,12 +1514,12 @@ void L::draw(
     //    glm::rotate(
     //        glm::rotate(
     //            glm::translate(
-    //                transform//localTransform
+    //                localTransform
     //                , translate)
     //            , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
     //        rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
     //glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.2f));
-    //glm::mat4 MVP = Projection * LookAt * View * Model;
+    //glm::mat4 Mat = Projection * MVP * View * Model;
 
     bindVertexArray();
     GLuint vcolLocation = glGetAttribLocation(programs[VERTEX], "vCol");
@@ -1451,14 +1527,23 @@ void L::draw(
         //format_attribute(vcolLocation, accessor[COLORS]);
         glEnableVertexArrayAttrib(vao, vcolLocation);
     }
+    if (normalsBindingLocation != 0xFFFFFFFF) glDisableVertexArrayAttrib(vao, normalsBindingLocation);
+    if (textureBindingLocation != 0xFFFFFFFF) glDisableVertexArrayAttrib(vao, textureBindingLocation);
     glBindVertexArray(vao);
     glBindProgramPipeline(pipeline);
 
+    //glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.2f));
+    //glm::mat4 lightMVP = MVP * Model * localTransform;
+    //glm::mat4 lightMVP = MVP;
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MVP));
 
-    int binding_point = 0;
-    glVertexAttribBinding(vertexPosBindingLocation, binding_point);
-    glBindVertexBuffer(binding_point, primitiveDataBuffer[POSITION], accessor[POSITION]->byteOffset, accessor[POSITION]->componentBytes);
+    //int binding_point = 0;
+    //glVertexAttribBinding(vertexPosBindingLocation, binding_point);
+    //glBindVertexBuffer(binding_point, primitiveDataBuffer[POSITION], accessor[POSITION]->byteOffset, accessor[POSITION]->componentBytes);
+    
+    bindVertexBuffer(this->bufferViews, this->docDataBuffer);
+    bindTextures();
+
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
@@ -1498,6 +1583,8 @@ void E::loadMesh()
             }
         }
     }
+    allocAll(doc);
+    docDataBuffer = parseBuffors();
 
     glCreateTextures(GL_TEXTURE_2D, 1, &skybox);
     int width, height, comp;
@@ -1514,17 +1601,6 @@ void E::loadMesh()
     glSamplerParameteri(env_sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
-//mvpBindingLocation = glGetUniformLocation(vertexProgram, "MVP");
-//GLuint textureBindingLocation = glGetAttribLocation(vertexProgram, "vTex");
-//GLuint vertexPosBindingLocation = glGetAttribLocation(vertexProgram, "vPos");
-//
-//if (vertexPosBindingLocation != -1) format_attribute(vertexPosBindingLocation, pos->accessor);
-//if (textureBindingLocation != -1) format_attribute(textureBindingLocation, tex->accessor);
-//
-//if (mvpBindingLocation != -1) glEnableVertexAttribArray(mvpBindingLocation);
-//if (vertexPosBindingLocation != -1) glEnableVertexAttribArray(vertexPosBindingLocation);
-//if (textureBindingLocation != -1) glEnableVertexAttribArray(textureBindingLocation);
-
 
 void E::draw(
     GLuint& lights_buffer,
@@ -1535,31 +1611,6 @@ void E::draw(
     glm::mat4& Projection)
 {
 
-
-    //float r = 0.1f * panelConfig.viewDistance;
-    //float phi = panelConfig.viewPhi;
-    //float theta = panelConfig.viewTheta;
-
-    //glm::mat4x4 Projection;
-
-    //glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
-    //eye = glm::vec3(eye.z, eye.y, eye.x);
-
-    //glm::vec3 north = glm::vec3(0., 1., 0.);
-    //float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
-    //if (corrected_theta > 3.14 / 2. && corrected_theta < 3.14 * 3. / 2.) {
-    //    north = glm::vec3(0., -1., 0.);
-    //}
-
-    //glm::vec3 translate = glm::vec3(0., 0., 0.);// glm::vec3(panelConfig.tr_x * 0.1, panelConfig.tr_y * 0.1, panelConfig.tr_z * 0.1);
-    //glm::vec3 rotate = glm::vec3(0., 0., 0.);//glm::vec3(3.14 * panelConfig.xRotate / 180, 3.14 * panelConfig.yRotate / 180, 0.f);
-
-    //glBindProgramPipeline(pipeline);
-
-    //glm::mat4 LookAt = glm::lookAt(eye, glm::vec3(0.), north);
-    //if (!camera) Projection = glm::perspectiveFov((float)3.14 * panelConfig.fov / 180, (float)width, (float)height, panelConfig.zNear, panelConfig.zFar);
-    //else Projection = Proj;
-
     //glm::mat4 View = glm::rotate(
     //    glm::rotate(
     //        glm::translate(
@@ -1568,23 +1619,28 @@ void E::draw(
     //        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
     //    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
     //glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
-    //MVP = Projection * LookAt * View * Model;
+    //glm::mat4 Mat = Projection * MVP * View * Model;
 
     bindVertexArray();
+    if(normalsBindingLocation != 0xFFFFFFFF) glDisableVertexArrayAttrib(vao, normalsBindingLocation);
     glBindVertexArray(vao);
     glBindProgramPipeline(pipeline);
 
-    glm::mat4 envMVP = MVP * localTransform;
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MVP));
 
-    int binding_point = 0;
-    glVertexAttribBinding(vertexPosBindingLocation, binding_point);
-    glBindVertexBuffer(binding_point, primitiveDataBuffer[POSITION], accessor[POSITION]->byteOffset, accessor[POSITION]->componentBytes);
+    glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
+    glm::mat4 envMVP = MVP * Model * localTransform;
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(envMVP));
 
-    binding_point = 1;
-    glVertexAttribBinding(textureBindingLocation, binding_point);
-    glBindVertexBuffer(binding_point, primitiveDataBuffer[TEXTURES], accessor[TEXTURES]->byteOffset, accessor[TEXTURES]->componentBytes);
+    //int binding_point = 0;
+    //glVertexAttribBinding(vertexPosBindingLocation, binding_point);
+    //glBindVertexBuffer(binding_point, primitiveDataBuffer[POSITION], accessor[POSITION]->byteOffset, accessor[POSITION]->componentBytes);
 
+    //binding_point = 1;
+    //glVertexAttribBinding(textureBindingLocation, binding_point);
+    //glBindVertexBuffer(binding_point, primitiveDataBuffer[TEXTURES], accessor[TEXTURES]->byteOffset, accessor[TEXTURES]->componentBytes);
+    
+    bindVertexBuffer(this->bufferViews, this->docDataBuffer);
+    bindTextures();
 
     glBindSampler(0, env_sampler);
     glActiveTexture(GL_TEXTURE0);
@@ -1620,10 +1676,12 @@ void C::loadMesh()
         if ((AkGeometryType)geometry->gdata->type) {
             if (mesh) {
                 processMesh(mesh->primitive);
-                allocUnique();
+                //allocUnique();
             };
         }
     }
+    allocAll(doc);
+    docDataBuffer = parseBuffors();
 }
 
 //
@@ -1697,24 +1755,26 @@ void C::draw(
     glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][0], g);
     glProgramUniform3fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][1], 1, glm::value_ptr(eye));
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightbuffer);
-
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lights_buffer);
 
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MVP));
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(Projection));
 
-    for (unsigned int texturesType = AMBIENT; texturesType < TT_SIZE; texturesType++) {
-        glActiveTexture(GL_TEXTURE0 + texturesType);
-        glBindTexture(GL_TEXTURE_2D, 0);
-    }
+    bindVertexBuffer(this->bufferViews, this->docDataBuffer);
+    bindTextures();
 
-    int binding_point = 0;
-    glVertexAttribBinding(vertexPosBindingLocation, binding_point);
-    glBindVertexBuffer(binding_point, primitiveDataBuffer[POSITION], accessor[POSITION]->byteOffset, accessor[POSITION]->componentBytes);
+    //for (unsigned int texturesType = AMBIENT; texturesType < TT_SIZE; texturesType++) {
+    //    glActiveTexture(GL_TEXTURE0 + texturesType);
+    //    glBindTexture(GL_TEXTURE_2D, 0);
+    //}
 
-    binding_point = 1;
-    glVertexAttribBinding(textureBindingLocation, binding_point);
-    glBindVertexBuffer(binding_point, primitiveDataBuffer[TEXTURES], accessor[TEXTURES]->byteOffset, accessor[TEXTURES]->componentBytes);
+    //int binding_point = 0;
+    //glVertexAttribBinding(vertexPosBindingLocation, binding_point);
+    //glBindVertexBuffer(binding_point, primitiveDataBuffer[POSITION], accessor[POSITION]->byteOffset, accessor[POSITION]->componentBytes);
+
+    //binding_point = 1;
+    //glVertexAttribBinding(textureBindingLocation, binding_point);
+    //glBindVertexBuffer(binding_point, primitiveDataBuffer[TEXTURES], accessor[TEXTURES]->byteOffset, accessor[TEXTURES]->componentBytes);
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
