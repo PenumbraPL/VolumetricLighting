@@ -11,14 +11,14 @@ void initialize_GLEW(void)
 {
     GLenum err = glewInit();
     if (GLEW_OK != err) {
-        logger.error("========== [GLEW]: Initialization failed =====================================\n");
+        logger.error("========== [GLEW]: Initialization failed =====================================");
         std::string text = "\tError:";
         text += (const char*) glewGetErrorString(err);
         logger.error(text);
     }
     std::string text = "========== [GLEW]: Using GLEW ";
     text += (const char*)glewGetString(GLEW_VERSION);
-    text += " =========================================\n";
+    text += " =========================================";
     logger.info(text);
 
     // glewIsSupported supported from version 1.3
@@ -37,13 +37,13 @@ void initialize_GLEW(void)
             if (!glewIsSupported((versionName + " " + ext).c_str())) {
                 text.clear();
 
-                text = "========== [GLEW]: For " + versionName + " extension " + ext + " isn't supported \n";
+                text = "========== [GLEW]: For " + versionName + " extension " + ext + " isn't supported ";
                 logger.warn(text);
             }
         }
     }
     else {
-        logger.warn("========== [GLEW]: OpenGL's extensions support haven't been verified! ============================\n");
+        logger.warn("========== [GLEW]: OpenGL's extensions support haven't been verified! ============================");
     }
 }
 
@@ -60,114 +60,6 @@ GLuint wrap_mode(AkWrapMode& wrap) {
     }
     return wrap_m;
 }
-
-void set_up_color(
-    AkColorDesc* colordesc,
-    AkMeshPrimitive* prim, 
-    Primitive& primitive,
-    enum TextureType type,
-    ConfigContext& panelConfig) 
-{
-    GLuint* sampler = &primitive.samplers[type];
-    GLuint* texture = &primitive.textures[type];
-    GLuint* texturesType = &primitive.texturesType[type];
-    glm::vec4* colors = &primitive.colors[type];
-
-    if (colordesc) {
-        if (colordesc->texture) {
-            AkTextureRef* tex = colordesc->texture;
-            if (tex->texture) {
-                AkSampler* samp = tex->texture->sampler;
-                if (!samp) return;
-
-                AkTypeId type = tex->texture->type;
-
-                GLuint texture_type;
-                GLuint minfilter, magfilter, mipfilter;
-                GLuint wrap_t, wrap_s, wrap_p;
-                switch (type) {
-                case AKT_SAMPLER1D:     texture_type = GL_TEXTURE_1D; break;
-                case AKT_SAMPLER2D:     texture_type = GL_TEXTURE_2D; break;
-                case AKT_SAMPLER3D:     texture_type = GL_TEXTURE_3D; break;
-                case AKT_SAMPLER_CUBE:  texture_type = GL_TEXTURE_CUBE_MAP; break;
-                case AKT_SAMPLER_RECT:  texture_type = GL_TEXTURE_RECTANGLE; break;
-                case AKT_SAMPLER_DEPTH: texture_type = GL_TEXTURE_2D; break;
-                    break;
-                }
-                wrap_t = wrap_mode(samp->wrapT);
-                wrap_s = wrap_mode(samp->wrapS);
-                wrap_p = wrap_mode(samp->wrapP);
-
-                switch (samp->minfilter) {
-                case AK_MINFILTER_LINEAR:       minfilter = GL_LINEAR; break;
-                case AK_MINFILTER_NEAREST:      minfilter = GL_NEAREST; break;
-                case AK_LINEAR_MIPMAP_NEAREST:  minfilter = GL_LINEAR_MIPMAP_NEAREST; break;
-                case AK_LINEAR_MIPMAP_LINEAR:   minfilter = GL_LINEAR_MIPMAP_LINEAR; break;
-                case AK_NEAREST_MIPMAP_NEAREST: minfilter = GL_NEAREST_MIPMAP_NEAREST; break;
-                case AK_NEAREST_MIPMAP_LINEAR:  minfilter = GL_NEAREST_MIPMAP_LINEAR; break;
-                }
-
-                switch (samp->magfilter) {
-                case AK_MAGFILTER_LINEAR:   magfilter = GL_LINEAR; break;
-                case AK_MAGFILTER_NEAREST:  magfilter = GL_NEAREST; break;
-                }
-
-                switch (samp->mipfilter) {
-                case AK_MIPFILTER_LINEAR:    mipfilter = GL_LINEAR; break;
-                case AK_MIPFILTER_NEAREST:   mipfilter = GL_NEAREST; break;
-                case AK_MIPFILTER_NONE:      mipfilter = GL_NONE; break;
-                }
-
-                glCreateSamplers(1, sampler);
-                glSamplerParameteri(*sampler, GL_TEXTURE_WRAP_S, wrap_s);
-                glSamplerParameteri(*sampler, GL_TEXTURE_WRAP_T, wrap_t);
-                glSamplerParameteri(*sampler, GL_TEXTURE_WRAP_R, wrap_p);
-                glSamplerParameteri(*sampler, GL_TEXTURE_MIN_FILTER, minfilter);
-                glSamplerParameteri(*sampler, GL_TEXTURE_MAG_FILTER, magfilter);
-
-
-                AkInput* tex_coord = ak_meshInputGet(prim, tex->coordInputName, tex->slot); //
-                int components = 0;
-                int width = 0;
-                int height = 0;
-                char path[128] = { '\0' };
-                memcpy_s(path, 128, panelConfig.getModelPath().c_str(), strlen(panelConfig.getModelPath().c_str()));
-                //char path[128] = { PATH };
-                const char* f_path = tex->texture->image->initFrom->ref;
-                memcpy_s(path + strlen(path), 128 - strlen(path), f_path, strlen(f_path));
-                char* image = (char*)imageLoadFromFile(path, &width, &height, &components);
-
-                if (image) {
-                    glCreateTextures(texture_type, 1, texture);
-                    *texturesType = texture_type;
-                    if (std::string::npos != std::string(path).find(".jpg", 0)) {
-                        glTextureStorage2D(*texture, 1, GL_RGB8, width, height);
-                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
-                    }
-                    if (std::string::npos != std::string(path).find(".jpeg", 0)) {
-                        glTextureStorage2D(*texture, 1, GL_RGB8, width, height);
-                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
-                    }
-                    if (std::string::npos != std::string(path).find(".png", 0)) {
-                        glTextureStorage2D(*texture, 1, GL_RGBA8, width, height);
-                        glTextureSubImage2D(*texture, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image);
-                    }
-                    stbi_image_free(image);
-                }
-            }
-        }
-        if (colordesc->color) {
-            glm::vec4 rgba;
-            rgba.r = colordesc->color->rgba.R;
-            rgba.g = colordesc->color->rgba.G;
-            rgba.b = colordesc->color->rgba.B;
-            rgba.a = colordesc->color->rgba.A;
-            *colors = rgba;
-        }
-    }
-}
-
-
 
 
 void set_up_color(
@@ -277,147 +169,6 @@ void set_up_color(
 }
 
 
-
-
-void proccess_node(AkNode* node, std::vector<Primitive>& primitives)
-{
-    Primitive primitive;
-    std::string geo_type;
-
-    float* world_transform = primitive.setWorldTransform();
-    float* localTransform = primitive.setTransform();
-    primitive.createSamplers();
-    primitive.createTextures();
-    ak_transformCombineWorld(node, world_transform);
-    ak_transformCombine(node, localTransform);
-    std::regex light_regex("^[Ll]ight.*");
-
-    if (node->geometry) {
-        AkGeometry* geometry = ak_instanceObjectGeom(node); // if geometry
-        AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
-        switch ((AkGeometryType)geometry->gdata->type) { //if gdata
-        case AK_GEOMETRY_MESH:
-            geo_type = "mesh";
-            if (mesh) {
-                GLuint prim_type;
-
-//                for (int i = 0; i < mesh->primitiveCount; i++) {/*prim = prim->next;*/ }
-                AkMeshPrimitive* prim = mesh->primitive;
-                switch (prim->type) {
-                case AK_PRIMITIVE_LINES:              prim_type = GL_LINES; break;
-                case AK_PRIMITIVE_POLYGONS:           prim_type = GL_POLYGON; break;
-                case AK_PRIMITIVE_TRIANGLES:          prim_type = GL_TRIANGLES; break;
-                case AK_PRIMITIVE_POINTS:
-                default:                              prim_type = GL_POINTS; break;
-                }
-                if (prim->indices) {
-                    primitive.verticleIndecies = (uint32_t*)prim->indices->items;
-                    primitive.verticleIndeciesSize = (unsigned int) prim->indices->count;
-                }
-                //std::cout << "Mesh name:" << mesh->name << std::endl;   // should i insert mesh->name ??
-                //std::cout << "Mesh center:" << mesh->center << std::endl; // same
-                //std::cout << "Primitive center: " << prim->center << std::endl;
-                int set = prim->input->set;
-
-                if (prim->material) {
-                    AkMaterial* mat = prim->material;
-                    AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
-                    AkTechniqueFxCommon* tch = ef->profile->technique->common;
-                    if (tch) {
-                        set_up_color(tch->ambient, prim, primitive, AMBIENT, panelConfig);
-                        set_up_color(tch->emission, prim, primitive, EMISIVE, panelConfig);
-                        set_up_color(tch->diffuse, prim, primitive, DIFFUSE, panelConfig);
-                        set_up_color(tch->specular, prim, primitive, SPECULAR, panelConfig);
-                        //add more
-
-                        switch (tch->type) {
-                        case AK_MATERIAL_METALLIC_ROUGHNESS: {
-                            AkMetallicRoughness* mr = (AkMetallicRoughness*)tch;
-                            AkColorDesc alb_cd;
-                            AkColorDesc mr_cd;
-                            AkColor col;
-                            mr_cd.color = &col;
-
-                            alb_cd.color = &mr->albedo;
-                            alb_cd.texture = mr->albedoTex;
-                            mr_cd.color->rgba.R = mr->metallic;
-                            mr_cd.color->rgba.G = mr->roughness;
-                            mr_cd.texture = mr->metalRoughTex;
-                            set_up_color(&alb_cd, prim, primitive, ALBEDO, panelConfig);
-                            set_up_color(&mr_cd, prim, primitive, MET_ROUGH, panelConfig);
-                            break;
-                        }
-
-                        case AK_MATERIAL_SPECULAR_GLOSSINES: {
-                            AkSpecularGlossiness* sg = (AkSpecularGlossiness*)tch;
-                            AkColorDesc sg_cd;
-                            AkColorDesc dif_cd;
-                            sg_cd.color = &sg->specular;
-                            sg_cd.texture = sg->specGlossTex;
-                            dif_cd.color = &sg->diffuse;
-                            dif_cd.texture = sg->diffuseTex;
-                            set_up_color(&sg_cd, prim, primitive, SP_GLOSSINESS, panelConfig);
-                            set_up_color(&dif_cd, prim, primitive, SP_DIFFUSE, panelConfig);
-                            break;
-                        }
-                        };
-                        //std::cout << "Is double sized: " << (tch->doubleSided ? "True" : "False");
-                    }
-                }
-
-                AkInput* wgs = ak_meshInputGet(prim, "WEIGHTS", set);
-                AkInput* jts = ak_meshInputGet(prim, "JOINTS", set);
-                AkInput* pos = ak_meshInputGet(prim, "POSITION", set);
-                AkInput* tex = ak_meshInputGet(prim, "TEXCOORD", set); // if indexed then multiple parts to proccess
-                AkInput* nor = ak_meshInputGet(prim, "NORMAL", set);
-
-                AkInput* col = ak_meshInputGet(prim, "COLOR", set);
-                AkInput* tan = ak_meshInputGet(prim, "TANGENT", set);
-
-                //std::cout << ak_meshInputCount(mesh) << std::endl;
-
-                primitive.wgs = wgs ? wgs->accessor : nullptr;
-                primitive.jts = jts ? jts->accessor : nullptr;
-                primitive.pos = pos ? pos->accessor : nullptr;
-                primitive.tex = tex ? tex->accessor : nullptr;
-                primitive.nor = nor ? nor->accessor : nullptr;
-                primitive.col = col ? col->accessor : nullptr;
-                primitive.tan = tan ? tan->accessor : nullptr;
-
-                primitive.createPipeline();
-
-                primitives.push_back(primitive);
-            };
-            break;
-        case AK_GEOMETRY_SPLINE: geo_type = "spline"; break;
-        case  AK_GEOMETRY_BREP:  geo_type = "brep";   break;
-        default:                 geo_type = "other";  break;
-        };
-    }
-    /*else if (std::regex_match(node->name, light_regex)) {
-        Light light;
-        light.localTransform = glm::make_mat4x4(localTransform);
-        light.worldTransform = glm::make_mat4x4(world_transform);
-        free(localTransform);
-        free(world_transform);
-
-        light.loadMesh();
-        lights.push_back(light);
-        // light from gltf file
-    }*/
-
-    //std::cout << "Node name: " << node->name << std::endl;
-    //std::cout << "Node type: " << geo_type << std::endl;
-
-    if (node->next) {
-        node = node->next;
-        proccess_node(node, primitives);
-    }
-    if (node->chld) {
-        node = node->chld;
-        proccess_node(node, primitives);
-    }
-}
 
 void proccess_node(AkNode* node, std::vector<Drawable>& primitives)
 {

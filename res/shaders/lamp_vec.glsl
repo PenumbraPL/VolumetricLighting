@@ -1,7 +1,7 @@
 #version 450
 
-in vec3 vCol;
 in vec3 vPos;
+in vec3 vCol;
 uniform mat4 MVP;
 
 out vec3 _color;
@@ -16,5 +16,9 @@ out gl_PerVertex
 void main()
 {
     gl_Position = MVP * vec4(vPos, 1.0);
-    _color = vCol;
+    if(length(vCol) < 1e-5){
+        _color = vPos;
+    } else{
+        _color = vCol;
+    }
 }

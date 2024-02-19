@@ -1,19 +1,19 @@
 // VolumetricLighting.cpp : This file contains the 'main' function. Program execution begins and ends there.
-#include "GL/glew.h"
-#include "GLFW/glfw3.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "pch.h"
-
-//#include "backends/imgui_impl_glfw.h"
-//#include "backends/imgui_impl_opengl3.h"
-
 //#define GLEW_STATIC
+#define STB_IMAGE_IMPLEMENTATION
+#include "Tools.h"
 #include "GUI.h"
 #include "IO.h"
-#include "Tools.h"
 #include "Light.h"
-#include "Debug.h"
 #include "Models.h"
+
+#include "GL/glew.h"
+#include "GLFW/glfw3.h"
+#include "pch.h"
+
+#include "Debug.h"
+
+
 
 namespace fs = std::filesystem;
 
@@ -110,13 +110,13 @@ void draw_imgui(ImGuiIO& io)
 int main(void)
 {
     GLFWwindow* window;
-    // Setup Dear ImGui context
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     init(&window, io);
 
-    L lightModel;
+    Light lightModel;
     lightModel.loadMesh();
     std::string lightsPipeline[5] = { "res/shaders/lamp_vec.glsl", "res/shaders/lamp_frag.glsl" };
     lightModel.createPipeline(lightsPipeline);
@@ -125,16 +125,15 @@ int main(void)
     lightModel.getLocation(uniformNames);
 
 
-    E env;
+    Environment env;
     env.loadMesh();
     std::string envPipeline[5] = { "res/shaders/environment_vec.glsl", "res/shaders/environment_frag.glsl" };
     env.createPipeline(envPipeline);
-    //env.createPipeline();
     std::vector<const char*> envUniformNames[5] = {{"MVP"}, {}, {}, {}, {}};
     env.getLocation(envUniformNames);
 
 
-    C cld;
+    Cloud cld;
     cld.loadMesh();
     std::string cloudPipeline[5] = { "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" };
     cld.createPipeline(cloudPipeline);
@@ -149,7 +148,7 @@ int main(void)
 
     /* ================================================ */
     do{
-        ////ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);        
+        ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);        
         AkDoc* doc = scenes.loadScene(panelConfig.getModelPath(), panelConfig.getModelName());
         AkCamera* camera = scenes.camera(doc);
         glm::mat4& View = scenes.cameraEye.View;
@@ -181,7 +180,6 @@ int main(void)
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightsBuffer);
 
         scenes.initLights();
-        //init_lights(lightsData);
         int lightsBufferSize = (int)sizeof(PointLight) * lightsData.size();
         unsigned int lightDataSize = (unsigned int)lightsData.size();
 
@@ -216,13 +214,13 @@ int main(void)
                             translate)
                         , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
                     rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-            //glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
-            glm::mat4 MVP = LookAt * View;// *Model;
-            glm::mat4 envMVP = Projection * LookAt * View;// *Model;
 
-            //env.draw(width, height, Projection, camera);
-            env.draw(lightsBuffer, bufferViews, docDataBuffer, eye, envMVP, Projection);
+            glm::mat4 MVP = Projection * LookAt * View;
 
+            env.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
+            
+
+            MVP = LookAt * View;
 
             for (auto& primitive : primitives) {
                 primitive.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
@@ -232,33 +230,28 @@ int main(void)
 
             scenes.updateLights(lightsBuffer, lightDataSize, panelConfig);
             for (auto& light : lightsData) {
-                glm::mat4x4 transform = glm::rotate(
+                glm::mat4x4 View =
                     glm::rotate(
-                        glm::translate(localTransform, light.position)
-                , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+                         glm::rotate(
+                            glm::translate(localTransform, light.position)
+                        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
                     rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-                //lightModel.drawLight(width, height, Projection, camera, transform);
-                glm::mat4 View = transform;
                 glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(.2f));
+
                 glm::mat4 MVP = Projection * LookAt * View * Model;
                 lightModel.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
             }
             /* ===================== */
 
-            //translate = glm::vec3(0., 0., 0.);// glm::vec3(panelConfig.tr_x * 0.1, panelConfig.tr_y * 0.1, panelConfig.tr_z * 0.1);
-            //rotate = glm::vec3(0., 0., 0.);//glm::vec3(3.14 * panelConfig.xRotate / 180, 3.14 * panelConfig.yRotate / 180, 0.f);
-
             View =
                 glm::rotate(
                     glm::rotate(
-                        glm::translate(
-                            cld.localTransform
-                            , translate)
-                        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
-                    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+                        glm::translate(cld.localTransform , translate)
+                    , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+                rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
             glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f));
+
             MVP = LookAt * View * Model;
-            //cld.draw(width, height, Projection, camera, panelConfig.g, lightsBuffer);
             cld.g = panelConfig.g;
             cld.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
 

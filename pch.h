@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iostream>
 #include <stdio.h>
+#include <string>
 #include <stdlib.h>
 #include <vector>
 #include <map>
