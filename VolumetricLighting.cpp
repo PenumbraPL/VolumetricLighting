@@ -1,25 +1,27 @@
 // VolumetricLighting.cpp : This file contains the 'main' function. Program execution begins and ends there.
+//#define GLEW_STATIC
+#define STB_IMAGE_IMPLEMENTATION
+#include "Tools.h"
+#include "GUI.h"
+#include "IO.h"
+#include "Light.h"
+#include "Models.h"
+
 #include "GL/glew.h"
 #include "GLFW/glfw3.h"
-#define STB_IMAGE_IMPLEMENTATION
 #include "pch.h"
 
-//#define GLEW_STATIC
-#include "GUI.h"
-#include "Draw.h"
-#include "IO.h"
-#include "Tools.h"
-#include "Light.h"
 #include "Debug.h"
-#include "Models.h"
+
+
 
 namespace fs = std::filesystem;
 
 
-auto bufferLogger = std::make_shared <debug::BufferLogger>();
-auto fileLogger = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/basic-log.txt", true);
-//auto consoleLogger = std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>();
-auto logger = spdlog::logger("multi_sink", {bufferLogger, fileLogger/*, consoleLogger*/});
+auto bufferLogger{ std::make_shared <debug::BufferLogger>() };
+auto fileLogger{ std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/basic-log.txt", true) };
+auto consoleLogger{ std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>() };
+auto logger{ spdlog::logger("multi_sink", {bufferLogger, fileLogger, consoleLogger}) };
 
 
 WindowInfo windowConfig = { 1900, 1000, "GLTF Viewer" };
@@ -29,11 +31,15 @@ ConfigContext panelConfig = { "./res/models/Sample2/scene.gltf" };
 
 /* ============================================================================= */
 
+
+
+
 void init(GLFWwindow** windowPtr, ImGuiIO& io)
 {
-    logger.info("========== Initialization started ============================================\n");
+    logger.set_pattern("%^[%L][%s:%#]%$  %v ");
+    logger.info("========== Initialization started ============================================");
     if (!glfwInit()) {
-        logger.error("========== [GLFW]: Initialization failed =====================================\n");
+        logger.error("========== [GLFW]: Initialization failed =====================================");
         exit(EXIT_FAILURE);
     }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
@@ -44,8 +50,8 @@ void init(GLFWwindow** windowPtr, ImGuiIO& io)
     GLFWwindow* window = glfwCreateWindow(windowConfig.width, windowConfig.height, windowConfig.title, NULL, NULL);
     if (!window) {
         glfwTerminate();
-        logger.warn("========== [GLFW]: Terminated ================================================\n");
-        logger.error("========== [GLFW]: Window initialization failed ==============================\n");
+        logger.warn("========== [GLFW]: Terminated ================================================");
+        logger.error("========== [GLFW]: Window initialization failed ==============================");
         exit(EXIT_FAILURE);
     }
     *windowPtr = window;
@@ -70,7 +76,7 @@ void init(GLFWwindow** windowPtr, ImGuiIO& io)
     
     ImGui::StyleColorsDark();
 
-    const char* glsl_version = "#version 450";
+    const char* glsl_version{ "#version 450" };
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
   
@@ -79,18 +85,18 @@ void init(GLFWwindow** windowPtr, ImGuiIO& io)
     int flags;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
-        logger.info("========== [GLFW]: Debug context initialize successful =======================\n");
+        logger.info("========== [GLFW]: Debug context initialize successful =======================");
         std::vector<DEBUGPROC> callbacks;
         debug::fill_callback_list(callbacks);
         debug::debug_init(callbacks);
     }
     else {
-        logger.warn("========== [GLFW]: Debug context initialize unsuccessful =====================\n");
+        logger.warn("========== [GLFW]: Debug context initialize unsuccessful =====================");
     }
 }
 
-void draw_imgui(ImGuiIO& io) {
-    // ImGui
+void draw_imgui(ImGuiIO& io) 
+{
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -98,7 +104,6 @@ void draw_imgui(ImGuiIO& io) {
     drawLeftPanel(io, panelConfig);
     drawRightPanel(io, panelConfig);
 
-    // Rendering
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
@@ -106,10 +111,10 @@ void draw_imgui(ImGuiIO& io) {
 /* ============================================================================= */
 
 
-int main(void)
+int main()
 {
     GLFWwindow* window;
-    // Setup Dear ImGui context
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -117,141 +122,58 @@ int main(void)
 
     Light lightModel;
     lightModel.loadMesh();
-    lightModel.createPipeline();
+    std::string lightsPipeline[5] = { "res/shaders/lamp_vec.glsl", "res/shaders/lamp_frag.glsl" };
+    lightModel.createPipeline(lightsPipeline);
+    std::vector<const char*> uniformNames[5] =
+    {{"MVP", "PRJ"}, {"G", "camera"}, {}, {}, {} };
+    lightModel.getLocation(uniformNames);
+
 
     Environment env;
     env.loadMesh();
-    env.createPipeline();
+    std::string envPipeline[5] = { "res/shaders/environment_vec.glsl", "res/shaders/environment_frag.glsl" };
+    env.createPipeline(envPipeline);
+    std::vector<const char*> envUniformNames[5] = {{"MVP"}, {}, {}, {}, {}};
+    env.getLocation(envUniformNames);
+
 
     Cloud cld;
     cld.loadMesh();
-    cld.createPipeline(windowConfig.width, windowConfig.height);
+    std::string cloudPipeline[5] = { "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" };
+    cld.createPipeline(cloudPipeline);
+    std::vector<const char*> cldUniformNames[5] =
+    { {"MVP", "PRJ"}, {"G", "camera"}, {}, {}, {} };
+    cld.getLocation(cldUniformNames);
 
-    std::vector<Primitive> primitives;
-    std::vector<PointLight> lightsData;
-    //std::vector<Camera> cameras;
-    panelConfig.lightsData = &lightsData;
+    Scene scenes;
+    std::vector<PointLight>& lightsData= scenes.lights;
+    panelConfig.lightsData = &scenes.lights;
 
 
     /* ================================================ */
     do{
-        primitives.clear();
-        lightsData.clear();
-        //ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
+        ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);        
+        AkDoc* doc = scenes.loadScene(panelConfig.getModelPath(), panelConfig.getModelName());
+        AkCamera* camera = scenes.camera(doc);
+        glm::mat4& View = scenes.cameraEye.View;
+        glm::mat4& Projection = scenes.cameraEye.Projection;
+        scenes.allocAll(doc);
 
-        AkDoc* doc;
-        AkVisualScene* scene;
-
-        std::string scenePath = panelConfig.getModelPath();
-        scenePath += panelConfig.getModelName();
-        if (ak_load(&doc, scenePath.c_str(), NULL) != AK_OK) {
-            logger.error("Document couldn't be loaded\n");
-            exit(EXIT_FAILURE);
-        }
-        else {
-            logger.info(print_coord_system(doc->coordSys));
-            logger.info(print_doc_information(doc->inf, doc->unit));
-            logger.info("==============================================================================\n");
-        }
+        std::vector<Drawable>& primitives = scenes.primitives;
+        std::string pipeline[5];
+        pipeline[VERTEX] = { "res/shaders/standard_vec.glsl" };
+        pipeline[FRAGMENT] = { "res/shaders/pbr_with_ext_light_frag.glsl" };
+        for (auto& primitive : primitives) primitive.createPipeline(pipeline);
+        std::map <void*, unsigned int>& bufferViews = scenes.bufferViews;
+        GLuint* docDataBuffer = scenes.parseBuffors();
 
 
-        AkCamera* camera = nullptr;
-        glm::mat4 View;
-        glm::mat4 Projection;
-        if (doc->scene.visualScene) {
-            scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
-            logger.info("=========================== Visual Scene loaded ==================================================\n");
-            if (scene->name) {
-                std::string sceneInfo = "======================== Scene name: ";
-                sceneInfo += scene->name;
-                sceneInfo += "========================\n";
-                logger.info(sceneInfo);
-            }
-            float cameraView[16];
-            float cameraProjection[16];
-
-            ak_firstCamera(doc, &camera, cameraView, cameraProjection);
-            if (camera) {
-                View = glm::make_mat4x4(cameraView);
-                Projection = glm::make_mat4x4(cameraProjection);
-            }
-            else if (scene->cameras) {
-                if (scene->cameras->first) {
-                    camera = (AkCamera*)ak_instanceObject(scene->cameras->first->instance);
-                }
-            }
-            if (camera) std::cout << "Camera name: " << camera->name << std::endl;
-
-
-            AkNode* node = ak_instanceObjectNode(scene->node);
-            proccess_node(node, primitives); // pointer to pointer?
-        }
-
-
-
-        std::map <void*, unsigned int> bufferViews;
-        std::map <void*, unsigned int> textureViews;
-        std::map <void*, unsigned int> imageViews;
-        bufferViews.clear();
-        textureViews.clear();
-        imageViews.clear();
-
-        // What with and libimages ??
-        int j = 0;
-        FListItem* i = doc->lib.images;
-        if (i) {
-            do {
-                AkImage* img = (AkImage*)i->data;
-                imageViews.insert({ {img, 0} });
-                i = i->next;
-            } while (i);
-            for (auto& u : imageViews) {
-                u.second = j++;
-            }
-        }
-
-        j = 0;
-        FListItem* t = doc->lib.textures;
-        if (t) {
-            do {
-                AkTexture* tex = (AkTexture*)t->data;
-                textureViews.insert({ {tex, 0} });
-                t = t->next;
-            } while (t);
-            for (auto& u : textureViews) {
-                u.second = j++;
-            }
-        }
-
-        j = 0;
-        FListItem* b = (FListItem*)doc->lib.buffers;
-        if (b) {
-            do {
-                AkBuffer* buf = (AkBuffer*)b->data;
-                bufferViews.insert({ {buf, 0} });
-                b = b->next;
-            } while (b);
-            for (auto& u : bufferViews) {
-                u.second = j++;
-            }
-        }
-
-
-        /* ======================================================== */
-
-        GLuint vao;
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-
-        GLuint* docDataBuffer = (GLuint*)calloc(bufferViews.size(), sizeof(GLuint));
-        glCreateBuffers((GLsizei)bufferViews.size(), docDataBuffer);
-        for (auto& buffer : bufferViews) {
-            unsigned int i = bufferViews[buffer.first];
-            glNamedBufferData(docDataBuffer[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
-        }
-        for (auto& p : primitives) p.getLocation();
-
-
+        std::vector<const char*> uniformNames[5] = {
+            {"MVP", "PRJ"},
+            {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound"},
+            {}, {}, {}
+        };
+        for (auto& primitive : primitives) primitive.getLocation(uniformNames);
 
         //glDepthRange(panelConfig.near_plane, panelConfig.far_plane);
         glDepthFunc(GL_LEQUAL);
@@ -261,7 +183,7 @@ int main(void)
         glGenBuffers(1, &lightsBuffer);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightsBuffer);
 
-        init_lights(lightsData);
+        scenes.initLights();
         int lightsBufferSize = (int)sizeof(PointLight) * lightsData.size();
         unsigned int lightDataSize = (unsigned int)lightsData.size();
 
@@ -271,7 +193,7 @@ int main(void)
 
         std::string fileSelected = panelConfig.fileSelection;
 
-        logger.info("===================== Main loop ==============================================\n");
+        logger.info("===================== Main loop ==============================================");
         while (!glfwWindowShouldClose(window)) {
             int width, height;
             glfwGetFramebufferSize(window, &width, &height);
@@ -281,54 +203,63 @@ int main(void)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glClearColor(0., 1., 1., 1.);
 
-
             if (!camera) Projection = panelConfig.getProjection(width, height);
-        /*    panelConfig.lightsData = lightsData.data();
-            panelConfig.lightsSize = lightsData.size();*/
-
-
-            env.draw(width, height, Projection, camera);
-
-
+            
             glm::vec3 eye = panelConfig.getView();
             glm::mat4 LookAt = panelConfig.getLookAt();
             glm::vec3 translate = panelConfig.getTranslate();
             glm::vec3 rotate = panelConfig.getRotate();
+            glm::mat4 localTransform = glm::mat4(1.);
+
+            glm::mat4 View =
+                glm::rotate(
+                    glm::rotate(
+                        glm::translate(localTransform,
+                            translate)
+                        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+                    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+
+            glm::mat4 MVP = Projection * LookAt * View;
+
+            env.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
+            
+
+            MVP = LookAt * View;
+
             for (auto& primitive : primitives) {
-                primitive.draw(lightsBuffer, bufferViews, docDataBuffer,
-                    eye, LookAt, Projection, translate, rotate);
+                primitive.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
             }
+       
+            
 
-            if (panelConfig.getLightsSize() != lightDataSize) {
-                if (panelConfig.getLightsSize() > lightDataSize) {
-                    lightDataSize = panelConfig.getLightsSize();
-                    int lightsBufferSize = (int)sizeof(PointLight) * lightsData.size();
-                    glNamedBufferData(lightsBuffer, sizeof(LightsList) + lightsBufferSize, NULL, GL_DYNAMIC_DRAW);
-                }
-                lightDataSize = panelConfig.getLightsSize();
-                int lightsBufferSize = (int)sizeof(PointLight) * lightsData.size();
-                glNamedBufferSubData(lightsBuffer, offsetof(LightsList, list), lightsBufferSize, lightsData.data());
-                glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
-            }
-            PointLight newLight = panelConfig.getLight();
-            if (compare_lights(lightsData.data()[panelConfig.lightId], newLight)) {
-                lightsData.data()[panelConfig.lightId] = newLight;
-                LightsList* ptr = (LightsList*)glMapNamedBuffer(lightsBuffer, GL_WRITE_ONLY);
-                memcpy_s((void*)&ptr->list[panelConfig.lightId], sizeof(PointLight), &newLight, sizeof(PointLight));
-                glUnmapNamedBuffer(lightsBuffer);
-                panelConfig.updateLight();
-            }
+            scenes.updateLights(lightsBuffer, lightDataSize, panelConfig);
             for (auto& light : lightsData) {
-                glm::mat4x4 transform = glm::translate(glm::mat4x4(1.f), light.position);
-                lightModel.drawLight(width, height, Projection, camera, transform);
+                glm::mat4x4 View =
+                    glm::rotate(
+                         glm::rotate(
+                            glm::translate(localTransform, light.position)
+                        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+                    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+                glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(.2f));
+
+                glm::mat4 MVP = Projection * LookAt * View * Model;
+                lightModel.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
             }
+            /* ===================== */
 
+            View =
+                glm::rotate(
+                    glm::rotate(
+                        glm::translate(cld.localTransform , translate)
+                    , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+                rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f));
 
-            cld.draw(width, height, Projection, camera, panelConfig.g, lightsBuffer);
-
+            MVP = LookAt * View * Model;
+            cld.g = panelConfig.g;
+            cld.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
 
             draw_imgui(io);
-
             glfwSwapBuffers(window);
             glfwPollEvents();
 
@@ -339,14 +270,18 @@ int main(void)
 
         glBindProgramPipeline(0);
 
-        for (auto& p : primitives) p.deleteTransforms();
-        for (auto& p : primitives) p.deleteTexturesAndSamplers();
-        for (auto& p : primitives) p.deletePipeline();
+        for (auto& primitive : primitives) primitive.deleteTexturesAndSamplers();
+        for (auto& primitive : primitives) primitive.deletePipeline();
 
         glDeleteBuffers((GLsizei)bufferViews.size(), docDataBuffer);
-        free(docDataBuffer);
-        glDeleteVertexArrays(1, &vao);
-        //
+        if(docDataBuffer) free(docDataBuffer);
+        
+        for (auto& primitive : primitives) {
+            for (int i = VERTEX; i <= GEOMETRY; i++) {
+                if(primitive.bindingLocationIndecies[i]) free(primitive.bindingLocationIndecies[i]);
+            }
+        }
+
     } while (!glfwWindowShouldClose(window));
 
     env.deletePipeline();
@@ -357,7 +292,7 @@ int main(void)
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     glfwTerminate();
-    logger.info("========== [GLFW]: Terminated ================================================\n");
-    logger.info("===================== Exit succeeded =========================================\n");
+    logger.info("========== [GLFW]: Terminated ================================================");
+    logger.info("===================== Exit succeeded =========================================");
     return 0;
 }

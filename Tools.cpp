@@ -7,23 +7,23 @@
 extern spdlog::logger logger;
 
 
-void initialize_GLEW(void) 
+void initialize_GLEW(void)
 {
-    GLenum err = glewInit();
+    GLenum err{ glewInit() };
     if (GLEW_OK != err) {
-        logger.error("========== [GLEW]: Initialization failed =====================================\n");
-        std::string text = "\tError:";
-        text += (const char*) glewGetErrorString(err);
+        logger.error("========== [GLEW]: Initialization failed =====================================");
+        std::string text{ "\tError:" };
+        text += (const char*)glewGetErrorString(err);
         logger.error(text);
     }
-    std::string text = "========== [GLEW]: Using GLEW ";
+    std::string text{ "========== [GLEW]: Using GLEW " };
     text += (const char*)glewGetString(GLEW_VERSION);
-    text += " =========================================\n";
+    text += " =========================================";
     logger.info(text);
 
     // glewIsSupported supported from version 1.3
     if (GLEW_VERSION_1_3) {
-        std::string versionName = "GL_VERSION_4_5";
+        std::string versionName{ "GL_VERSION_4_5" };
         std::string extensionList[] = {
             "GL_ARB_separate_shader_objects",
             "GL_ARB_shader_image_load_store",
@@ -37,13 +37,13 @@ void initialize_GLEW(void)
             if (!glewIsSupported((versionName + " " + ext).c_str())) {
                 text.clear();
 
-                text = "========== [GLEW]: For " + versionName + " extension " + ext + " isn't supported \n";
+                text = "========== [GLEW]: For " + versionName + " extension " + ext + " isn't supported ";
                 logger.warn(text);
             }
         }
     }
     else {
-        logger.warn("========== [GLEW]: OpenGL's extensions support haven't been verified! ============================\n");
+        logger.warn("========== [GLEW]: OpenGL's extensions support haven't been verified! ============================");
     }
 }
 
@@ -61,12 +61,13 @@ GLuint wrap_mode(AkWrapMode& wrap) {
     return wrap_m;
 }
 
+
 void set_up_color(
     AkColorDesc* colordesc,
-    AkMeshPrimitive* prim, 
-    Primitive& primitive,
+    AkMeshPrimitive* prim,
+    Drawable& primitive,
     enum TextureType type,
-    ConfigContext& panelConfig) 
+    ConfigContext& panelConfig)
 {
     GLuint* sampler = &primitive.samplers[type];
     GLuint* texture = &primitive.textures[type];
@@ -75,12 +76,12 @@ void set_up_color(
 
     if (colordesc) {
         if (colordesc->texture) {
-            AkTextureRef* tex = colordesc->texture;
+            AkTextureRef* tex{ colordesc->texture };
             if (tex->texture) {
-                AkSampler* samp = tex->texture->sampler;
+                AkSampler* samp{ tex->texture->sampler };
                 if (!samp) return;
 
-                AkTypeId type = tex->texture->type;
+                AkTypeId type{ tex->texture->type };
 
                 GLuint texture_type;
                 GLuint minfilter, magfilter, mipfilter;
@@ -127,9 +128,9 @@ void set_up_color(
 
 
                 AkInput* tex_coord = ak_meshInputGet(prim, tex->coordInputName, tex->slot); //
-                int components = 0;
-                int width = 0;
-                int height = 0;
+                auto components{ 0 };
+                auto width{ 0 };
+                auto height{ 0 };
                 char path[128] = { '\0' };
                 memcpy_s(path, 128, panelConfig.getModelPath().c_str(), strlen(panelConfig.getModelPath().c_str()));
                 //char path[128] = { PATH };
@@ -169,162 +170,44 @@ void set_up_color(
 
 
 
-
-void proccess_node(AkNode* node, std::vector<Primitive>& primitives)
+void proccess_node(AkNode* node, std::vector<Drawable>& primitives)
 {
-    Primitive primitive;
-    std::string geo_type;
-
-    float* world_transform = primitive.setWorldTransform();
-    float* localTransform = primitive.setTransform();
-    primitive.createSamplers();
-    primitive.createTextures();
-    ak_transformCombineWorld(node, world_transform);
-    ak_transformCombine(node, localTransform);
-    std::regex light_regex("^[Ll]ight.*");
+    Drawable primitive;
+    primitive.loadMatrix(node);
 
     if (node->geometry) {
-        AkGeometry* geometry = ak_instanceObjectGeom(node); // if geometry
-        AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
-        switch ((AkGeometryType)geometry->gdata->type) { //if gdata
-        case AK_GEOMETRY_MESH:
-            geo_type = "mesh";
+        AkGeometry* geometry{ ak_instanceObjectGeom(node) };
+        AkMesh* mesh{ (AkMesh*)ak_objGet(geometry->gdata) };
+        if ((AkGeometryType)geometry->gdata->type) {
             if (mesh) {
-                GLuint prim_type;
-
-//                for (int i = 0; i < mesh->primitiveCount; i++) {/*prim = prim->next;*/ }
-                AkMeshPrimitive* prim = mesh->primitive;
-                switch (prim->type) {
-                case AK_PRIMITIVE_LINES:              prim_type = GL_LINES; break;
-                case AK_PRIMITIVE_POLYGONS:           prim_type = GL_POLYGON; break;
-                case AK_PRIMITIVE_TRIANGLES:          prim_type = GL_TRIANGLES; break;
-                case AK_PRIMITIVE_POINTS:
-                default:                              prim_type = GL_POINTS; break;
-                }
-                if (prim->indices) {
-                    primitive.verticleIndecies = (uint32_t*)prim->indices->items;
-                    primitive.verticleIndeciesSize = (unsigned int) prim->indices->count;
-                }
-                //std::cout << "Mesh name:" << mesh->name << std::endl;   // should i insert mesh->name ??
-                //std::cout << "Mesh center:" << mesh->center << std::endl; // same
-                //std::cout << "Primitive center: " << prim->center << std::endl;
-                int set = prim->input->set;
-
-                if (prim->material) {
-                    AkMaterial* mat = prim->material;
-                    AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
-                    AkTechniqueFxCommon* tch = ef->profile->technique->common;
-                    if (tch) {
-                        set_up_color(tch->ambient, prim, primitive, AMBIENT, panelConfig);
-                        set_up_color(tch->emission, prim, primitive, EMISIVE, panelConfig);
-                        set_up_color(tch->diffuse, prim, primitive, DIFFUSE, panelConfig);
-                        set_up_color(tch->specular, prim, primitive, SPECULAR, panelConfig);
-                        //add more
-
-                        switch (tch->type) {
-                        case AK_MATERIAL_METALLIC_ROUGHNESS: {
-                            AkMetallicRoughness* mr = (AkMetallicRoughness*)tch;
-                            AkColorDesc alb_cd;
-                            AkColorDesc mr_cd;
-                            AkColor col;
-                            mr_cd.color = &col;
-
-                            alb_cd.color = &mr->albedo;
-                            alb_cd.texture = mr->albedoTex;
-                            mr_cd.color->rgba.R = mr->metallic;
-                            mr_cd.color->rgba.G = mr->roughness;
-                            mr_cd.texture = mr->metalRoughTex;
-                            set_up_color(&alb_cd, prim, primitive, ALBEDO, panelConfig);
-                            set_up_color(&mr_cd, prim, primitive, MET_ROUGH, panelConfig);
-                            break;
-                        }
-
-                        case AK_MATERIAL_SPECULAR_GLOSSINES: {
-                            AkSpecularGlossiness* sg = (AkSpecularGlossiness*)tch;
-                            AkColorDesc sg_cd;
-                            AkColorDesc dif_cd;
-                            sg_cd.color = &sg->specular;
-                            sg_cd.texture = sg->specGlossTex;
-                            dif_cd.color = &sg->diffuse;
-                            dif_cd.texture = sg->diffuseTex;
-                            set_up_color(&sg_cd, prim, primitive, SP_GLOSSINESS, panelConfig);
-                            set_up_color(&dif_cd, prim, primitive, SP_DIFFUSE, panelConfig);
-                            break;
-                        }
-                        };
-                        //std::cout << "Is double sized: " << (tch->doubleSided ? "True" : "False");
-                    }
-                }
-
-                AkInput* wgs = ak_meshInputGet(prim, "WEIGHTS", set);
-                AkInput* jts = ak_meshInputGet(prim, "JOINTS", set);
-                AkInput* pos = ak_meshInputGet(prim, "POSITION", set);
-                AkInput* tex = ak_meshInputGet(prim, "TEXCOORD", set); // if indexed then multiple parts to proccess
-                AkInput* nor = ak_meshInputGet(prim, "NORMAL", set);
-
-                AkInput* col = ak_meshInputGet(prim, "COLOR", set);
-                AkInput* tan = ak_meshInputGet(prim, "TANGENT", set);
-
-                //std::cout << ak_meshInputCount(mesh) << std::endl;
-
-                primitive.wgs = wgs ? wgs->accessor : nullptr;
-                primitive.jts = jts ? jts->accessor : nullptr;
-                primitive.pos = pos ? pos->accessor : nullptr;
-                primitive.tex = tex ? tex->accessor : nullptr;
-                primitive.nor = nor ? nor->accessor : nullptr;
-                primitive.col = col ? col->accessor : nullptr;
-                primitive.tan = tan ? tan->accessor : nullptr;
-
-                primitive.createPipeline();
-
+                primitive.processMesh(mesh->primitive);
                 primitives.push_back(primitive);
-            };
-            break;
-        case AK_GEOMETRY_SPLINE: geo_type = "spline"; break;
-        case  AK_GEOMETRY_BREP:  geo_type = "brep";   break;
-        default:                 geo_type = "other";  break;
-        };
-    }
-    /*else if (std::regex_match(node->name, light_regex)) {
-        Light light;
-        light.localTransform = glm::make_mat4x4(localTransform);
-        light.worldTransform = glm::make_mat4x4(world_transform);
-        free(localTransform);
-        free(world_transform);
-
-        light.loadMesh();
-        lights.push_back(light);
-        // light from gltf file
-    }*/
-
-    //std::cout << "Node name: " << node->name << std::endl;
-    //std::cout << "Node type: " << geo_type << std::endl;
-
-    if (node->next) {
-        node = node->next;
-        proccess_node(node, primitives);
-    }
-    if (node->chld) {
-        node = node->chld;
-        proccess_node(node, primitives);
+            }
+        }
+        if (node->next) {
+            node = node->next;
+            proccess_node(node, primitives);
+        }
+        if (node->chld) {
+            node = node->chld;
+            proccess_node(node, primitives);
+        }
     }
 }
-
-
-
 
 std::string print_coord_system(AkCoordSys* coord) 
 {
     if (coord) {
-        AkAxis axis[] = { coord->axis.fwd,
-        coord->axis.right,
-        coord->axis.up,
-        coord->cameraOrientation.fwd,
-        coord->cameraOrientation.right,
-        coord->cameraOrientation.up };
+        AkAxis axis[] = {
+            coord->axis.fwd,
+            coord->axis.right,
+            coord->axis.up,
+            coord->cameraOrientation.fwd,
+            coord->cameraOrientation.right,
+            coord->cameraOrientation.up };
         std::string ax_name[] = { "axis FW:" ,"axis RH:" ,"axis UP:", "camera FW:", "camera RH:", "camera UP : " };
 
-        AkAxisRotDirection axis_dir = coord->rotDirection;
+        AkAxisRotDirection axis_dir{ coord->rotDirection };
         std::string coordString;
 
         for (int i = 0; i < sizeof(axis) / sizeof(AkAxis); i++) {
@@ -373,11 +256,11 @@ std::string print_doc_information(AkDocInf* inf, AkUnit* unit)
 
 
 
-void format_attribute(GLint attr_location, AkAccessor* acc) 
+void format_attribute(GLint attr_location, AkAccessor* acc)
 {
-    int comp_size = acc->componentSize;;
-    int type = acc->componentType;
-    GLuint normalize = acc->normalized ? GL_TRUE : GL_FALSE;
+    int comp_size{ acc->componentSize };
+    int type{ acc->componentType};
+    GLint normalize{ acc->normalized ? GL_TRUE : GL_FALSE };
     //size_t offset = acc->byteOffset;
     //int comp_stride = acc->componentBytes;
     //size_t length = acc->byteLength;
@@ -409,7 +292,7 @@ void format_attribute(GLint attr_location, AkAccessor* acc)
     glVertexAttribFormat(attr_location, comp_size, type, normalize, 0);
 }
 
-char* read_file(const char* file_name) 
+char* read_file(const char* file_name)
 {
     FILE* fs;
     fopen_s(&fs, file_name, "rb");
@@ -418,10 +301,10 @@ char* read_file(const char* file_name)
 
 
     fseek(fs, 0, SEEK_END);
-    int file_size = ftell(fs);
+    int file_size{ ftell(fs) };
     rewind(fs);
 
-    char* buffer = (char*)calloc(file_size + 1, 1);
+    char* buffer{ (char*)calloc(file_size + 1, 1) };
     if (buffer) fread(buffer, 1, file_size, fs);
     fclose(fs);
 
@@ -452,4 +335,50 @@ GLint check_pipeline_status(GLuint vertex_shader, GLuint fragment_shader)
         logger.error(comp_info);
     }
     return (!v_comp_status || !f_comp_status) ? 0 : 1;
+}
+
+
+
+/* ============== Unused ================ */
+void setPointer(GLuint program,
+    GLint& mvpBindingLocation,
+    GLint& vertexPosBindingLocation,
+    GLint& vcol_location)
+{
+    mvpBindingLocation = glGetUniformLocation(program, "MVP");
+    vertexPosBindingLocation = glGetAttribLocation(program, "vPos");
+    vcol_location = glGetAttribLocation(program, "vCol");
+
+    glEnableVertexAttribArray(vertexPosBindingLocation);
+    glEnableVertexAttribArray(vcol_location);
+
+    glVertexAttribPointer(vertexPosBindingLocation, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)0);
+    glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 2));
+}
+
+void setPointer2(
+    GLuint program,
+    GLint& mvpBindingLocation,
+    GLint& vertexPosBindingLocation,
+    GLint& vcol_location)
+{
+    mvpBindingLocation = glGetUniformLocation(program, "MVP");
+    vertexPosBindingLocation = glGetAttribLocation(program, "vPos");
+
+    glEnableVertexAttribArray(vertexPosBindingLocation);
+    glVertexAttribPointer(vertexPosBindingLocation, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0);
+}
+
+void setPointer3(
+    GLuint program,
+    GLint& mvpBindingLocation,
+    GLint& vertexPosBindingLocation,
+    GLint& vcol_location)
+{
+    mvpBindingLocation = glGetUniformLocation(program, "MVP");
+    vertexPosBindingLocation = glGetAttribLocation(program, "vPos");
+
+    glVertexAttribFormat(vertexPosBindingLocation, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexAttribBinding(vertexPosBindingLocation, 0);
+    glEnableVertexAttribArray(vertexPosBindingLocation);
 }

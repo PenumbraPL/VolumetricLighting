@@ -2,9 +2,7 @@
 
 layout (location = 0) in vec3 vPos;
 layout (location = 1) in vec2 vTex;
-uniform mat4 MVP;
-uniform mat4 PRJ;
-
+uniform mat4 MVP = mat4(1.);
 
 out VS_OUT
 {

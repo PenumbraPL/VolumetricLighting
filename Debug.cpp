@@ -57,10 +57,8 @@ namespace debug
 		default:							sev = "[Unknown]";
 		}
 		std::string text = "Severity: " + sev + " Message: " + message + 
-			 "\n ======================================================================== \n";
+			 "\n ========================================================================";
 		logger.warn(text);
-		/*std::cout << "Severity: " << sev << " Message: " << message << std::endl
-			<< " ======================================================================== \n";*/
 	};
 
 	void callback_full_info(GLenum source,
@@ -80,14 +78,10 @@ namespace debug
 		default:							sev = "[Unknown]";
 		}
 
-		//std::cout << "Source: " << source << " Type: " << type
-		//	<< " Id: " << id << " Severity: " << sev << " Length: " << length
-		//	<< " Message: " << message << std::endl
-		//	<< " ======================================================================== \n";
 		std::string text = "Source: " + std::to_string(source) + " Type: " + std::to_string(type)
 			+ " Id: " + std::to_string(id)  + " Severity: " + sev + " Length: " + std::to_string(length)
 			+ " Message: " + message
-			+ "\n ======================================================================== \n";
+			+ "\n ========================================================================";
 		logger.warn(text);
 	};
 
@@ -100,16 +94,15 @@ namespace debug
 	void glew_callback(int code, const char* description)
 	{
 	//	std::cout << code << " " << description << std::endl;
-		std::string text = code + " ";
+		std::string text{ code + " " };
 		text += description;
-		text += '\n';
 		logger.warn(text);
 	}
 
 	void basic_logfile_example()
 	{
 		try {
-			auto logger = spdlog::basic_logger_mt("basic_logger", "logs/basic-log.txt");
+			auto logger{ spdlog::basic_logger_mt("basic_logger", "logs/basic-log.txt") };
 		}
 		catch (const spdlog::spdlog_ex& ex) {
 			std::cout << "Log init failed: " << ex.what() << std::endl;
