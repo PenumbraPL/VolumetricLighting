@@ -435,7 +435,8 @@ void Drawable::deleteTexturesAndSamplers()
 
 
 
-    AkCamera* Scene::camera(AkDoc* doc) {
+    AkCamera* Scene::camera(AkDoc* doc) 
+    {
         AkVisualScene* scene;
         AkCamera* cam = nullptr;
         if (doc->scene.visualScene) {

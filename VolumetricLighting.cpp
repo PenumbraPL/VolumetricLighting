@@ -18,10 +18,10 @@
 namespace fs = std::filesystem;
 
 
-auto bufferLogger = std::make_shared <debug::BufferLogger>();
-auto fileLogger = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/basic-log.txt", true);
-auto consoleLogger = std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>();
-auto logger = spdlog::logger("multi_sink", {bufferLogger, fileLogger, consoleLogger});
+auto bufferLogger{ std::make_shared <debug::BufferLogger>() };
+auto fileLogger{ std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/basic-log.txt", true) };
+auto consoleLogger{ std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>() };
+auto logger{ spdlog::logger("multi_sink", {bufferLogger, fileLogger, consoleLogger}) };
 
 
 WindowInfo windowConfig = { 1900, 1000, "GLTF Viewer" };
@@ -76,7 +76,7 @@ void init(GLFWwindow** windowPtr, ImGuiIO& io)
     
     ImGui::StyleColorsDark();
 
-    const char* glsl_version = "#version 450";
+    const char* glsl_version{ "#version 450" };
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
   
@@ -111,7 +111,7 @@ void draw_imgui(ImGuiIO& io)
 /* ============================================================================= */
 
 
-int main(void)
+int main()
 {
     GLFWwindow* window;
 

@@ -9,21 +9,21 @@ extern spdlog::logger logger;
 
 void initialize_GLEW(void)
 {
-    GLenum err = glewInit();
+    GLenum err{ glewInit() };
     if (GLEW_OK != err) {
         logger.error("========== [GLEW]: Initialization failed =====================================");
-        std::string text = "\tError:";
+        std::string text{ "\tError:" };
         text += (const char*)glewGetErrorString(err);
         logger.error(text);
     }
-    std::string text = "========== [GLEW]: Using GLEW ";
+    std::string text{ "========== [GLEW]: Using GLEW " };
     text += (const char*)glewGetString(GLEW_VERSION);
     text += " =========================================";
     logger.info(text);
 
     // glewIsSupported supported from version 1.3
     if (GLEW_VERSION_1_3) {
-        std::string versionName = "GL_VERSION_4_5";
+        std::string versionName{ "GL_VERSION_4_5" };
         std::string extensionList[] = {
             "GL_ARB_separate_shader_objects",
             "GL_ARB_shader_image_load_store",
@@ -76,12 +76,12 @@ void set_up_color(
 
     if (colordesc) {
         if (colordesc->texture) {
-            AkTextureRef* tex = colordesc->texture;
+            AkTextureRef* tex{ colordesc->texture };
             if (tex->texture) {
-                AkSampler* samp = tex->texture->sampler;
+                AkSampler* samp{ tex->texture->sampler };
                 if (!samp) return;
 
-                AkTypeId type = tex->texture->type;
+                AkTypeId type{ tex->texture->type };
 
                 GLuint texture_type;
                 GLuint minfilter, magfilter, mipfilter;
@@ -128,9 +128,9 @@ void set_up_color(
 
 
                 AkInput* tex_coord = ak_meshInputGet(prim, tex->coordInputName, tex->slot); //
-                int components = 0;
-                int width = 0;
-                int height = 0;
+                auto components{ 0 };
+                auto width{ 0 };
+                auto height{ 0 };
                 char path[128] = { '\0' };
                 memcpy_s(path, 128, panelConfig.getModelPath().c_str(), strlen(panelConfig.getModelPath().c_str()));
                 //char path[128] = { PATH };
@@ -176,8 +176,8 @@ void proccess_node(AkNode* node, std::vector<Drawable>& primitives)
     primitive.loadMatrix(node);
 
     if (node->geometry) {
-        AkGeometry* geometry = ak_instanceObjectGeom(node);
-        AkMesh* mesh = (AkMesh*)ak_objGet(geometry->gdata);
+        AkGeometry* geometry{ ak_instanceObjectGeom(node) };
+        AkMesh* mesh{ (AkMesh*)ak_objGet(geometry->gdata) };
         if ((AkGeometryType)geometry->gdata->type) {
             if (mesh) {
                 primitive.processMesh(mesh->primitive);
@@ -198,15 +198,16 @@ void proccess_node(AkNode* node, std::vector<Drawable>& primitives)
 std::string print_coord_system(AkCoordSys* coord) 
 {
     if (coord) {
-        AkAxis axis[] = { coord->axis.fwd,
-        coord->axis.right,
-        coord->axis.up,
-        coord->cameraOrientation.fwd,
-        coord->cameraOrientation.right,
-        coord->cameraOrientation.up };
+        AkAxis axis[] = {
+            coord->axis.fwd,
+            coord->axis.right,
+            coord->axis.up,
+            coord->cameraOrientation.fwd,
+            coord->cameraOrientation.right,
+            coord->cameraOrientation.up };
         std::string ax_name[] = { "axis FW:" ,"axis RH:" ,"axis UP:", "camera FW:", "camera RH:", "camera UP : " };
 
-        AkAxisRotDirection axis_dir = coord->rotDirection;
+        AkAxisRotDirection axis_dir{ coord->rotDirection };
         std::string coordString;
 
         for (int i = 0; i < sizeof(axis) / sizeof(AkAxis); i++) {
@@ -255,11 +256,11 @@ std::string print_doc_information(AkDocInf* inf, AkUnit* unit)
 
 
 
-void format_attribute(GLint attr_location, AkAccessor* acc) 
+void format_attribute(GLint attr_location, AkAccessor* acc)
 {
-    int comp_size = acc->componentSize;;
-    int type = acc->componentType;
-    GLuint normalize = acc->normalized ? GL_TRUE : GL_FALSE;
+    int comp_size{ acc->componentSize };
+    int type{ acc->componentType};
+    GLint normalize{ acc->normalized ? GL_TRUE : GL_FALSE };
     //size_t offset = acc->byteOffset;
     //int comp_stride = acc->componentBytes;
     //size_t length = acc->byteLength;
@@ -291,7 +292,7 @@ void format_attribute(GLint attr_location, AkAccessor* acc)
     glVertexAttribFormat(attr_location, comp_size, type, normalize, 0);
 }
 
-char* read_file(const char* file_name) 
+char* read_file(const char* file_name)
 {
     FILE* fs;
     fopen_s(&fs, file_name, "rb");
@@ -300,10 +301,10 @@ char* read_file(const char* file_name)
 
 
     fseek(fs, 0, SEEK_END);
-    int file_size = ftell(fs);
+    int file_size{ ftell(fs) };
     rewind(fs);
 
-    char* buffer = (char*)calloc(file_size + 1, 1);
+    char* buffer{ (char*)calloc(file_size + 1, 1) };
     if (buffer) fread(buffer, 1, file_size, fs);
     fclose(fs);
 

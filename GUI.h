@@ -38,7 +38,7 @@ struct ConfigContext{
     std::vector<PointLight>* lightsData = nullptr;
      
     PointLight* getLightsData();
-    unsigned int getLightsSize();
+    std::size_t getLightsSize();
     PointLight getLight();
     void updateLight();
     glm::vec3 getTranslate();

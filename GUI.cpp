@@ -13,7 +13,7 @@ PointLight* ConfigContext::getLightsData()
     return lightsData->data();
 }
 
-unsigned int ConfigContext::getLightsSize()
+std::size_t ConfigContext::getLightsSize()
 {
     return lightsData->size();
 }
@@ -21,57 +21,57 @@ unsigned int ConfigContext::getLightsSize()
 
 PointLight ConfigContext::getLight()
 {
-    glm::vec3 ambient = glm::vec3{ lightAmbient[0], lightAmbient[1], lightAmbient[2] };
-    glm::vec3 diffuse = glm::vec3{ lightDiffuse[0], lightDiffuse[1], lightDiffuse[2] };
-    glm::vec3 specular = glm::vec3{ lightSpecular[0], lightSpecular[1], lightSpecular[2] };
-    glm::vec3 position = glm::vec3{ this->position[0], this->position[1], this->position[2] };
-
+    glm::vec3 ambient{ lightAmbient[0], lightAmbient[1], lightAmbient[2] };
+    glm::vec3 diffuse{ lightDiffuse[0], lightDiffuse[1], lightDiffuse[2] };
+    glm::vec3 specular{ lightSpecular[0], lightSpecular[1], lightSpecular[2] };
+    glm::vec3 position{ this->position[0], this->position[1], this->position[2] };
 
     return { position, c, l, q, ambient, diffuse, specular };
 }
 
 void ConfigContext::updateLight() 
 {
-    getLightsData()[lightId].ambient = { lightAmbient[0], lightAmbient[1], lightAmbient[2] };
-    getLightsData()[lightId].diffuse = { lightDiffuse[0], lightDiffuse[1], lightDiffuse[2] };
-    getLightsData()[lightId].specular = { lightSpecular[0], lightSpecular[1], lightSpecular[2] };
-    getLightsData()[lightId].position = { position[0], position[1], position[2] };
+    auto& light = getLightsData()[lightId];
+    light.ambient = { lightAmbient[0], lightAmbient[1], lightAmbient[2] };
+    light.diffuse = { lightDiffuse[0], lightDiffuse[1], lightDiffuse[2] };
+    light.specular = { lightSpecular[0], lightSpecular[1], lightSpecular[2] };
+    light.position = { position[0], position[1], position[2] };
 }
 
 
 glm::vec3 ConfigContext::getTranslate()
 {
-    return  glm::vec3(xTranslate * 0.02, yTranslate * 0.02, zTranslate * 0.02);
+    return  glm::vec3{ xTranslate * 0.02, yTranslate * 0.02, zTranslate * 0.02 };
 }
 
 glm::vec3 ConfigContext::getRotate()
 {
-    return glm::vec3(3.14 * xRotate / 180, 3.14 * yRotate / 180, 0.f);
+    return glm::vec3{ 3.14 * xRotate / 180, 3.14 * yRotate / 180, 0.f };
 }
 
 
 glm::vec3 ConfigContext::getView()
 {
-    float r = 0.1f * viewDistance;
-    float phi = this->viewPhi;
-    float theta = this->viewTheta;
-    glm::vec3 eye = r * glm::euclidean(glm::vec2(theta, phi));
-
-    return glm::vec3(eye.z, eye.y, eye.x);
+    float r{ 0.1f * this->viewDistance };
+    float phi{ this->viewPhi };
+    float theta{ this->viewTheta };
+    glm::vec3 eye{ r * glm::euclidean(glm::vec2{ theta, phi }) };
+ 
+    return glm::vec3{eye.z, eye.y, eye.x};
 }
 
 
 glm::mat4 ConfigContext::getLookAt()
 {
-    float theta = this->viewTheta;
-    glm::vec3 eye = getView();
+    float theta{ this->viewTheta };
+    glm::vec3 eye{ getView() };
 
-    glm::vec3 north = glm::vec3(0., 1., 0.);
-    float corrected_theta = glm::fmod(glm::abs(theta), 6.28f);
+    glm::vec3 north{ 0., 1., 0. };
+    float corrected_theta{ glm::fmod(glm::abs(theta), 6.28f) };
     if (corrected_theta > 3.14 / 2. && corrected_theta < 3.14 * 3. / 2.) {
-        north = glm::vec3(0., -1., 0.);
+        north = glm::vec3{0., -1., 0.};
     }
-    return  glm::lookAt(eye, glm::vec3(0.), north);
+    return  glm::lookAt(eye, glm::vec3{ 0. }, north);
 }
 
 
@@ -129,7 +129,7 @@ void folder_content(
 
 void drawLeftPanel(ImGuiIO& io, ConfigContext& config) 
 {
-    static bool show_shader_dialog = false;
+    static bool show_shader_dialog{ false };
     static bool selected[3] = { false, false, false };
     //static std::string selected2 = 0;
     static std::string shaderSelection;
@@ -146,8 +146,6 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
             if (ImGui::BeginTabItem("Config")) {
        
                 ImGui::SliderFloat("g const", &config.g, -0.99999f, 0.99999f, "ratio = %.3f");
-
-
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Debug")) {
@@ -198,9 +196,10 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
                     }
                     ImGui::Text("Mouse wheel: %.1f", io.MouseWheel);
 
-                    struct funcs { static bool IsLegacyNativeDupe(ImGuiKey key) { 
-                        return key < 512 && ImGui::GetIO().KeyMap[key] != -1;
-                    } }; 
+                    struct funcs { 
+                        static bool IsLegacyNativeDupe(ImGuiKey key) { 
+                            return key < 512 && ImGui::GetIO().KeyMap[key] != -1;}
+                    }; 
                     ImGuiKey start_key = (ImGuiKey)0;
 
                     ImGui::Text("Keys down:");
@@ -239,10 +238,10 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
                 }
                 ImGui::SetNextItemOpen(true);
                 if (ImGui::TreeNode("Shaders")) {
-                    int j = 0;
-                    std::string path2 = "res/shaders/";
+                    int j{ 0 };
+                    std::string path2{ "res/shaders/" };
                     std::vector<std::string> tree2;
-                    std::string extension2 = ".glsl";
+                    std::string extension2{ ".glsl" };
 
                     folder_content(path2, tree2, j, shaderSelection, extension2);
                     ImGui::TreePop();
@@ -269,10 +268,11 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
                 ImGui::EndTabItem();
                 ImGui::Separator();
 
-                glm::vec3 ambient = config.getLightsData()[config.lightId].ambient;
-                glm::vec3 diffuse = config.getLightsData()[config.lightId].diffuse;
-                glm::vec3 specular = config.getLightsData()[config.lightId].specular;
-                glm::vec3 position = config.getLightsData()[config.lightId].position;
+                auto& light = config.getLightsData()[config.lightId];
+                glm::vec3 ambient{ light.ambient };
+                glm::vec3 diffuse{ light.diffuse };
+                glm::vec3 specular{ light.specular };
+                glm::vec3 position{ light.position };
                 config.lightAmbient[0] = ambient.x;
                 config.lightAmbient[1] = ambient.y;
                 config.lightAmbient[2] = ambient.z;
