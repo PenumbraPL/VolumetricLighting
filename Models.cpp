@@ -37,7 +37,7 @@ void imageFlipVerticallyOnLoad(bool flip)
 
 
 
-void Drawable::createPipeline(std::string shaderPath[5])
+void Drawable::createPipeline(ShadersSources shaderPath)
 {
     char* shader[5];
     glGenProgramPipelines(1, &pipeline);
@@ -246,13 +246,13 @@ void Drawable::draw(
 
 
 
-void Drawable::getLocation(std::vector<const char*> uniformNames[5])
+void Drawable::getLocation(BindingPointCollection uniformNames)
 {
     for (int i = VERTEX; i <= GEOMETRY; i++) {
         if (uniformNames[i].size()) {
             bindingLocationIndecies[i] = (GLuint*)calloc(uniformNames[i].size(), sizeof(GLuint));
             for (int j = 0; j < uniformNames[i].size(); j++) {
-                bindingLocationIndecies[i][j] = glGetUniformLocation(programs[i], uniformNames[i].data()[j]);
+                bindingLocationIndecies[i][j] = glGetUniformLocation(programs[i], uniformNames[i].data()[j].c_str());
             }
             //glGetUniformIndices(programs[i], uniformNames[i].size(), uniformNames[i].data(), bindingLocationIndecies[i]);
         }

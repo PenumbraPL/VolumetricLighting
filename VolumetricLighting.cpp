@@ -13,8 +13,6 @@
 
 #include "Debug.h"
 
-
-
 namespace fs = std::filesystem;
 
 
@@ -76,9 +74,9 @@ void init(GLFWwindow** windowPtr, ImGuiIO& io)
     
     ImGui::StyleColorsDark();
 
-    const char* glsl_version{ "#version 450" };
+    const char* GLSLVersion{ "#version 450" };
     ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init(glsl_version);
+    ImGui_ImplOpenGL3_Init(GLSLVersion);
   
     
 
@@ -122,28 +120,20 @@ int main()
 
     Light lightModel;
     lightModel.loadMesh();
-    std::string lightsPipeline[5] = { "res/shaders/lamp_vec.glsl", "res/shaders/lamp_frag.glsl" };
-    lightModel.createPipeline(lightsPipeline);
-    std::vector<const char*> uniformNames[5] =
-    {{"MVP", "PRJ"}, {"G", "camera"}, {}, {}, {} };
-    lightModel.getLocation(uniformNames);
+    lightModel.createPipeline({ "res/shaders/lamp_vec.glsl", "res/shaders/lamp_frag.glsl" });
+    lightModel.getLocation({ { {"MVP", "PRJ"}, {"G", "camera"} } });
 
 
     Environment env;
     env.loadMesh();
-    std::string envPipeline[5] = { "res/shaders/environment_vec.glsl", "res/shaders/environment_frag.glsl" };
-    env.createPipeline(envPipeline);
-    std::vector<const char*> envUniformNames[5] = {{"MVP"}, {}, {}, {}, {}};
-    env.getLocation(envUniformNames);
+    env.createPipeline({ "res/shaders/environment_vec.glsl", "res/shaders/environment_frag.glsl" });
+    env.getLocation({ {{"MVP"}} });
 
 
     Cloud cld;
     cld.loadMesh();
-    std::string cloudPipeline[5] = { "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" };
-    cld.createPipeline(cloudPipeline);
-    std::vector<const char*> cldUniformNames[5] =
-    { {"MVP", "PRJ"}, {"G", "camera"}, {}, {}, {} };
-    cld.getLocation(cldUniformNames);
+    cld.createPipeline({ "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" });
+    cld.getLocation({ { {"MVP", "PRJ"}, {"G", "camera"} } });
 
     Scene scenes;
     std::vector<PointLight>& lightsData= scenes.lights;
@@ -151,8 +141,8 @@ int main()
 
 
     /* ================================================ */
-    do{
-        ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);        
+    do {
+        ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
         AkDoc* doc = scenes.loadScene(panelConfig.getModelPath(), panelConfig.getModelName());
         AkCamera* camera = scenes.camera(doc);
         glm::mat4& View = scenes.cameraEye.View;
@@ -160,20 +150,18 @@ int main()
         scenes.allocAll(doc);
 
         std::vector<Drawable>& primitives = scenes.primitives;
-        std::string pipeline[5];
-        pipeline[VERTEX] = { "res/shaders/standard_vec.glsl" };
-        pipeline[FRAGMENT] = { "res/shaders/pbr_with_ext_light_frag.glsl" };
-        for (auto& primitive : primitives) primitive.createPipeline(pipeline);
+        ShadersSources defaultModel;
+        defaultModel[VERTEX] = { "res/shaders/standard_vec.glsl" };
+        defaultModel[FRAGMENT] = { "res/shaders/pbr_with_ext_light_frag.glsl" };
+        for (auto& primitive : primitives) primitive.createPipeline(defaultModel);
         std::map <void*, unsigned int>& bufferViews = scenes.bufferViews;
         GLuint* docDataBuffer = scenes.parseBuffors();
 
-
-        std::vector<const char*> uniformNames[5] = {
+        for (auto& primitive : primitives) primitive.getLocation({{
             {"MVP", "PRJ"},
-            {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound"},
-            {}, {}, {}
-        };
-        for (auto& primitive : primitives) primitive.getLocation(uniformNames);
+            {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound"}
+            }
+    });
 
         //glDepthRange(panelConfig.near_plane, panelConfig.far_plane);
         glDepthFunc(GL_LEQUAL);

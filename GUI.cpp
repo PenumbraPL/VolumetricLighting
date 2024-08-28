@@ -151,8 +151,6 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
             if (ImGui::BeginTabItem("Debug")) {
                 ImGui::SetNextItemOpen(true, ImGuiCond_Once);
                 if (ImGui::TreeNode("Debug info")) {
-                   // int wrap_width = 400;
-                   // ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
                     unsigned int lines = 20;
                     float scroll_x = ImGui::GetScrollX();
@@ -161,14 +159,7 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
                     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0f, 2.0f));
                     ImVec2 scrolling_child_size = ImVec2(0, ImGui::GetFrameHeightWithSpacing() * lines + 30);
                     ImGui::BeginChild("scrolling", scrolling_child_size, 0, ImGuiWindowFlags_HorizontalScrollbar);
-
-                    //ImVec2 pos = ImGui::GetCursorScreenPos();
-                    //ImVec2 marker_min = ImVec2(pos.x + wrap_width, pos.y);
-                    //ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
-                    //ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
-                    ImGui::Text(bufferLogger->getBuffer().c_str(), scroll_x - 20, scroll_max_x);// wrap_width);
-                    //draw_list->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
-                    //ImGui::PopTextWrapPos();
+                    ImGui::Text(bufferLogger->getBuffer().c_str(), scroll_x - 20, scroll_max_x);
 
                     ImGui::EndChild();
                     ImGui::PopStyleVar(2);

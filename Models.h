@@ -6,6 +6,10 @@
 
 extern ConfigContext panelConfig;
 
+typedef std::vector<std::string> BindingPointList;
+typedef std::array<BindingPointList, 5> BindingPointCollection;
+typedef std::array<std::string, 5> ShadersSources;
+
 enum TextureType {
     AMBIENT,
     EMISIVE,
@@ -109,7 +113,7 @@ struct Drawable {
     std::map <void*, unsigned int> imageViews;
     GLuint* docDataBuffer;
 
-    void createPipeline(std::string shaderPath[5]);
+    void createPipeline(ShadersSources shadersPaths);
     void deletePipeline();
     void loadMatrix(AkNode* node);
     virtual void processMesh(AkMeshPrimitive* primitive);
@@ -125,7 +129,7 @@ struct Drawable {
     void bindTextures();
     GLuint* parseBuffors();
     void allocAll(AkDoc* doc);
-    virtual void getLocation(std::vector<const char*> uniformNames[5]);
+    virtual void getLocation(BindingPointCollection uniformNames);
     virtual void deleteTexturesAndSamplers(); // how many to delete?
 
 protected:
