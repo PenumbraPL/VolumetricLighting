@@ -118,22 +118,9 @@ int main()
     ImGuiIO& io = ImGui::GetIO();
     init(&window, io);
 
-    Light lightModel;
-    lightModel.loadMesh();
-    lightModel.createPipeline({ "res/shaders/lamp_vec.glsl", "res/shaders/lamp_frag.glsl" });
-    lightModel.getLocation({ { {"MVP", "PRJ"}, {"G", "camera"} } });
-
-
-    Environment env;
-    env.loadMesh();
-    env.createPipeline({ "res/shaders/environment_vec.glsl", "res/shaders/environment_frag.glsl" });
-    env.getLocation({ {{"MVP"}} });
-
-
-    Cloud cld;
-    cld.loadMesh();
-    cld.createPipeline({ "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" });
-    cld.getLocation({ { {"MVP", "PRJ"}, {"G", "camera"} } });
+    std::unique_ptr<Drawable> lightModel = LightFactory().createDrawable();
+    std::unique_ptr<Drawable> env = EnvironmentFactory().createDrawable();
+    std::unique_ptr<Drawable> cld = CloudFactory().createDrawable();
 
     Scene scenes;
     std::vector<PointLight>& lightsData= scenes.lights;
@@ -161,7 +148,7 @@ int main()
             {"MVP", "PRJ"},
             {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound"}
             }
-    });
+        });
 
         //glDepthRange(panelConfig.near_plane, panelConfig.far_plane);
         glDepthFunc(GL_LEQUAL);
@@ -209,7 +196,7 @@ int main()
 
             glm::mat4 MVP = Projection * LookAt * View;
 
-            env.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
+            env->draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
             
 
             MVP = LookAt * View;
@@ -231,21 +218,21 @@ int main()
                 glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(.2f));
 
                 glm::mat4 MVP = Projection * LookAt * View * Model;
-                lightModel.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
+                lightModel->draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
             }
             /* ===================== */
 
             View =
                 glm::rotate(
                     glm::rotate(
-                        glm::translate(cld.localTransform , translate)
+                        glm::translate(cld->localTransform , translate)
                     , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
                 rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
             glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f));
 
             MVP = LookAt * View * Model;
-            cld.g = panelConfig.g;
-            cld.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
+            ((Cloud*) cld.get())->g = panelConfig.g;
+            cld->draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
 
             draw_imgui(io);
             glfwSwapBuffers(window);
@@ -272,9 +259,9 @@ int main()
 
     } while (!glfwWindowShouldClose(window));
 
-    env.deletePipeline();
-    cld.deletePipeline();
-    lightModel.deletePipeline();
+    env->deletePipeline();
+    cld->deletePipeline();
+    lightModel->deletePipeline();
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();

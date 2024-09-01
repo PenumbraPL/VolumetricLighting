@@ -35,8 +35,6 @@ void imageFlipVerticallyOnLoad(bool flip)
 }
 
 
-
-
 void Drawable::createPipeline(ShadersSources shaderPath)
 {
     char* shader[5];

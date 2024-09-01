@@ -77,6 +77,8 @@ void imageFlipVerticallyOnLoad(bool flip);
 
 
 
+
+
 struct Drawable {
     Drawable() {}
     ~Drawable(){}
@@ -131,20 +133,21 @@ struct Drawable {
     void allocAll(AkDoc* doc);
     virtual void getLocation(BindingPointCollection uniformNames);
     virtual void deleteTexturesAndSamplers(); // how many to delete?
-
+    virtual void loadMesh() {};
 protected:
     void allocUnique();
 };
 
 
 struct Primitive : public Drawable {
+    void loadMesh() override {};
     virtual void draw(
         GLuint& lights_buffer,
         std::map <void*, unsigned int>& bufferViews,
         GLuint* docDataBuffer,
         glm::vec3& eye,
         glm::mat4& MVP,
-        glm::mat4& Projection);
+        glm::mat4& Projection) override;
 }; // without change (maybe declaration of paths?
 
 
@@ -154,14 +157,14 @@ struct Light : public Drawable {
     glm::vec3 color = glm::vec3(1.0, 1.0, 1.0);
     float intensity = 1.0;
 
-    void loadMesh();
+    void loadMesh() override;
     virtual void draw(
         GLuint& lights_buffer,
         std::map <void*, unsigned int>& bufferViews,
         GLuint* docDataBuffer,
         glm::vec3& eye,
         glm::mat4& MVP,
-        glm::mat4& Projection);
+        glm::mat4& Projection) override;
 };
 
 
@@ -169,28 +172,28 @@ struct Environment : public Drawable {
     GLuint skybox;
     GLuint env_sampler;
     
-    void loadMesh();
+    void loadMesh() override;
     virtual void draw(
         GLuint& lights_buffer,
         std::map <void*, unsigned int>& bufferViews,
         GLuint* docDataBuffer,
         glm::vec3& eye,
         glm::mat4& MVP,
-        glm::mat4& Projection);
+        glm::mat4& Projection) override;
 };
 
 
 struct Cloud : public Drawable {
     float g = 0.;
     
-    void loadMesh();
+    void loadMesh() override;
     virtual void draw(
         GLuint& lights_buffer,
         std::map <void*, unsigned int>& bufferViews,
         GLuint* docDataBuffer,
         glm::vec3& eye,
         glm::mat4& MVP,
-        glm::mat4& Projection);
+        glm::mat4& Projection) override;
 };
 
 
@@ -225,4 +228,52 @@ struct Scene {
     void initLights();
     bool compare_lights(PointLight& old_light, PointLight& new_light);
     bool compare_lights(LightsList& old_light, LightsList& new_light);
+};
+
+
+struct DrawableFactory {
+    virtual std::unique_ptr<Drawable> createDrawable() = 0;
+    virtual void deleteDrawable() = 0;
+};
+
+struct LightFactory : public DrawableFactory {
+    std::unique_ptr<Drawable> createDrawable() override {
+        auto lightModel = std::make_unique<Light>();
+        lightModel->loadMesh();
+        lightModel->createPipeline({ "res/shaders/lamp_vec.glsl", "res/shaders/lamp_frag.glsl" });
+        lightModel->getLocation({ { {"MVP", "PRJ"}, {"G", "camera"} } });
+        return lightModel;
+    }
+
+    void deleteDrawable() override {
+
+    }
+};
+
+struct EnvironmentFactory : public DrawableFactory {
+    std::unique_ptr<Drawable> createDrawable() override {
+        auto env = std::make_unique<Environment>();
+        env->loadMesh();
+        env->createPipeline({ "res/shaders/environment_vec.glsl", "res/shaders/environment_frag.glsl" });
+        env->getLocation({ {{"MVP"}} });
+        return env;
+    }
+
+    void deleteDrawable() override {
+
+    }
+};
+
+struct CloudFactory : public DrawableFactory {
+    std::unique_ptr<Drawable> createDrawable() override {
+        auto cld = std::make_unique<Cloud>();
+        cld->loadMesh();
+        cld->createPipeline({ "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" });
+        cld->getLocation({ { {"MVP", "PRJ"}, {"G", "camera"} } });
+        return cld;
+    }
+
+    void deleteDrawable() override {
+
+    }
 };
