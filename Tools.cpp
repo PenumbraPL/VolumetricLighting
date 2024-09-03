@@ -172,16 +172,19 @@ void setUpColor(
 
 void proccessNode(AkNode* node, std::vector<Drawable>& primitives)
 {
-    Drawable primitive;
-    primitive.loadMatrix(node);
-
     if (node->geometry) {
         AkGeometry* geometry{ ak_instanceObjectGeom(node) };
         AkMesh* mesh{ (AkMesh*)ak_objGet(geometry->gdata) };
         if ((AkGeometryType)geometry->gdata->type) {
             if (mesh) {
-                primitive.processMesh(mesh->primitive);
-                primitives.push_back(primitive);
+                AkMeshPrimitive* ptr = mesh->primitive;
+                while (ptr) {
+                    Drawable primitive;
+                    primitive.loadMatrix(node);
+                    primitive.processMesh(ptr);
+                    primitives.push_back(primitive);
+                    ptr = ptr->next;
+                }
             }
         }
         if (node->chld) {
