@@ -6,7 +6,7 @@ extern spdlog::logger logger;
 
 namespace debug 
 {
-	void turn_on_everything(bool turnOnNotify)
+	void turnOnEverything(bool turnOnNotify)
 	{
 		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_HIGH,   0, NULL, GL_TRUE);
 		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_MEDIUM, 0, NULL, GL_TRUE);
@@ -20,7 +20,7 @@ namespace debug
 		}
 	}
 
-	void turn_on_only_errors()
+	void turnOnOnlyErrors()
 	{
 		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION,  0, NULL, GL_FALSE);
 
@@ -31,7 +31,7 @@ namespace debug
 		glDebugMessageControl(GL_DEBUG_SOURCE_API, GL_DEBUG_TYPE_ERROR, GL_DEBUG_SEVERITY_MEDIUM, 0, NULL, GL_TRUE);
 	}
 
-	void display_logs()
+	void displayLogs()
 	{
 		char messageLog[2048] = {'\0'};
 		//memset(messageLog, '\0', 2048);
@@ -40,7 +40,7 @@ namespace debug
 		logger.warn(messageLog);
 	}
 
-	void callback_basic_info(GLenum source,
+	void callbackBasicInfo(GLenum source,
 		GLenum type,
 		GLuint id,
 		GLenum severity,
@@ -61,7 +61,7 @@ namespace debug
 		logger.warn(text);
 	};
 
-	void callback_full_info(GLenum source,
+	void callbackFullInfo(GLenum source,
 		GLenum type,
 		GLuint id,
 		GLenum severity,
@@ -85,13 +85,13 @@ namespace debug
 		logger.warn(text);
 	};
 
-	void fill_callback_list(std::vector<DEBUGPROC>& callback_list) 
+	void fillCallbackList(std::vector<DEBUGPROC>& callback_list) 
 	{
-		callback_list.push_back(&callback_basic_info);
+		callback_list.push_back(&callbackBasicInfo);
 		//callback_list.push_back(&gl_callback_full_info);
 	}
 
-	void glew_callback(int code, const char* description)
+	void glewCallback(int code, const char* description)
 	{
 	//	std::cout << code << " " << description << std::endl;
 		std::string text{ code + " " };
@@ -99,7 +99,7 @@ namespace debug
 		logger.warn(text);
 	}
 
-	void basic_logfile_example()
+	void basicLogfileExample()
 	{
 		try {
 			auto logger{ spdlog::basic_logger_mt("basic_logger", "logs/basic-log.txt") };
@@ -111,7 +111,7 @@ namespace debug
 
 	/* ================================================ */
 
-	void debug_init(std::vector<DEBUGPROC>& callback_list) 
+	void debugInit(std::vector<DEBUGPROC>& callback_list) 
 	{
 		glEnable(GL_DEBUG_OUTPUT);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -120,9 +120,9 @@ namespace debug
 		for (auto& callback : callback_list) {
 			glDebugMessageCallback(callback, userParam);
 		}
-		display_logs();
-		turn_on_only_errors();
+		displayLogs();
+		turnOnOnlyErrors();
 		//turn_on_everything();
-		basic_logfile_example();
+		basicLogfileExample();
 	}
 }

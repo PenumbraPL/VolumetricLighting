@@ -45,7 +45,7 @@ void Drawable::createPipeline(ShadersSources shaderPath)
 
     for (int i = VERTEX; i <= GEOMETRY; i++) {
         if (!shaderPath[i].empty()) {
-            shader[i] = read_file(shaderPath[i].c_str());
+            shader[i] = readFile(shaderPath[i].c_str());
             if (!shader[i]) {
                 SPDLOG_LOGGER_ERROR(&logger, "=================== Coulnt find " + shaderPath[i] + " ==============================");
             }
@@ -127,10 +127,10 @@ void Drawable::processMesh(AkMeshPrimitive* primitive)
         AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
         AkTechniqueFxCommon* tch = ef->profile->technique->common;
         if (tch) {
-            set_up_color(tch->ambient, primitive, *this, AMBIENT, panelConfig);
-            set_up_color(tch->emission, primitive, *this, EMISIVE, panelConfig);
-            set_up_color(tch->diffuse, primitive, *this, DIFFUSE, panelConfig);
-            set_up_color(tch->specular, primitive, *this, SPECULAR, panelConfig);
+            setUpColor(tch->ambient, primitive, *this, AMBIENT, panelConfig);
+            setUpColor(tch->emission, primitive, *this, EMISIVE, panelConfig);
+            setUpColor(tch->diffuse, primitive, *this, DIFFUSE, panelConfig);
+            setUpColor(tch->specular, primitive, *this, SPECULAR, panelConfig);
 
             switch (tch->type) {
             case AK_MATERIAL_METALLIC_ROUGHNESS: {
@@ -145,8 +145,8 @@ void Drawable::processMesh(AkMeshPrimitive* primitive)
                 mr_cd.color->rgba.R = mr->metallic;
                 mr_cd.color->rgba.G = mr->roughness;
                 mr_cd.texture = mr->metalRoughTex;
-                set_up_color(&alb_cd, primitive, *this, ALBEDO, panelConfig);
-                set_up_color(&mr_cd, primitive, *this, MET_ROUGH, panelConfig);
+                setUpColor(&alb_cd, primitive, *this, ALBEDO, panelConfig);
+                setUpColor(&mr_cd, primitive, *this, MET_ROUGH, panelConfig);
                 break;
             }
 
@@ -158,8 +158,8 @@ void Drawable::processMesh(AkMeshPrimitive* primitive)
                 sg_cd.texture = sg->specGlossTex;
                 dif_cd.color = &sg->diffuse;
                 dif_cd.texture = sg->diffuseTex;
-                set_up_color(&sg_cd, primitive, *this, SP_GLOSSINESS, panelConfig);
-                set_up_color(&dif_cd, primitive, *this, SP_DIFFUSE, panelConfig);
+                setUpColor(&sg_cd, primitive, *this, SP_GLOSSINESS, panelConfig);
+                setUpColor(&dif_cd, primitive, *this, SP_DIFFUSE, panelConfig);
                 break;
             }
             };
@@ -183,15 +183,15 @@ void Drawable::bindVertexArray()
 {
     glBindVertexArray(vao);
     if (vertexPosBindingLocation != 0xFFFFFFFF) {
-        format_attribute(vertexPosBindingLocation, accessor[POSITION]);
+        formatAttribute(vertexPosBindingLocation, accessor[POSITION]);
         glEnableVertexArrayAttrib(vao, vertexPosBindingLocation);
     }
     if (normalsBindingLocation != 0xFFFFFFFF) {
-        format_attribute(normalsBindingLocation, accessor[NORMALS]);
+        formatAttribute(normalsBindingLocation, accessor[NORMALS]);
         glEnableVertexArrayAttrib(vao, normalsBindingLocation);
     }
     if (textureBindingLocation != 0xFFFFFFFF) {
-        format_attribute(textureBindingLocation, accessor[TEXTURES]);
+        formatAttribute(textureBindingLocation, accessor[TEXTURES]);
         glEnableVertexArrayAttrib(vao, textureBindingLocation);
     }
 }
@@ -469,8 +469,8 @@ void Drawable::deleteTexturesAndSamplers()
             exit(EXIT_FAILURE);
         }
         else {
-            logger.info(print_coord_system(doc->coordSys));
-            logger.info(print_doc_information(doc->inf, doc->unit));
+            logger.info(printCoordSystem(doc->coordSys));
+            logger.info(printDocInformation(doc->inf, doc->unit));
             logger.info("==============================================================================");
         }
 
@@ -488,7 +488,7 @@ void Drawable::deleteTexturesAndSamplers()
         }
 
         AkNode* node = ak_instanceObjectNode(scene->node);
-        proccess_node(node, primitives);
+        proccessNode(node, primitives);
 
         return doc;
     }

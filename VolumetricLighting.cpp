@@ -23,7 +23,7 @@ auto logger{ spdlog::logger("multi_sink", {bufferLogger, fileLogger, consoleLogg
 
 
 WindowInfo windowConfig = { 1900, 1000, "GLTF Viewer" };
-ConfigContext panelConfig = { "./res/models/Sample2/scene.gltf" };
+ConfigContext panelConfig = { "./res/models/GLTFTest/gltfTest.gltf" };
 
 
 
@@ -58,14 +58,14 @@ void init(GLFWwindow** windowPtr, ImGuiIO& io)
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
 
-    glfwSetKeyCallback(window, control::key_callback);
-    glfwSetErrorCallback(debug::glew_callback);
-    glfwSetScrollCallback(window, control::scroll_callback);
-    glfwSetMouseButtonCallback(window, control::mouse_button_callback);
-    glfwSetCursorPosCallback(window, control::cursor_position_callback);
-    glfwSetWindowFocusCallback(window, control::focus_callback);
+    glfwSetKeyCallback(window, control::keyCallback);
+    glfwSetErrorCallback(debug::glewCallback);
+    glfwSetScrollCallback(window, control::scrollCallback);
+    glfwSetMouseButtonCallback(window, control::mouseButtonCallback);
+    glfwSetCursorPosCallback(window, control::cursorPositionCallback);
+    glfwSetWindowFocusCallback(window, control::focusCallback);
 
-    initialize_GLEW();
+    initializeGLEW();
 
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
@@ -85,15 +85,15 @@ void init(GLFWwindow** windowPtr, ImGuiIO& io)
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
         logger.info("========== [GLFW]: Debug context initialize successful =======================");
         std::vector<DEBUGPROC> callbacks;
-        debug::fill_callback_list(callbacks);
-        debug::debug_init(callbacks);
+        debug::fillCallbackList(callbacks);
+        debug::debugInit(callbacks);
     }
     else {
         logger.warn("========== [GLFW]: Debug context initialize unsuccessful =====================");
     }
 }
 
-void draw_imgui(ImGuiIO& io) 
+void drawImgui(ImGuiIO& io) 
 {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -234,7 +234,7 @@ int main()
             ((Cloud*) cld.get())->g = panelConfig.g;
             cld->draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
 
-            draw_imgui(io);
+            drawImgui(io);
             glfwSwapBuffers(window);
             glfwPollEvents();
 

@@ -8,14 +8,14 @@ extern WindowInfo windowConfig;
 
 namespace control
 {
-    void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+    void scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     {
         if (!panelConfig.focused) {
             panelConfig.viewDistance += (float)(yoffset * panelConfig.viewDistance / -6.);
         }
     }
     //static
-    void cursor_position_callback(GLFWwindow* window, double new_xpos, double new_ypos)
+    void cursorPositionCallback(GLFWwindow* window, double new_xpos, double new_ypos)
     {
         if (!panelConfig.focused) {
             int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
@@ -31,14 +31,14 @@ namespace control
         }
     }
 
-    void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+    void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     {
         if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
             glfwGetCursorPos(window, &windowConfig.xCursorPosition, &windowConfig.yCursorPosition);
         }
     }
 
-    void key_callback(
+    void keyCallback(
         GLFWwindow* window,
         int key,
         int scancode,
@@ -82,7 +82,7 @@ namespace control
         }
     }
 
-    void focus_callback(GLFWwindow* window, int focused)
+    void focusCallback(GLFWwindow* window, int focused)
     {
         panelConfig.focused = focused ? true : false;
     }

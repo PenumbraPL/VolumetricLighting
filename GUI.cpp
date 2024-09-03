@@ -97,7 +97,7 @@ std::string ConfigContext::getModelName()
 
 
 
-void folder_content(
+void folderContent(
     std::string& path, 
     std::vector<std::string>& content, 
     int& i, 
@@ -119,7 +119,7 @@ void folder_content(
             std::string subpath = entry.path().generic_string();
 
             if (ImGui::TreeNode((void*)(intptr_t)i, entry.path().filename().generic_string().c_str())){
-                folder_content(subpath, content, i, selected, extension);
+                folderContent(subpath, content, i, selected, extension);
                 ImGui::TreePop();
             }
             i++;
@@ -222,7 +222,7 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
                     std::vector<std::string> tree;
                     std::string extension = ".gltf";
 
-                    folder_content(path, tree, i, config.fileSelection, extension);
+                    folderContent(path, tree, i, config.fileSelection, extension);
                     // }
                     ImGui::Separator();
                     ImGui::TreePop();
@@ -234,7 +234,7 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
                     std::vector<std::string> tree2;
                     std::string extension2{ ".glsl" };
 
-                    folder_content(path2, tree2, j, shaderSelection, extension2);
+                    folderContent(path2, tree2, j, shaderSelection, extension2);
                     ImGui::TreePop();
                 }
 
@@ -300,7 +300,7 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
         
         if (shaderSelection != lastShaderSelection) {
             if (*fileText) free(*fileText);
-            *fileText = read_file(shaderSelection.c_str());
+            *fileText = readFile(shaderSelection.c_str());
             if (*fileText) strcpy(text, *fileText);
             lastShaderSelection = shaderSelection;
         }

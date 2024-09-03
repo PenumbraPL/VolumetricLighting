@@ -13,9 +13,9 @@ typedef void (*DEBUGPROC)(
 
 namespace debug
 {
-	void debug_init(std::vector<DEBUGPROC>& callback_list);
-	void fill_callback_list(std::vector<DEBUGPROC>& callback_list);
-	void glew_callback(int code, const char* description);
+	void debugInit(std::vector<DEBUGPROC>& callback_list);
+	void fillCallbackList(std::vector<DEBUGPROC>& callback_list);
+	void glewCallback(int code, const char* description);
 
     class BufferLogger : public spdlog::sinks::sink {
     public:

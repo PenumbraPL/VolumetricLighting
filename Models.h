@@ -208,11 +208,13 @@ struct Camera {
     glm::mat4 Projection;
 };
 
+struct Component {
+
+};
 
 struct Scene {
     ~Scene();
 
-    //std::vector<Primitive> primitives;
     std::vector<Drawable> primitives;
     Camera cameraEye;
     std::vector<PointLight> lights;

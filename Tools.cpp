@@ -7,7 +7,7 @@
 extern spdlog::logger logger;
 
 
-void initialize_GLEW(void)
+void initializeGLEW(void)
 {
     GLenum err{ glewInit() };
     if (GLEW_OK != err) {
@@ -49,7 +49,7 @@ void initialize_GLEW(void)
 
 
 
-GLuint wrap_mode(AkWrapMode& wrap) {
+GLuint wrapMode(AkWrapMode& wrap) {
     GLuint wrap_m = GL_REPEAT;
     switch (wrap) {
     case AK_WRAP_MODE_WRAP:         wrap_m = GL_REPEAT; break;
@@ -62,7 +62,7 @@ GLuint wrap_mode(AkWrapMode& wrap) {
 }
 
 
-void set_up_color(
+void setUpColor(
     AkColorDesc* colordesc,
     AkMeshPrimitive* prim,
     Drawable& primitive,
@@ -95,9 +95,9 @@ void set_up_color(
                 case AKT_SAMPLER_DEPTH: texture_type = GL_TEXTURE_2D; break;
                     break;
                 }
-                wrap_t = wrap_mode(samp->wrapT);
-                wrap_s = wrap_mode(samp->wrapS);
-                wrap_p = wrap_mode(samp->wrapP);
+                wrap_t = wrapMode(samp->wrapT);
+                wrap_s = wrapMode(samp->wrapS);
+                wrap_p = wrapMode(samp->wrapP);
 
                 switch (samp->minfilter) {
                 case AK_MINFILTER_LINEAR:       minfilter = GL_LINEAR; break;
@@ -170,7 +170,7 @@ void set_up_color(
 
 
 
-void proccess_node(AkNode* node, std::vector<Drawable>& primitives)
+void proccessNode(AkNode* node, std::vector<Drawable>& primitives)
 {
     Drawable primitive;
     primitive.loadMatrix(node);
@@ -186,16 +186,16 @@ void proccess_node(AkNode* node, std::vector<Drawable>& primitives)
         }
         if (node->next) {
             node = node->next;
-            proccess_node(node, primitives);
+            proccessNode(node, primitives);
         }
         if (node->chld) {
             node = node->chld;
-            proccess_node(node, primitives);
+            proccessNode(node, primitives);
         }
     }
 }
 
-std::string print_coord_system(AkCoordSys* coord) 
+std::string printCoordSystem(AkCoordSys* coord) 
 {
     if (coord) {
         AkAxis axis[] = {
@@ -231,7 +231,7 @@ std::string print_coord_system(AkCoordSys* coord)
     return "CoordSys is nullptr!\n";
 }
 
-std::string print_doc_information(AkDocInf* inf, AkUnit* unit) 
+std::string printDocInformation(AkDocInf* inf, AkUnit* unit) 
 {
     std::string infString;
     if (inf && unit) {
@@ -256,7 +256,7 @@ std::string print_doc_information(AkDocInf* inf, AkUnit* unit)
 
 
 
-void format_attribute(GLint attr_location, AkAccessor* acc)
+void formatAttribute(GLint attr_location, AkAccessor* acc)
 {
     int comp_size{ acc->componentSize };
     int type{ acc->componentType};
@@ -292,7 +292,7 @@ void format_attribute(GLint attr_location, AkAccessor* acc)
     glVertexAttribFormat(attr_location, comp_size, type, normalize, 0);
 }
 
-char* read_file(const char* file_name)
+char* readFile(const char* file_name)
 {
     FILE* fs;
     fopen_s(&fs, file_name, "rb");
@@ -311,7 +311,7 @@ char* read_file(const char* file_name)
     return buffer;
 }
 
-GLint check_pipeline_status(GLuint vertex_shader, GLuint fragment_shader) 
+GLint checkPipelineStatus(GLuint vertex_shader, GLuint fragment_shader) 
 {
     GLint v_comp_status, f_comp_status;
     glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &v_comp_status);
