@@ -184,14 +184,13 @@ void proccessNode(AkNode* node, std::vector<Drawable>& primitives)
                 primitives.push_back(primitive);
             }
         }
-        if (node->next) {
-            node = node->next;
-            proccessNode(node, primitives);
-        }
         if (node->chld) {
-            node = node->chld;
-            proccessNode(node, primitives);
+            proccessNode(node->chld, primitives);
         }
+        if (node->next) {
+            proccessNode(node->next, primitives);
+        }
+
     }
 }
 
