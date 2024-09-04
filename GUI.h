@@ -51,13 +51,37 @@ struct ConfigContext{
 };
 
 
-void drawLeftPanel(ImGuiIO& io, ConfigContext& config);
-void drawRightPanel(ImGuiIO& io, ConfigContext& config);
-
 class GUI {
 public:
-    GUI();
+    GUI() {
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+    };
+    void deleteImGui() {
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+    }
+    ImGuiIO& getIO() {
+        return ImGui::GetIO();
+    }
+    void draw(ConfigContext& panelConfig) {
+        ImGuiIO& io = getIO();
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
 
+        drawLeftPanel(io, panelConfig);
+        drawRightPanel(io, panelConfig);
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    }
+    void drawLeftPanel(ImGuiIO& io, ConfigContext& config);
+    void drawRightPanel(ImGuiIO& io, ConfigContext& config);
+    ~GUI() {
+        //deleteImGui();
+    };
 private:
-    ImGuiIO& io;
+    //ImGuiIO& io{  };
 };

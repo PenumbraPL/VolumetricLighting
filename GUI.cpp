@@ -127,7 +127,7 @@ void folderContent(
     }
 }
 
-void drawLeftPanel(ImGuiIO& io, ConfigContext& config) 
+void GUI::drawLeftPanel(ImGuiIO& io, ConfigContext& config)
 {
     static bool show_shader_dialog{ false };
     static bool selected[3] = { false, false, false };
@@ -349,7 +349,7 @@ void drawLeftPanel(ImGuiIO& io, ConfigContext& config)
     }
 }
 
-void drawRightPanel(ImGuiIO& io, ConfigContext &config) 
+void GUI::drawRightPanel(ImGuiIO& io, ConfigContext &config) 
 {
     if (ImGui::Begin("View")) {
         

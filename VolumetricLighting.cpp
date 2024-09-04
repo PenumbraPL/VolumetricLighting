@@ -32,7 +32,7 @@ ConfigContext panelConfig = { "./res/models/GLTFTest/gltfTest.gltf" };
 
 
 
-void init(GLFWwindow** windowPtr, ImGuiIO& io)
+GLFWwindow* initContext(ImGuiIO& io)
 {
     logger.set_pattern("%^[%L][%s:%#]%$  %v ");
     logger.info("========== Initialization started ============================================");
@@ -52,7 +52,6 @@ void init(GLFWwindow** windowPtr, ImGuiIO& io)
         logger.error("========== [GLFW]: Window initialization failed ==============================");
         exit(EXIT_FAILURE);
     }
-    *windowPtr = window;
 
     glfwMakeContextCurrent(window);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -91,19 +90,8 @@ void init(GLFWwindow** windowPtr, ImGuiIO& io)
     else {
         logger.warn("========== [GLFW]: Debug context initialize unsuccessful =====================");
     }
-}
 
-void drawImgui(ImGuiIO& io) 
-{
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-
-    drawLeftPanel(io, panelConfig);
-    drawRightPanel(io, panelConfig);
-
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    return window;
 }
 
 /* ============================================================================= */
@@ -111,38 +99,34 @@ void drawImgui(ImGuiIO& io)
 
 int main()
 {
-    GLFWwindow* window;
+    GUI myGui;
+    GLFWwindow* window{ initContext(myGui.getIO()) };
 
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    init(&window, io);
-
-    std::unique_ptr<Drawable> lightModel = LightFactory().createDrawable();
-    std::unique_ptr<Drawable> env = EnvironmentFactory().createDrawable();
-    std::unique_ptr<Drawable> cld = CloudFactory().createDrawable();
+    std::unique_ptr<Drawable> lightModel{ LightFactory().createDrawable() };
+    std::unique_ptr<Drawable> skySphere{ EnvironmentFactory().createDrawable() };
+    std::unique_ptr<Drawable> cloudCube{ CloudFactory().createDrawable() };
 
     Scene scenes;
-    std::vector<PointLight>& lightsData= scenes.lights;
+    std::vector<PointLight>& lightsData{ scenes.lights };
     panelConfig.lightsData = &scenes.lights;
 
 
     /* ================================================ */
     do {
         ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
-        AkDoc* doc = scenes.loadScene(panelConfig.getModelPath(), panelConfig.getModelName());
-        AkCamera* camera = scenes.camera(doc);
-        glm::mat4& View = scenes.cameraEye.View;
-        glm::mat4& Projection = scenes.cameraEye.Projection;
+        AkDoc* doc{ scenes.loadScene(panelConfig.getModelPath(), panelConfig.getModelName()) };
+        AkCamera* camera{ scenes.camera(doc) };
+        glm::mat4& View{ scenes.cameraEye.View };
+        glm::mat4& Projection{ scenes.cameraEye.Projection };
         scenes.allocAll(doc);
 
-        std::vector<Drawable>& primitives = scenes.primitives;
+        std::vector<Drawable>& primitives{ scenes.primitives };
         ShadersSources defaultModel;
         defaultModel[VERTEX] = { "res/shaders/standard_vec.glsl" };
         defaultModel[FRAGMENT] = { "res/shaders/pbr_with_ext_light_frag.glsl" };
         for (auto& primitive : primitives) primitive.createPipeline(defaultModel);
-        std::map <void*, unsigned int>& bufferViews = scenes.bufferViews;
-        GLuint* docDataBuffer = scenes.parseBuffors();
+        std::map <void*, unsigned int>& bufferViews{ scenes.bufferViews };
+        GLuint* docDataBuffer{ scenes.parseBuffors() };
 
         for (auto& primitive : primitives) primitive.getLocation({{
             {"MVP", "PRJ"},
@@ -196,7 +180,7 @@ int main()
 
             glm::mat4 MVP = Projection * LookAt * View;
 
-            env->draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
+            skySphere->draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
             
 
             MVP = LookAt * View;
@@ -206,7 +190,6 @@ int main()
             }
        
             
-
             scenes.updateLights(lightsBuffer, lightDataSize, panelConfig);
             for (auto& light : lightsData) {
                 glm::mat4x4 View =
@@ -225,16 +208,16 @@ int main()
             View =
                 glm::rotate(
                     glm::rotate(
-                        glm::translate(cld->localTransform , translate)
+                        glm::translate(cloudCube->localTransform , translate)
                     , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
                 rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
             glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f));
 
             MVP = LookAt * View * Model;
-            ((Cloud*) cld.get())->g = panelConfig.g;
-            cld->draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
+            ((Cloud*) cloudCube.get())->g = panelConfig.g;
+            cloudCube->draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
 
-            drawImgui(io);
+            myGui.draw(panelConfig);
             glfwSwapBuffers(window);
             glfwPollEvents();
 
@@ -259,13 +242,11 @@ int main()
 
     } while (!glfwWindowShouldClose(window));
 
-    env->deletePipeline();
-    cld->deletePipeline();
+    skySphere->deletePipeline();
+    cloudCube->deletePipeline();
     lightModel->deletePipeline();
 
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    myGui.deleteImGui();
     glfwTerminate();
     logger.info("========== [GLFW]: Terminated ================================================");
     logger.info("===================== Exit succeeded =========================================");
