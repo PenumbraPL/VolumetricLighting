@@ -67,7 +67,7 @@ void setUpColor(
     AkMeshPrimitive* prim,
     Drawable& primitive,
     enum TextureType type,
-    ConfigContext& panelConfig)
+    GUI& panelConfig)
 {
     GLuint* sampler = &primitive.samplers[type];
     GLuint* texture = &primitive.textures[type];

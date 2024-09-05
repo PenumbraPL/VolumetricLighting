@@ -6,7 +6,6 @@
 
 extern spdlog::logger logger;
 
-
 void* imageLoadFromFile(
     const char* __restrict path,
     int* __restrict width,
@@ -127,10 +126,10 @@ void Drawable::processMesh(AkMeshPrimitive* primitive)
         AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
         AkTechniqueFxCommon* tch = ef->profile->technique->common;
         if (tch) {
-            setUpColor(tch->ambient, primitive, *this, AMBIENT, panelConfig);
-            setUpColor(tch->emission, primitive, *this, EMISIVE, panelConfig);
-            setUpColor(tch->diffuse, primitive, *this, DIFFUSE, panelConfig);
-            setUpColor(tch->specular, primitive, *this, SPECULAR, panelConfig);
+            setUpColor(tch->ambient, primitive, *this, AMBIENT, myGui);
+            setUpColor(tch->emission, primitive, *this, EMISIVE, myGui);
+            setUpColor(tch->diffuse, primitive, *this, DIFFUSE, myGui);
+            setUpColor(tch->specular, primitive, *this, SPECULAR, myGui);
 
             switch (tch->type) {
             case AK_MATERIAL_METALLIC_ROUGHNESS: {
@@ -145,8 +144,8 @@ void Drawable::processMesh(AkMeshPrimitive* primitive)
                 mr_cd.color->rgba.R = mr->metallic;
                 mr_cd.color->rgba.G = mr->roughness;
                 mr_cd.texture = mr->metalRoughTex;
-                setUpColor(&alb_cd, primitive, *this, ALBEDO, panelConfig);
-                setUpColor(&mr_cd, primitive, *this, MET_ROUGH, panelConfig);
+                setUpColor(&alb_cd, primitive, *this, ALBEDO, myGui);
+                setUpColor(&mr_cd, primitive, *this, MET_ROUGH, myGui);
                 break;
             }
 
@@ -158,8 +157,8 @@ void Drawable::processMesh(AkMeshPrimitive* primitive)
                 sg_cd.texture = sg->specGlossTex;
                 dif_cd.color = &sg->diffuse;
                 dif_cd.texture = sg->diffuseTex;
-                setUpColor(&sg_cd, primitive, *this, SP_GLOSSINESS, panelConfig);
-                setUpColor(&dif_cd, primitive, *this, SP_DIFFUSE, panelConfig);
+                setUpColor(&sg_cd, primitive, *this, SP_GLOSSINESS, myGui);
+                setUpColor(&dif_cd, primitive, *this, SP_DIFFUSE, myGui);
                 break;
             }
             };
@@ -389,25 +388,25 @@ void Drawable::deleteTexturesAndSamplers()
 
 /* ================================================ */
 
-    void Scene::updateLights(GLuint lightsBuffer, unsigned int lightDataSize, ConfigContext& panelConfig) {
-        if (panelConfig.getLightsSize() != lightDataSize) {
-            if (panelConfig.getLightsSize() > lightDataSize) {
-                lightDataSize = panelConfig.getLightsSize();
+    void Scene::updateLights(GLuint lightsBuffer, unsigned int lightDataSize, GUI& myGui) {
+        if (myGui.getLightsSize() != lightDataSize) {
+            if (myGui.getLightsSize() > lightDataSize) {
+                lightDataSize = myGui.getLightsSize();
                 int lightsBufferSize = (int)sizeof(PointLight) * lights.size();
                 glNamedBufferData(lightsBuffer, sizeof(LightsList) + lightsBufferSize, NULL, GL_DYNAMIC_DRAW);
             }
-            lightDataSize = panelConfig.getLightsSize();
+            lightDataSize = myGui.getLightsSize();
             int lightsBufferSize = (int)sizeof(PointLight) * lights.size();
             glNamedBufferSubData(lightsBuffer, offsetof(LightsList, list), lightsBufferSize, lights.data());
             glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
         }
-        PointLight newLight = panelConfig.getLight();
-        if (compare_lights(lights.data()[panelConfig.lightId], newLight)) {
-            lights.data()[panelConfig.lightId] = newLight;
+        PointLight newLight = myGui.getLight();
+        if (compare_lights(lights.data()[myGui.lightId], newLight)) {
+            lights.data()[myGui.lightId] = newLight;
             LightsList* ptr = (LightsList*)glMapNamedBuffer(lightsBuffer, GL_WRITE_ONLY);
-            memcpy_s((void*)&ptr->list[panelConfig.lightId], sizeof(PointLight), &newLight, sizeof(PointLight));
+            memcpy_s((void*)&ptr->list[myGui.lightId], sizeof(PointLight), &newLight, sizeof(PointLight));
             glUnmapNamedBuffer(lightsBuffer);
-            panelConfig.updateLight();
+            myGui.updateLight();
         }
     }
 

@@ -4,7 +4,8 @@
 #include "GUI.h"
 #include "pch.h"
 
-extern ConfigContext panelConfig;
+extern GUI myGui;
+
 
 typedef std::vector<std::string> BindingPointList;
 typedef std::array<BindingPointList, 5> BindingPointCollection;
@@ -226,7 +227,7 @@ struct Scene {
     void allocAll(AkDoc* doc);
     GLuint* parseBuffors();
     AkCamera* camera(AkDoc* doc);
-    void updateLights(GLuint lightsBuffer, unsigned int lightDataSize, ConfigContext& panelConfig);
+    void updateLights(GLuint lightsBuffer, unsigned int lightDataSize, GUI& panelConfig);
     void initLights();
     bool compare_lights(PointLight& old_light, PointLight& new_light);
     bool compare_lights(LightsList& old_light, LightsList& new_light);

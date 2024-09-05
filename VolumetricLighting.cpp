@@ -23,8 +23,6 @@ auto logger{ spdlog::logger("multi_sink", {bufferLogger, fileLogger, consoleLogg
 
 
 WindowInfo windowConfig = { 1900, 1000, "GLTF Viewer" };
-ConfigContext panelConfig = { "./res/models/GLTFTest/gltfTest.gltf" };
-
 
 
 /* ============================================================================= */
@@ -32,7 +30,7 @@ ConfigContext panelConfig = { "./res/models/GLTFTest/gltfTest.gltf" };
 
 
 
-GLFWwindow* initContext(ImGuiIO& io)
+GLFWwindow* initContext()
 {
     logger.set_pattern("%^[%L][%s:%#]%$  %v ");
     logger.info("========== Initialization started ============================================");
@@ -65,19 +63,7 @@ GLFWwindow* initContext(ImGuiIO& io)
     glfwSetWindowFocusCallback(window, control::focusCallback);
 
     initializeGLEW();
-
-
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-    io.ConfigWindowsMoveFromTitleBarOnly = true;
-    
-    ImGui::StyleColorsDark();
-
-    const char* GLSLVersion{ "#version 450" };
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init(GLSLVersion);
-  
-    
+   
 
     int flags;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
@@ -97,10 +83,13 @@ GLFWwindow* initContext(ImGuiIO& io)
 /* ============================================================================= */
 
 
+GUI myGui{ "./res/models/GLTFTest/gltfTest.gltf" };
+
+
 int main()
 {
-    GUI myGui;
-    GLFWwindow* window{ initContext(myGui.getIO()) };
+    GLFWwindow* window{ initContext() };
+    myGui.chooseGlfwImpl(window);
 
     std::unique_ptr<Drawable> lightModel{ LightFactory().createDrawable() };
     std::unique_ptr<Drawable> skySphere{ EnvironmentFactory().createDrawable() };
@@ -108,13 +97,13 @@ int main()
 
     Scene scenes;
     std::vector<PointLight>& lightsData{ scenes.lights };
-    panelConfig.lightsData = &scenes.lights;
+    myGui.lightsData = &scenes.lights;
 
 
     /* ================================================ */
     do {
         ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
-        AkDoc* doc{ scenes.loadScene(panelConfig.getModelPath(), panelConfig.getModelName()) };
+        AkDoc* doc{ scenes.loadScene(myGui.getModelPath(), myGui.getModelName()) };
         AkCamera* camera{ scenes.camera(doc) };
         glm::mat4& View{ scenes.cameraEye.View };
         glm::mat4& Projection{ scenes.cameraEye.Projection };
@@ -134,7 +123,7 @@ int main()
             }
         });
 
-        //glDepthRange(panelConfig.near_plane, panelConfig.far_plane);
+        //glDepthRange(myGui.near_plane, myGui.far_plane);
         glDepthFunc(GL_LEQUAL);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -150,7 +139,7 @@ int main()
         glNamedBufferSubData(lightsBuffer, offsetof(LightsList, list), lightsBufferSize, lightsData.data());
         glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
 
-        std::string fileSelected = panelConfig.fileSelection;
+        std::string fileSelected = myGui.fileSelection;
 
         logger.info("===================== Main loop ==============================================");
         while (!glfwWindowShouldClose(window)) {
@@ -162,12 +151,12 @@ int main()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glClearColor(0., 1., 1., 1.);
 
-            if (!camera) Projection = panelConfig.getProjection(width, height);
+            if (!camera) Projection = myGui.getProjection(width, height);
             
-            glm::vec3 eye = panelConfig.getView();
-            glm::mat4 LookAt = panelConfig.getLookAt();
-            glm::vec3 translate = panelConfig.getTranslate();
-            glm::vec3 rotate = panelConfig.getRotate();
+            glm::vec3 eye = myGui.getView();
+            glm::mat4 LookAt = myGui.getLookAt();
+            glm::vec3 translate = myGui.getTranslate();
+            glm::vec3 rotate = myGui.getRotate();
             glm::mat4 localTransform = glm::mat4(1.);
 
             glm::mat4 View =
@@ -190,7 +179,7 @@ int main()
             }
        
             
-            scenes.updateLights(lightsBuffer, lightDataSize, panelConfig);
+            scenes.updateLights(lightsBuffer, lightDataSize, myGui);
             for (auto& light : lightsData) {
                 glm::mat4x4 View =
                     glm::rotate(
@@ -214,14 +203,14 @@ int main()
             glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f));
 
             MVP = LookAt * View * Model;
-            ((Cloud*) cloudCube.get())->g = panelConfig.g;
+            ((Cloud*) cloudCube.get())->g = myGui.g;
             cloudCube->draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
 
-            myGui.draw(panelConfig);
+            myGui.draw();
             glfwSwapBuffers(window);
             glfwPollEvents();
 
-            if (panelConfig.fileSelection != fileSelected) break;
+            if (myGui.fileSelection != fileSelected) break;
         }
 
         /* ======================================================== */
