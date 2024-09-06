@@ -362,18 +362,61 @@ void GUI::drawRightPanel(ImGuiIO& io)
         ImGui::Text("fov:"); ImGui::SliderInt("fov", &fov, 10, 120);
         ImGui::Separator();
 
-        ImGui::SliderInt("Translation X", &xTranslate, -100, 100);
-        ImGui::SliderInt("Translation Y", &yTranslate, -100, 100);
-        ImGui::SliderInt("Translation Z", &zTranslate, -100, 100);
-        ImGui::SliderInt("Rotation X", &xRotate, 0, 360);
-        ImGui::SliderInt("Rotation Y", &yRotate, 0, 360);
-        ImGui::SliderFloat("Camera distance", &viewDistance, 0, 360);
-        ImGui::SliderAngle("Camera phi", &viewPhi, 0, 360);
-        ImGui::SliderAngle("Camera theta", &viewTheta, 0, 360);
+        if(ImGui::SliderInt("Translation X", &xTranslate.data, -100, 100)) xTranslate.notifyAll();
+        if(ImGui::SliderInt("Translation Y", &yTranslate.data, -100, 100)) yTranslate.notifyAll();
+        if (ImGui::SliderInt("Translation Z", &zTranslate.data, -100, 100)) zTranslate.notifyAll();
+        if (ImGui::SliderInt("Rotation X", &xRotate.data, 0, 360)) xRotate.notifyAll();
+        if (ImGui::SliderInt("Rotation Y", &yRotate.data, 0, 360)) yRotate.notifyAll();
+        if (ImGui::SliderFloat("Camera distance", &viewDistance.data, 0, 360)) viewDistance.notifyAll();
+        if (ImGui::SliderAngle("Camera phi", &viewPhi.data, 0, 360)) viewPhi.notifyAll();
+        if (ImGui::SliderAngle("Camera theta", &viewTheta.data, 0, 360)) viewTheta.notifyAll();
         ImGui::Separator();
 
         ImGui::Button("Save Image");
         ImGui::SameLine(); ImGui::Button("Save Clip");
         ImGui::End();
     }
+}
+
+
+GUI::GUI(std::string fileSelection) : fileSelection{ fileSelection } {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+};
+
+void GUI::deleteImGui() {
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+}
+
+ImGuiIO& GUI::getIO() {
+    return ImGui::GetIO();
+}
+
+
+void GUI::draw() {
+    ImGuiIO& io = getIO();
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    drawLeftPanel(io);
+    drawRightPanel(io);
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+void GUI::chooseGlfwImpl(GLFWwindow* window) {
+    ImGuiIO& io = getIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    io.ConfigWindowsMoveFromTitleBarOnly = true;
+
+    ImGui::StyleColorsDark();
+
+    const char* GLSLVersion{ "#version 450" };
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(GLSLVersion);
+
 }

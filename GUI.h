@@ -8,79 +8,37 @@
 
 
 struct Observer {
-    virtual void notify();
+    virtual void notify() {};
 };
 
 template <typename T>
 struct Object {
     Object(T data): data{data} {}
     void subscribe(Observer& observer) {
-        observers.push_back(observer);
+        observers.push_back(&observer);
+        observer.notify();
     }
     operator T() const {
         return data;
     }
     void unsubscribe(Observer& observer) {
-        const auto pos{ std::find(std::begin(observers), std::end(observers), observer) };
+        const auto pos{ std::find(std::begin(observers), std::end(observers), &observer) };
         if (pos != std::end(observers)) {
             observers.erase(pos);
         }
     }
     void notifyAll() {
         for (auto& observer : observers) {
-            observer.notify();
+            observer->notify();
         }
     }
     T data;
-    std::vector<Observer> observers;
+    std::vector<Observer*> observers;
 };
 
 
 class GUI {
 public:
-    GUI(std::string fileSelection) : fileSelection{fileSelection} {
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-    };
-    void deleteImGui() {
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
-        ImGui::DestroyContext();
-    }
-    ImGuiIO& getIO() {
-        return ImGui::GetIO();
-    }
-    void draw() {
-        ImGuiIO& io = getIO();
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        drawLeftPanel(io);
-        drawRightPanel(io);
-
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    }
-    void chooseGlfwImpl(GLFWwindow* window) {
-        ImGuiIO& io = getIO();
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-        io.ConfigWindowsMoveFromTitleBarOnly = true;
-
-        ImGui::StyleColorsDark();
-
-        const char* GLSLVersion{ "#version 450" };
-        ImGui_ImplGlfw_InitForOpenGL(window, true);
-        ImGui_ImplOpenGL3_Init(GLSLVersion);
-
-    }
-    void drawLeftPanel(ImGuiIO& io);
-    void drawRightPanel(ImGuiIO& io);
-    ~GUI() {
-        //deleteImGui();
-    };
-
     std::string fileSelection;
     unsigned int lightId = 0;
     std::vector<PointLight>* lightsData = nullptr;
@@ -90,14 +48,14 @@ public:
     float zFar{ 500.f };
     float zNear = .001f;
     int fov = 50;
-    int xTranslate = 0;
-    int yTranslate = 0;
-    int zTranslate = 0;
-    int xRotate = 0;
-    int yRotate = 0;
-    float viewDistance = 50;
-    float viewPhi = 0;
-    float viewTheta = 0;
+    Object<int> xTranslate{ 0 };
+    Object<int> yTranslate{ 0 };
+    Object<int> zTranslate{ 0 };
+    Object<int> xRotate{ 0 };
+    Object<int> yRotate{ 0 };
+    Object<float> viewDistance{ 50 };
+    Object<float> viewPhi{ 0 };
+    Object<float> viewTheta{ 0 };
     float lightAmbient[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
     float lightDiffuse[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
     float lightSpecular[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
@@ -108,8 +66,24 @@ public:
     float g = 0.f;
 
 
-
-
+    void subscribeToView(Observer& observer) {
+        xTranslate.subscribe(observer);
+        yTranslate.subscribe(observer);
+        zTranslate.subscribe(observer);
+        xRotate.subscribe(observer);
+        yRotate.subscribe(observer);
+        viewDistance.subscribe(observer);
+        viewPhi.subscribe(observer);
+        viewTheta.subscribe(observer);
+    }
+    GUI(std::string fileSelection);
+    void deleteImGui();
+    ImGuiIO& getIO();
+    void draw();
+    void chooseGlfwImpl(GLFWwindow* window);
+    void drawLeftPanel(ImGuiIO& io);
+    void drawRightPanel(ImGuiIO& io);
+    ~GUI() {};
     PointLight* getLightsData();
     std::size_t getLightsSize();
     PointLight getLight();
@@ -123,5 +97,4 @@ public:
     std::string getModelName();
 
 private:
-    //ImGuiIO* io{ nullptr };
 };

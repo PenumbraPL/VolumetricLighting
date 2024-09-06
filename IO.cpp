@@ -11,7 +11,8 @@ namespace control
     void scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     {
         if (!myGui.workSpaceFocused) {
-            myGui.viewDistance += (float)(yoffset * myGui.viewDistance / -6.);
+            myGui.viewDistance.data += (float)(yoffset * myGui.viewDistance / -6.);
+            myGui.viewDistance.notifyAll();
         }
     }
     //static
@@ -22,8 +23,10 @@ namespace control
             if (state != GLFW_RELEASE) {
                 double nx = (windowConfig.mouseSpeed / windowConfig.width) * (new_xpos - windowConfig.xCursorPosition);
                 double ny = (windowConfig.mouseSpeed / windowConfig.height) * (new_ypos - windowConfig.yCursorPosition);
-                myGui.viewPhi += (float) nx;
-                myGui.viewTheta += (float) ny;
+                myGui.viewPhi.data += (float) nx;
+                myGui.viewTheta.data += (float) ny;
+                myGui.viewPhi.notifyAll();
+                myGui.viewTheta.notifyAll();
 
                 windowConfig.xCursorPosition = new_xpos;
                 windowConfig.yCursorPosition = new_ypos;
@@ -47,28 +50,36 @@ namespace control
     {
         if (!myGui.workSpaceFocused) {
             if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-                myGui.viewPhi += 0.01f;
+                myGui.viewPhi.data += 0.01f;
+                myGui.viewPhi.notifyAll();
             }
             if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-                myGui.viewPhi -= 0.01f;
+                myGui.viewPhi.data -= 0.01f;
+                myGui.viewPhi.notifyAll();
             }
             if (key == GLFW_KEY_UP && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-                myGui.viewTheta += 0.01f;
+                myGui.viewTheta.data += 0.01f;
+                myGui.viewTheta.notifyAll();
             }
             if (key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-                myGui.viewTheta -= 0.01f;
+                myGui.viewTheta.data -= 0.01f;
+                myGui.viewTheta.notifyAll();
             }
             if (key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-                myGui.zTranslate += 1;
+                myGui.zTranslate.data += 1;
+                myGui.zTranslate.notifyAll();
             }
             if (key == GLFW_KEY_D && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-                myGui.zTranslate -= 1;
+                myGui.zTranslate.data -= 1;
+                myGui.zTranslate.notifyAll();
             }
             if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-                myGui.xTranslate -= 1;
+                myGui.xTranslate.data -= 1;
+                myGui.xTranslate.notifyAll();
             }
             if (key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-                myGui.xTranslate += 1;
+                myGui.xTranslate.data += 1;
+                myGui.xTranslate.notifyAll();
             }
             if (key == GLFW_KEY_H && action == GLFW_PRESS) {
                 int mode[2] = { GLFW_CURSOR_DISABLED, GLFW_CURSOR_NORMAL };

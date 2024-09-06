@@ -33,9 +33,10 @@ public:
     Matrix() {}
     Matrix(glm::mat4 localTransform) : localTransform{ localTransform } {}
 
-    void setProjection() {
-      /*  if(!camera) Projection = myGui.getProjection(width, height);
-        Projection = Proj;*/
+    void setProjection(int width, int height) {
+        //if(!camera)
+            Projection = myGui.getProjection(width, height);
+        //Projection = Proj;
     }
 
     void calculateMVP() {
@@ -61,9 +62,9 @@ public:
     }
 
     glm::mat4 localTransform = glm::mat4(1.);
-    glm::mat4 Projection;
-    glm::mat4 MVP;
-    glm::mat4 MV;
+    glm::mat4 Projection = glm::mat4(1.);;
+    glm::mat4 MVP = glm::mat4(1.);;
+    glm::mat4 MV = glm::mat4(1.);;
 };
 
 
@@ -145,7 +146,15 @@ int main()
     std::vector<PointLight>& lightsData{ scenes.lights };
     myGui.lightsData = &scenes.lights;
 
+    Matrix transform;
+    transform.setProjection(windowConfig.width, windowConfig.height);
+    myGui.subscribeToView(transform);
 
+    Matrix cloudTransform{ cloudCube->localTransform };
+    cloudTransform.setProjection(windowConfig.width, windowConfig.height);
+    myGui.subscribeToView(cloudTransform);
+    
+    
     /* ================================================ */
     do {
         AkDoc* doc{ scenes.loadScene(myGui.getModelPath(), myGui.getModelName()) };
@@ -200,23 +209,23 @@ int main()
             glm::vec3 rotate = myGui.getRotate();
             glm::mat4 localTransform = glm::mat4(1.);
 
-            glm::mat4 View =
-                glm::rotate(
-                    glm::rotate(
-                        glm::translate(localTransform,
-                            translate)
-                        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
-                    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+            //glm::mat4 View =
+            //    glm::rotate(
+            //        glm::rotate(
+            //            glm::translate(localTransform,
+            //                translate)
+            //            , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+            //        rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
 
-            glm::mat4 MVP = Projection * LookAt * View;
+            //glm::mat4 MVP = Projection * LookAt * View;
 
-            skySphere->draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
+            skySphere->draw(lightsBuffer, bufferViews, docDataBuffer, eye, transform.MVP, Projection);
             
 
-            MVP = LookAt * View;
+            //MVP = LookAt * View;
 
             for (auto& primitive : primitives) {
-                primitive.draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
+                primitive.draw(lightsBuffer, bufferViews, docDataBuffer, eye, transform.MV, Projection);
             }
        
             
@@ -235,17 +244,17 @@ int main()
             }
             /* ===================== */
 
-            View =
-                glm::rotate(
-                    glm::rotate(
-                        glm::translate(cloudCube->localTransform , translate)
-                    , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
-                rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-            glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f));
+            //View =
+            //    glm::rotate(
+            //        glm::rotate(
+            //            glm::translate(cloudCube->localTransform , translate)
+            //        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+            //    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+            //glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f));
 
-            MVP = LookAt * View * Model;
+            //MVP = LookAt * View * Model;
             ((Cloud*) cloudCube.get())->g = myGui.g;
-            cloudCube->draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
+            cloudCube->draw(lightsBuffer, bufferViews, docDataBuffer, eye, transform.MV, Projection);
 
             myGui.draw();
             glfwSwapBuffers(window);
