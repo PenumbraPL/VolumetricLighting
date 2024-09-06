@@ -10,14 +10,14 @@ namespace control
 {
     void scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     {
-        if (!myGui.focused) {
+        if (!myGui.workSpaceFocused) {
             myGui.viewDistance += (float)(yoffset * myGui.viewDistance / -6.);
         }
     }
     //static
     void cursorPositionCallback(GLFWwindow* window, double new_xpos, double new_ypos)
     {
-        if (!myGui.focused) {
+        if (!myGui.workSpaceFocused) {
             int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
             if (state != GLFW_RELEASE) {
                 double nx = (windowConfig.mouseSpeed / windowConfig.width) * (new_xpos - windowConfig.xCursorPosition);
@@ -45,7 +45,7 @@ namespace control
         int action,
         int mods)
     {
-        if (!myGui.focused) {
+        if (!myGui.workSpaceFocused) {
             if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
                 myGui.viewPhi += 0.01f;
             }
@@ -84,6 +84,6 @@ namespace control
 
     void focusCallback(GLFWwindow* window, int focused)
     {
-        myGui.focused = focused ? true : false;
+        myGui.workSpaceFocused = focused ? true : false;
     }
 }

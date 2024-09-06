@@ -138,7 +138,7 @@ void GUI::drawLeftPanel(ImGuiIO& io)
 
 
     if (ImGui::Begin("Control")) {
-        focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow) ? true : false;
+        workSpaceFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow) ? true : false;
 
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
 

@@ -41,7 +41,6 @@ public:
     GUI(std::string fileSelection) : fileSelection{fileSelection} {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
-        io = &getIO();
     };
     void deleteImGui() {
         ImGui_ImplOpenGL3_Shutdown();
@@ -52,22 +51,22 @@ public:
         return ImGui::GetIO();
     }
     void draw() {
-        //ImGuiIO& io = getIO();
+        ImGuiIO& io = getIO();
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        drawLeftPanel(*io);
-        drawRightPanel(*io);
+        drawLeftPanel(io);
+        drawRightPanel(io);
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
     void chooseGlfwImpl(GLFWwindow* window) {
-        //ImGuiIO& io = getIO();
-        io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-        io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-        io->ConfigWindowsMoveFromTitleBarOnly = true;
+        ImGuiIO& io = getIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+        io.ConfigWindowsMoveFromTitleBarOnly = true;
 
         ImGui::StyleColorsDark();
 
@@ -85,7 +84,7 @@ public:
     std::string fileSelection;
     unsigned int lightId = 0;
     std::vector<PointLight>* lightsData = nullptr;
-    bool focused = false;
+    bool workSpaceFocused = false;
     std::vector<std::string> directory;
 
     float zFar{ 500.f };
@@ -111,18 +110,18 @@ public:
 
 
 
-PointLight* getLightsData();
-std::size_t getLightsSize();
-PointLight getLight();
-void updateLight();
-glm::vec3 getTranslate();
-glm::vec3 getRotate();
-glm::vec3 getView();
-glm::mat4 getLookAt();
-glm::mat4 getProjection(int width, int height);
-std::string getModelPath();
-std::string getModelName();
+    PointLight* getLightsData();
+    std::size_t getLightsSize();
+    PointLight getLight();
+    void updateLight();
+    glm::vec3 getTranslate();
+    glm::vec3 getRotate();
+    glm::vec3 getView();
+    glm::mat4 getLookAt();
+    glm::mat4 getProjection(int width, int height);
+    std::string getModelPath();
+    std::string getModelName();
 
 private:
-    ImGuiIO* io{ nullptr };
+    //ImGuiIO* io{ nullptr };
 };

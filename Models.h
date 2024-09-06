@@ -226,7 +226,7 @@ struct Scene {
     AkDoc* loadScene(std::string scenePath, std::string sceneName);
     void allocAll(AkDoc* doc);
     GLuint* parseBuffors();
-    AkCamera* camera(AkDoc* doc);
+    AkCamera* loadCamera(AkDoc* doc);
     void updateLights(GLuint lightsBuffer, unsigned int lightDataSize, GUI& panelConfig);
     void initLights();
     bool compare_lights(PointLight& old_light, PointLight& new_light);

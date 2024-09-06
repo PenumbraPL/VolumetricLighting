@@ -432,7 +432,7 @@ void Drawable::deleteTexturesAndSamplers()
 
 
 
-    AkCamera* Scene::camera(AkDoc* doc) 
+    AkCamera* Scene::loadCamera(AkDoc* doc) 
     {
         AkVisualScene* scene;
         AkCamera* cam = nullptr;
@@ -488,6 +488,8 @@ void Drawable::deleteTexturesAndSamplers()
 
         AkNode* node = ak_instanceObjectNode(scene->node);
         proccessNode(node, primitives);
+        loadCamera(doc);
+
 
         return doc;
     }

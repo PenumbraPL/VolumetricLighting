@@ -28,6 +28,48 @@ WindowInfo windowConfig = { 1900, 1000, "GLTF Viewer" };
 /* ============================================================================= */
 
 
+class Matrix : public Observer {
+public:
+    Matrix() {}
+    Matrix(glm::mat4 localTransform) : localTransform{ localTransform } {}
+
+    void setProjection() {
+      /*  if(!camera) Projection = myGui.getProjection(width, height);
+        Projection = Proj;*/
+    }
+
+    void calculateMVP() {
+        glm::vec3 eye = myGui.getView();
+        glm::mat4 LookAt = myGui.getLookAt();
+        glm::vec3 translate = myGui.getTranslate();
+        glm::vec3 rotate = myGui.getRotate();
+
+        glm::mat4 View =
+            glm::rotate(
+                glm::rotate(
+                    glm::translate(localTransform,
+                        translate)
+                    , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+                rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+
+        MV = LookAt * View;
+        MVP = Projection * MV;
+    }
+
+    virtual void notify() {
+        calculateMVP();
+    }
+
+    glm::mat4 localTransform = glm::mat4(1.);
+    glm::mat4 Projection;
+    glm::mat4 MVP;
+    glm::mat4 MV;
+};
+
+
+
+
+/* ============================================================================= */
 
 
 GLFWwindow* initContext()
@@ -104,9 +146,6 @@ int main()
     do {
         ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
         AkDoc* doc{ scenes.loadScene(myGui.getModelPath(), myGui.getModelName()) };
-        AkCamera* camera{ scenes.camera(doc) };
-        glm::mat4& View{ scenes.cameraEye.View };
-        glm::mat4& Projection{ scenes.cameraEye.Projection };
         scenes.allocAll(doc);
 
         std::vector<Drawable>& primitives{ scenes.primitives };
@@ -151,8 +190,7 @@ int main()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glClearColor(0., 1., 1., 1.);
 
-            if (!camera) Projection = myGui.getProjection(width, height);
-            
+            glm::mat4 Projection = myGui.getProjection(width, height);
             glm::vec3 eye = myGui.getView();
             glm::mat4 LookAt = myGui.getLookAt();
             glm::vec3 translate = myGui.getTranslate();
