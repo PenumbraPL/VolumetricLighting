@@ -119,6 +119,10 @@ GLFWwindow* initContext()
         logger.warn("========== [GLFW]: Debug context initialize unsuccessful =====================");
     }
 
+
+    ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
+
+
     return window;
 }
 
@@ -144,7 +148,6 @@ int main()
 
     /* ================================================ */
     do {
-        ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
         AkDoc* doc{ scenes.loadScene(myGui.getModelPath(), myGui.getModelName()) };
         scenes.allocAll(doc);
 
