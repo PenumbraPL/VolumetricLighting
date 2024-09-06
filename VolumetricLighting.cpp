@@ -143,8 +143,8 @@ int main()
     std::unique_ptr<Drawable> cloudCube{ CloudFactory().createDrawable() };
 
     Scene scenes;
-    std::vector<PointLight>& lightsData{ scenes.lights };
-    myGui.lightsData = &scenes.lights;
+    myGui.lightsData = &scenes.sceneLights.lights;
+    scenes.cameraEye.Projection = myGui.getProjection(windowConfig.width, windowConfig.height);
 
     Matrix transform;
     transform.setProjection(windowConfig.width, windowConfig.height);
@@ -153,6 +153,7 @@ int main()
     Matrix cloudTransform{ cloudCube->localTransform };
     cloudTransform.setProjection(windowConfig.width, windowConfig.height);
     myGui.subscribeToView(cloudTransform);
+    myGui.subscribeToEye(scenes.cameraEye);
     
     
     /* ================================================ */
@@ -165,8 +166,7 @@ int main()
         defaultModel[VERTEX] = { "res/shaders/standard_vec.glsl" };
         defaultModel[FRAGMENT] = { "res/shaders/pbr_with_ext_light_frag.glsl" };
         for (auto& primitive : primitives) primitive.createPipeline(defaultModel);
-        std::map <void*, unsigned int>& bufferViews{ scenes.bufferViews };
-        GLuint* docDataBuffer{ scenes.parseBuffors() };
+        scenes.parseBuffors();
 
         for (auto& primitive : primitives) primitive.getLocation({{
             {"MVP", "PRJ"},
@@ -177,18 +177,6 @@ int main()
         //glDepthRange(myGui.near_plane, myGui.far_plane);
         glDepthFunc(GL_LEQUAL);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        GLuint lightsBuffer;
-        glGenBuffers(1, &lightsBuffer);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightsBuffer);
-
-        scenes.initLights();
-        int lightsBufferSize = (int)sizeof(PointLight) * lightsData.size();
-        unsigned int lightDataSize = (unsigned int)lightsData.size();
-
-        glNamedBufferData(lightsBuffer, sizeof(LightsList) + lightsBufferSize, NULL, GL_DYNAMIC_DRAW);
-        glNamedBufferSubData(lightsBuffer, offsetof(LightsList, list), lightsBufferSize, lightsData.data());
-        glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
 
         std::string fileSelected = myGui.fileSelection;
 
@@ -202,35 +190,21 @@ int main()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glClearColor(0., 1., 1., 1.);
 
-            glm::mat4 Projection = myGui.getProjection(width, height);
-            glm::vec3 eye = myGui.getView();
+            //glm::mat4 Projection = myGui.getProjection(width, height);
+            //glm::vec3 eye = myGui.getView();
             glm::mat4 LookAt = myGui.getLookAt();
             glm::vec3 translate = myGui.getTranslate();
             glm::vec3 rotate = myGui.getRotate();
             glm::mat4 localTransform = glm::mat4(1.);
 
-            //glm::mat4 View =
-            //    glm::rotate(
-            //        glm::rotate(
-            //            glm::translate(localTransform,
-            //                translate)
-            //            , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
-            //        rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-
-            //glm::mat4 MVP = Projection * LookAt * View;
-
-            skySphere->draw(lightsBuffer, bufferViews, docDataBuffer, eye, transform.MVP, Projection);
+            skySphere->draw(transform.MVP, scenes);
             
-
-            //MVP = LookAt * View;
-
             for (auto& primitive : primitives) {
-                primitive.draw(lightsBuffer, bufferViews, docDataBuffer, eye, transform.MV, Projection);
+                primitive.draw(transform.MV, scenes);
             }
        
-            
-            scenes.updateLights(lightsBuffer, lightDataSize, myGui);
-            for (auto& light : lightsData) {
+            scenes.sceneLights.updateLights(myGui);
+            for (auto& light : scenes.sceneLights.lights) {
                 glm::mat4x4 View =
                     glm::rotate(
                          glm::rotate(
@@ -239,22 +213,15 @@ int main()
                     rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
                 glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(.2f));
 
+                glm::mat4 Projection = scenes.cameraEye.Projection;
                 glm::mat4 MVP = Projection * LookAt * View * Model;
-                lightModel->draw(lightsBuffer, bufferViews, docDataBuffer, eye, MVP, Projection);
+                lightModel->draw(MVP, scenes);
             }
             /* ===================== */
 
-            //View =
-            //    glm::rotate(
-            //        glm::rotate(
-            //            glm::translate(cloudCube->localTransform , translate)
-            //        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
-            //    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-            //glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f));
 
-            //MVP = LookAt * View * Model;
             ((Cloud*) cloudCube.get())->g = myGui.g;
-            cloudCube->draw(lightsBuffer, bufferViews, docDataBuffer, eye, transform.MV, Projection);
+            cloudCube->draw(transform.MV, scenes);
 
             myGui.draw();
             glfwSwapBuffers(window);
@@ -270,8 +237,8 @@ int main()
         for (auto& primitive : primitives) primitive.deleteTexturesAndSamplers();
         for (auto& primitive : primitives) primitive.deletePipeline();
 
-        glDeleteBuffers((GLsizei)bufferViews.size(), docDataBuffer);
-        if(docDataBuffer) free(docDataBuffer);
+        glDeleteBuffers((GLsizei) scenes.bufferViews.size(), scenes.docDataBuffer);
+        if(scenes.docDataBuffer) free(scenes.docDataBuffer);
         
         for (auto& primitive : primitives) {
             for (int i = VERTEX; i <= GEOMETRY; i++) {

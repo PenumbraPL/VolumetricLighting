@@ -76,6 +76,11 @@ public:
         viewPhi.subscribe(observer);
         viewTheta.subscribe(observer);
     }
+    void subscribeToEye(Observer& observer) {
+        viewDistance.subscribe(observer);
+        viewPhi.subscribe(observer);
+        viewTheta.subscribe(observer);
+    }
     GUI(std::string fileSelection);
     void deleteImGui();
     ImGuiIO& getIO();

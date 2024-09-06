@@ -195,30 +195,24 @@ void Drawable::bindVertexArray()
     }
 }
 
-void Drawable::draw(
-    GLuint& lights_buffer,
-    std::map <void*, unsigned int>& bufferViews,
-    GLuint* docDataBuffer,
-    glm::vec3& eye,
-    glm::mat4& MVP,
-    glm::mat4& Projection)
+void Drawable::draw(glm::mat4& MVP, Scene& scene)
 {
     bindVertexArray();
 
     glBindVertexArray(vao);
     glBindProgramPipeline(pipeline);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lights_buffer);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, scene.sceneLights.lightsBuffer);
 
-    glm::vec3 camera_view = eye;
-    glm::vec3 camera_dir = glm::vec3(0.) - eye;
+    glm::vec3 camera_view = scene.cameraEye.eye;
+    glm::vec3 camera_dir = glm::vec3(0.) - scene.cameraEye.eye;
 
     glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
     glm::mat4 MVPPos = MVP * Model * localTransform; // check is it correct?
 
 
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MVPPos));
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(Projection));
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
     glProgramUniform3fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][0], 1, glm::value_ptr(camera_view));
 
     {
@@ -235,7 +229,7 @@ void Drawable::draw(
         glProgramUniform4fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][3], 1, glm::value_ptr(colors[ALBEDO]));
     }
 
-    bindVertexBuffer(bufferViews, docDataBuffer);
+    bindVertexBuffer(scene.bufferViews, scene.docDataBuffer);
     bindTextures();
 
     glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
@@ -388,48 +382,6 @@ void Drawable::deleteTexturesAndSamplers()
 
 /* ================================================ */
 
-    void Scene::updateLights(GLuint lightsBuffer, unsigned int lightDataSize, GUI& myGui) {
-        if (myGui.getLightsSize() != lightDataSize) {
-            if (myGui.getLightsSize() > lightDataSize) {
-                lightDataSize = myGui.getLightsSize();
-                int lightsBufferSize = (int)sizeof(PointLight) * lights.size();
-                glNamedBufferData(lightsBuffer, sizeof(LightsList) + lightsBufferSize, NULL, GL_DYNAMIC_DRAW);
-            }
-            lightDataSize = myGui.getLightsSize();
-            int lightsBufferSize = (int)sizeof(PointLight) * lights.size();
-            glNamedBufferSubData(lightsBuffer, offsetof(LightsList, list), lightsBufferSize, lights.data());
-            glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
-        }
-        PointLight newLight = myGui.getLight();
-        if (compare_lights(lights.data()[myGui.lightId], newLight)) {
-            lights.data()[myGui.lightId] = newLight;
-            LightsList* ptr = (LightsList*)glMapNamedBuffer(lightsBuffer, GL_WRITE_ONLY);
-            memcpy_s((void*)&ptr->list[myGui.lightId], sizeof(PointLight), &newLight, sizeof(PointLight));
-            glUnmapNamedBuffer(lightsBuffer);
-            myGui.updateLight();
-        }
-    }
-
-    void Scene::initLights() {
-        lights.clear();
-        lights.push_back({ glm::vec3(1.5f, 1.5f, 1.5f), 0.1f, 0.5f, 0.5f, glm::vec3(1.f, 1.f, 1.f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(1.f, 1.f, 1.f) });
-        lights.push_back({ glm::vec3(-1.5f, -1.5f, 1.5f), 0.1f, 0.5f, 0.5f, glm::vec3(1.f, .9f, .8f), glm::vec3(.7f, .5f, .4f), glm::vec3(.3f, .2f, .1f) });
-        lights.push_back({ glm::vec3(1.5f, -1.5f, 1.5f), 0.1f, 0.5f, 0.5f, glm::vec3(1.f, .9f, .8f), glm::vec3(.7f, .5f, .4f), glm::vec3(.3f, .2f, .1f) });
-    }
-
-
-    bool Scene::compare_lights(PointLight& old_light, PointLight& new_light)
-    {
-        return memcmp(&old_light, &new_light, sizeof(PointLight));
-    }
-
-    bool Scene::compare_lights(LightsList& old_light, LightsList& new_light)
-    {
-        if (old_light.size != new_light.size) return true;
-
-        return memcmp(&old_light.list, &new_light.list, old_light.size * sizeof(PointLight));
-    }
-
 
 
     AkCamera* Scene::loadCamera(AkDoc* doc) 
@@ -560,6 +512,9 @@ void Drawable::deleteTexturesAndSamplers()
             unsigned int i = bufferViews[buffer.first];
             glNamedBufferData(docDataBuffer[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
         }
+
+        this->docDataBuffer = docDataBuffer;
+
         return docDataBuffer;
     }
 
@@ -601,13 +556,7 @@ void Light::loadMesh()
 }
 
 
-void Light::draw(
-    GLuint& lights_buffer,
-    std::map <void*, unsigned int>& bufferViews,
-    GLuint* docDataBuffer,
-    glm::vec3& eye,
-    glm::mat4& MVP,
-    glm::mat4& Projection)
+void Light::draw(glm::mat4& MVP,  Scene& scene)
 {
     bindVertexArray();
     GLuint vcolLocation = glGetAttribLocation(programs[VERTEX], "vCol");
@@ -685,13 +634,7 @@ void Environment::loadMesh()
     glDeleteTextures(1, &skybox);
 */
 
-void Environment::draw(
-    GLuint& lights_buffer,
-    std::map <void*, unsigned int>& bufferViews,
-    GLuint* docDataBuffer,
-    glm::vec3& eye,
-    glm::mat4& MVP,
-    glm::mat4& Projection)
+void Environment::draw(glm::mat4& MVP, Scene& scene)
 {
     bindVertexArray();
     if(normalsBindingLocation != 0xFFFFFFFF) glDisableVertexArrayAttrib(vao, normalsBindingLocation);
@@ -750,32 +693,91 @@ void Cloud::loadMesh()
 }
 
 
-void Cloud::draw(
-    GLuint& lights_buffer,
-    std::map <void*, unsigned int>& bufferViews,
-    GLuint* docDataBuffer,
-    glm::vec3& eye,
-    glm::mat4& MVP,
-    glm::mat4& Projection)
+void Cloud::draw(glm::mat4& MVP, Scene& scene)
 {
     bindVertexArray();
     glBindVertexArray(vao);
     glBindProgramPipeline(pipeline);
 
     glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][0], g);
-    glProgramUniform3fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][1], 1, glm::value_ptr(eye));
+    glProgramUniform3fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][1], 1, glm::value_ptr(scene.cameraEye.eye));
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lights_buffer);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, scene.sceneLights.lightsBuffer);
 
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MVP));
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(Projection));
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
 
     bindVertexBuffer(this->bufferViews, this->docDataBuffer);
     bindTextures();
 
-     glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
     glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
     glDisable(GL_BLEND);
     glDisable(GL_CULL_FACE);
+}
+
+
+/* ================================================ */
+
+
+void SceneLights::updateLights (GUI& myGui) {
+    if (myGui.getLightsSize() != lightDataSize) {
+        if (myGui.getLightsSize() > lightDataSize) {
+            lightDataSize = myGui.getLightsSize();
+            int lightsBufferSize = (int)sizeof(PointLight) * lights.size();
+            glNamedBufferData(lightsBuffer, sizeof(LightsList) + lightsBufferSize, NULL, GL_DYNAMIC_DRAW);
+        }
+        lightDataSize = myGui.getLightsSize();
+        int lightsBufferSize = (int)sizeof(PointLight) * lights.size();
+        glNamedBufferSubData(lightsBuffer, offsetof(LightsList, list), lightsBufferSize, lights.data());
+        glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
+    }
+    PointLight newLight = myGui.getLight();
+    if (compareLights(lights.data()[myGui.lightId], newLight)) {
+        lights.data()[myGui.lightId] = newLight;
+        LightsList* ptr = (LightsList*)glMapNamedBuffer(lightsBuffer, GL_WRITE_ONLY);
+        memcpy_s((void*)&ptr->list[myGui.lightId], sizeof(PointLight), &newLight, sizeof(PointLight));
+        glUnmapNamedBuffer(lightsBuffer);
+        myGui.updateLight();
+    }
+}
+
+void SceneLights::initLights() {
+    lights.clear();
+    lights.push_back({ glm::vec3(1.5f, 1.5f, 1.5f), 0.1f, 0.5f, 0.5f, glm::vec3(1.f, 1.f, 1.f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(1.f, 1.f, 1.f) });
+    lights.push_back({ glm::vec3(-1.5f, -1.5f, 1.5f), 0.1f, 0.5f, 0.5f, glm::vec3(1.f, .9f, .8f), glm::vec3(.7f, .5f, .4f), glm::vec3(.3f, .2f, .1f) });
+    lights.push_back({ glm::vec3(1.5f, -1.5f, 1.5f), 0.1f, 0.5f, 0.5f, glm::vec3(1.f, .9f, .8f), glm::vec3(.7f, .5f, .4f), glm::vec3(.3f, .2f, .1f) });
+}
+
+
+bool SceneLights::compareLights(PointLight& old_light, PointLight& new_light)
+{
+    return memcmp(&old_light, &new_light, sizeof(PointLight));
+}
+
+bool SceneLights::compareLights(LightsList& old_light, LightsList& new_light)
+{
+    if (old_light.size != new_light.size) return true;
+
+    return memcmp(&old_light.list, &new_light.list, old_light.size * sizeof(PointLight));
+}
+
+
+SceneLights::SceneLights() {
+    glGenBuffers(1, &lightsBuffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightsBuffer);
+
+    initLights();
+    int lightsBufferSize = (int)sizeof(PointLight) * lights.size();
+    lightDataSize = (unsigned int)lights.size();
+
+    glNamedBufferData(lightsBuffer, sizeof(LightsList) + lightsBufferSize, NULL, GL_DYNAMIC_DRAW);
+    glNamedBufferSubData(lightsBuffer, offsetof(LightsList, list), lightsBufferSize, lights.data());
+    glNamedBufferSubData(lightsBuffer, offsetof(LightsList, size), sizeof(unsigned int), &lightDataSize);
+}
+
+SceneLights::~SceneLights() {
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    glDeleteBuffers(1, &lightsBuffer);
 }

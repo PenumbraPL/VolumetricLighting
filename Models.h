@@ -76,8 +76,7 @@ void* imageLoadFromMemory(
 
 void imageFlipVerticallyOnLoad(bool flip);
 
-
-
+struct Scene;
 
 
 struct Drawable {
@@ -120,13 +119,7 @@ struct Drawable {
     void deletePipeline();
     void loadMatrix(AkNode* node);
     virtual void processMesh(AkMeshPrimitive* primitive);
-    virtual void draw(
-        GLuint& lights_buffer,
-        std::map <void*, unsigned int>& bufferViews,
-        GLuint* docDataBuffer,
-        glm::vec3& eye,
-        glm::mat4& MVP,
-        glm::mat4& Projection);
+    virtual void draw(glm::mat4& MVP, Scene& scene);
     void bindVertexArray();
     void bindVertexBuffer(std::map <void*, unsigned int>& bufferViews, GLuint* docDataBuffer);
     void bindTextures();
@@ -142,13 +135,7 @@ protected:
 
 struct Primitive : public Drawable {
     void loadMesh() override {};
-    virtual void draw(
-        GLuint& lights_buffer,
-        std::map <void*, unsigned int>& bufferViews,
-        GLuint* docDataBuffer,
-        glm::vec3& eye,
-        glm::mat4& MVP,
-        glm::mat4& Projection) override;
+    virtual void draw(glm::mat4& MVP, Scene& scene) override;
 }; // without change (maybe declaration of paths?
 
 
@@ -159,13 +146,7 @@ struct Light : public Drawable {
     float intensity = 1.0;
 
     void loadMesh() override;
-    virtual void draw(
-        GLuint& lights_buffer,
-        std::map <void*, unsigned int>& bufferViews,
-        GLuint* docDataBuffer,
-        glm::vec3& eye,
-        glm::mat4& MVP,
-        glm::mat4& Projection) override;
+    virtual void draw(glm::mat4& MVP, Scene& scene) override;
 };
 
 
@@ -174,13 +155,7 @@ struct Environment : public Drawable {
     GLuint env_sampler;
     
     void loadMesh() override;
-    virtual void draw(
-        GLuint& lights_buffer,
-        std::map <void*, unsigned int>& bufferViews,
-        GLuint* docDataBuffer,
-        glm::vec3& eye,
-        glm::mat4& MVP,
-        glm::mat4& Projection) override;
+    virtual void draw(glm::mat4& MVP, Scene& scene) override;
 };
 
 
@@ -188,50 +163,58 @@ struct Cloud : public Drawable {
     float g = 0.;
     
     void loadMesh() override;
-    virtual void draw(
-        GLuint& lights_buffer,
-        std::map <void*, unsigned int>& bufferViews,
-        GLuint* docDataBuffer,
-        glm::vec3& eye,
-        glm::mat4& MVP,
-        glm::mat4& Projection) override;
+    virtual void draw(glm::mat4& MVP, Scene& scene) override;
 };
 
 
-struct Camera {
+struct Camera : Observer{
     glm::mat4x4 localTransform;
     glm::mat4x4 worldTransform;
     glm::vec4 viewDirection;
+    glm::vec3 eye;
     float zNear;
     float zFar;
     int fov;
     glm::mat4 View;
     glm::mat4 Projection;
+
+    virtual void notify() {
+        eye = myGui.getView();
+    }
 };
 
-struct Component {
 
+struct SceneLights {
+    std::vector<PointLight> lights;
+    GLuint lightsBuffer;
+    unsigned int lightDataSize;
+
+    SceneLights();
+    ~SceneLights();
+
+    void updateLights(GUI& panelConfig);
+    void initLights();
+    bool compareLights(PointLight& old_light, PointLight& new_light);
+    bool compareLights(LightsList& old_light, LightsList& new_light);
 };
+
 
 struct Scene {
-    ~Scene();
-
     std::vector<Drawable> primitives;
     Camera cameraEye;
-    std::vector<PointLight> lights;
     std::map <void*, unsigned int> bufferViews;
     std::map <void*, unsigned int> textureViews;
     std::map <void*, unsigned int> imageViews;
+    GLuint* docDataBuffer;
+    SceneLights sceneLights;
 
+    ~Scene();
     AkDoc* loadScene(std::string scenePath, std::string sceneName);
     void allocAll(AkDoc* doc);
     GLuint* parseBuffors();
     AkCamera* loadCamera(AkDoc* doc);
-    void updateLights(GLuint lightsBuffer, unsigned int lightDataSize, GUI& panelConfig);
-    void initLights();
-    bool compare_lights(PointLight& old_light, PointLight& new_light);
-    bool compare_lights(LightsList& old_light, LightsList& new_light);
 };
+
 
 
 struct DrawableFactory {
