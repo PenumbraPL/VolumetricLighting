@@ -98,6 +98,8 @@ struct Drawable {
 
     glm::mat4 worldTransform;
     glm::mat4 localTransform;
+    glm::mat4 MV;
+    glm::mat4 Proj;
 
     GLuint vao;
 
@@ -147,6 +149,7 @@ struct Light : public Drawable {
 
     void loadMesh() override;
     virtual void draw(glm::mat4& MVP, Scene& scene) override;
+    glm::mat4 calcMVP(PointLight& light, Scene& scenes);
 };
 
 

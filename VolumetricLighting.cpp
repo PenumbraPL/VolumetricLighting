@@ -158,21 +158,19 @@ int main()
     
     /* ================================================ */
     do {
-        AkDoc* doc{ scenes.loadScene(myGui.getModelPath(), myGui.getModelName()) };
-        scenes.allocAll(doc);
+        scenes.loadScene(myGui.getModelPath(), myGui.getModelName());
 
         std::vector<Drawable>& primitives{ scenes.primitives };
-        ShadersSources defaultModel;
-        defaultModel[VERTEX] = { "res/shaders/standard_vec.glsl" };
-        defaultModel[FRAGMENT] = { "res/shaders/pbr_with_ext_light_frag.glsl" };
-        for (auto& primitive : primitives) primitive.createPipeline(defaultModel);
-        scenes.parseBuffors();
-
-        for (auto& primitive : primitives) primitive.getLocation({{
-            {"MVP", "PRJ"},
-            {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound"}
-            }
-        });
+        for (auto& primitive : primitives) {
+            ShadersSources defaultModel;
+            defaultModel[VERTEX] = { "res/shaders/standard_vec.glsl" };
+            defaultModel[FRAGMENT] = { "res/shaders/pbr_with_ext_light_frag.glsl" };
+            primitive.createPipeline(defaultModel);
+            primitive.getLocation({ {
+                {"MVP", "PRJ"},
+                {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound"}
+            } });
+        }
 
         //glDepthRange(myGui.near_plane, myGui.far_plane);
         glDepthFunc(GL_LEQUAL);
@@ -190,13 +188,6 @@ int main()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glClearColor(0., 1., 1., 1.);
 
-            //glm::mat4 Projection = myGui.getProjection(width, height);
-            //glm::vec3 eye = myGui.getView();
-            glm::mat4 LookAt = myGui.getLookAt();
-            glm::vec3 translate = myGui.getTranslate();
-            glm::vec3 rotate = myGui.getRotate();
-            glm::mat4 localTransform = glm::mat4(1.);
-
             skySphere->draw(transform.MVP, scenes);
             
             for (auto& primitive : primitives) {
@@ -205,20 +196,9 @@ int main()
        
             scenes.sceneLights.updateLights(myGui);
             for (auto& light : scenes.sceneLights.lights) {
-                glm::mat4x4 View =
-                    glm::rotate(
-                         glm::rotate(
-                            glm::translate(localTransform, light.position)
-                        , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
-                    rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-                glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(.2f));
-
-                glm::mat4 Projection = scenes.cameraEye.Projection;
-                glm::mat4 MVP = Projection * LookAt * View * Model;
+                glm::mat4 MVP = ((Light*) lightModel.get())->calcMVP(light, scenes);
                 lightModel->draw(MVP, scenes);
             }
-            /* ===================== */
-
 
             ((Cloud*) cloudCube.get())->g = myGui.g;
             cloudCube->draw(transform.MV, scenes);

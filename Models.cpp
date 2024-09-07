@@ -442,6 +442,8 @@ void Drawable::deleteTexturesAndSamplers()
         proccessNode(node, primitives);
         loadCamera(doc);
 
+        allocAll(doc);
+        parseBuffors();
 
         return doc;
     }
@@ -780,4 +782,15 @@ SceneLights::SceneLights() {
 SceneLights::~SceneLights() {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glDeleteBuffers(1, &lightsBuffer);
+}
+
+
+glm::mat4 Light::calcMVP(PointLight& light, Scene& scenes) {
+    glm::mat4x4 View =
+        glm::translate(localTransform, light.position);
+    glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(.2f));
+    glm::mat4 LookAt = myGui.getLookAt();
+    glm::mat4 Projection = scenes.cameraEye.Projection;
+    glm::mat4 MVP = Projection * LookAt * View * Model;
+    return MVP;
 }
