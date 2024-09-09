@@ -195,7 +195,8 @@ void Drawable::bindVertexArray()
     }
 }
 
-void Drawable::draw(glm::mat4& MVP, Scene& scene)
+#include <glm/gtx/string_cast.hpp>
+void Drawable::draw(Scene& scene)
 {
     bindVertexArray();
 
@@ -208,10 +209,11 @@ void Drawable::draw(glm::mat4& MVP, Scene& scene)
     glm::vec3 camera_dir = glm::vec3(0.) - scene.cameraEye.eye;
 
     glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
-    glm::mat4 MVPPos = MVP * Model * localTransform; // check is it correct?
+    glm::mat4 MV = this->transforms->MV * Model* localTransform; // check is it correct?
+    std::cout << glm::to_string(MV) << std::endl;
+    std::cout << glm::to_string(this->transforms->MV) << std::endl;
 
-
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MVPPos));
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MV));
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
     glProgramUniform3fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][0], 1, glm::value_ptr(camera_view));
 
@@ -558,7 +560,7 @@ void Light::loadMesh()
 }
 
 
-void Light::draw(glm::mat4& MVP,  Scene& scene)
+void Light::draw(Scene& scene)
 {
     bindVertexArray();
     GLuint vcolLocation = glGetAttribLocation(programs[VERTEX], "vCol");
@@ -570,7 +572,7 @@ void Light::draw(glm::mat4& MVP,  Scene& scene)
     glBindVertexArray(vao);
     glBindProgramPipeline(pipeline);
 
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MVP));
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(transforms->MV));
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
 
  
@@ -638,7 +640,7 @@ void Environment::loadMesh()
     glDeleteTextures(1, &skybox);
 */
 
-void Environment::draw(glm::mat4& MVP, Scene& scene)
+void Environment::draw(Scene& scene)
 {
     bindVertexArray();
     if(normalsBindingLocation != 0xFFFFFFFF) glDisableVertexArrayAttrib(vao, normalsBindingLocation);
@@ -647,8 +649,8 @@ void Environment::draw(glm::mat4& MVP, Scene& scene)
 
 
     glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
-    glm::mat4 envMVP = MVP * Model * localTransform;
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(envMVP));
+    glm::mat4 MV = this->transforms->MV * Model * localTransform;
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MV));
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
 
 
@@ -699,7 +701,7 @@ void Cloud::loadMesh()
 }
 
 
-void Cloud::draw(glm::mat4& MVP, Scene& scene)
+void Cloud::draw(Scene& scene)
 {
     bindVertexArray();
     glBindVertexArray(vao);
@@ -710,7 +712,7 @@ void Cloud::draw(glm::mat4& MVP, Scene& scene)
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, scene.sceneLights.lightsBuffer);
 
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MVP));
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(transforms->MV));
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
 
     bindVertexBuffer(this->bufferViews, this->docDataBuffer);
@@ -794,6 +796,10 @@ glm::mat4 Light::calcMV(PointLight& light, Scene& scenes) {
         glm::translate(localTransform, light.position);
     glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(.2f));
     glm::mat4 LookAt = myGui.getLookAt();
-    glm::mat4 MV = LookAt * View * Model;
-    return MV;
+    glm::mat4 transforms = LookAt * View * Model;
+    return transforms;
+}
+
+void SceneLights::notify() {
+    updateLights(myGui);
 }

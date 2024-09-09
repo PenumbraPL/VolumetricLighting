@@ -78,9 +78,47 @@ void imageFlipVerticallyOnLoad(bool flip);
 
 struct Scene;
 
+class Matrix : public Observer {
+public:
+    Matrix() {}
+    Matrix(glm::mat4 localTransform) : localTransform{ localTransform } {}
+
+    void setProjection(int width, int height) {
+        //if(!camera)
+        Projection = myGui.getProjection(width, height);
+        //Projection = Proj;
+    }
+
+    void calculateMVP() {
+        glm::mat4 LookAt = myGui.getLookAt();
+        glm::vec3 translate = myGui.getTranslate();
+        glm::vec3 rotate = myGui.getRotate();
+
+        glm::mat4 View =
+            glm::rotate(
+                glm::rotate(
+                    glm::translate(localTransform,
+                        translate)
+                    , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+                rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+
+        MV = LookAt * View;
+        MVP = Projection * MV;
+    }
+
+    virtual void notify() {
+        calculateMVP();
+    }
+
+    glm::mat4 localTransform = glm::mat4(1.);
+    glm::mat4 Projection = glm::mat4(1.);;
+    glm::mat4 MVP = glm::mat4(1.);;
+    glm::mat4 MV = glm::mat4(1.);;
+};
 
 struct Drawable {
-    Drawable() {}
+    Drawable() : transforms(nullptr) {}
+    Drawable(Matrix* transforms) : transforms(transforms) {}
     ~Drawable(){}
 
     GLuint programs[5] = { 0xffffffff };
@@ -98,7 +136,7 @@ struct Drawable {
 
     glm::mat4 worldTransform;
     glm::mat4 localTransform;
-    glm::mat4 MV;
+    Matrix* transforms;
     glm::mat4 Proj;
 
     GLuint vao;
@@ -121,7 +159,7 @@ struct Drawable {
     void deletePipeline();
     void loadMatrix(AkNode* node);
     virtual void processMesh(AkMeshPrimitive* primitive);
-    virtual void draw(glm::mat4& MVP, Scene& scene);
+    virtual void draw(Scene& scene);
     void bindVertexArray();
     void bindVertexBuffer(std::map <void*, unsigned int>& bufferViews, GLuint* docDataBuffer);
     void bindTextures();
@@ -137,7 +175,7 @@ protected:
 
 struct Primitive : public Drawable {
     void loadMesh() override {};
-    virtual void draw(glm::mat4& MVP, Scene& scene) override;
+    virtual void draw(Scene& scene) override;
 }; // without change (maybe declaration of paths?
 
 
@@ -148,7 +186,7 @@ struct Light : public Drawable {
     float intensity = 1.0;
 
     void loadMesh() override;
-    virtual void draw(glm::mat4& MVP, Scene& scene) override;
+    virtual void draw(Scene& scene) override;
     glm::mat4 calcMV(PointLight& light, Scene& scenes);
 };
 
@@ -158,15 +196,18 @@ struct Environment : public Drawable {
     GLuint env_sampler;
     
     void loadMesh() override;
-    virtual void draw(glm::mat4& MVP, Scene& scene) override;
+    virtual void draw(Scene& scene) override;
 };
 
 
-struct Cloud : public Drawable {
+struct Cloud : public Drawable, public Observer {
     float g = 0.;
     
     void loadMesh() override;
-    virtual void draw(glm::mat4& MVP, Scene& scene) override;
+    virtual void draw(Scene& scene) override;
+    virtual void notify() override {
+        g = myGui.g;
+    }
 };
 
 
@@ -187,7 +228,7 @@ struct Camera : Observer{
 };
 
 
-struct SceneLights {
+struct SceneLights : public Observer{
     std::vector<PointLight> lights;
     GLuint lightsBuffer;
     unsigned int lightDataSize;
@@ -199,6 +240,7 @@ struct SceneLights {
     void initLights();
     bool compareLights(PointLight& old_light, PointLight& new_light);
     bool compareLights(LightsList& old_light, LightsList& new_light);
+    virtual void notify();
 };
 
 

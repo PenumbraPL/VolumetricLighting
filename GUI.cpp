@@ -10,12 +10,12 @@ extern std::shared_ptr<debug::BufferLogger> bufferLogger;
 
 PointLight* GUI::getLightsData() 
 {
-    return lightsData->data();
+    return lightsData.data->data();
 }
 
 std::size_t GUI::getLightsSize()
 {
-    return lightsData->size();
+    return lightsData.data->size();
 }
 
 
@@ -77,21 +77,21 @@ glm::mat4 GUI::getLookAt()
 
 glm::mat4 GUI::getProjection(int width, int height) 
 {
-    return glm::perspectiveFov((float)3.14 * fov / 180, (float)width, (float)height, zNear, (float) zFar);
+    return glm::perspectiveFov((float)3.14 * fov.data / 180, (float)width, (float)height, zNear.data, (float) zFar.data);
 }
 
 
 std::string GUI::getModelPath() 
 {
     //std::cout << fileSelection.substr(0, fileSelection.find_last_of("/")+1).c_str() << std::endl;
-    return fileSelection.substr(0, fileSelection.find_last_of("/")+1);
+    return selectedSceneFile.data.substr(0, selectedSceneFile.data.find_last_of("/")+1);
 }
 
 
 std::string GUI::getModelName() 
 {
     //std::cout << "model name: " << fileSelection.substr(fileSelection.find_last_of("/")+1).c_str() << std::endl;
-    return fileSelection.substr(fileSelection.find_last_of("/")+1);
+    return selectedSceneFile.data.substr(selectedSceneFile.data.find_last_of("/")+1);
 }
 
 
@@ -101,7 +101,7 @@ void folderContent(
     std::string& path, 
     std::vector<std::string>& content, 
     int& i, 
-    std::string& selected,
+    Object<std::string>& selected,
     std::string& extension)
 {
     for (const auto& entry : fs::directory_iterator(path)) {
@@ -111,7 +111,10 @@ void folderContent(
                 std::string filePath = entry.path().generic_string();
                 content.push_back(filePath);
 
-                if(ImGui::Selectable(fileName.c_str(), content.at(content.size() - 1) == selected)) selected = filePath;
+                if (ImGui::Selectable(fileName.c_str(), content.at(content.size() - 1) == selected.data)) {
+                    selected.data = filePath;
+                    selected.notifyAll();
+                }
                 ImGui::SameLine(200); ImGui::Text(filePath.c_str());
             }
         }
@@ -132,8 +135,8 @@ void GUI::drawLeftPanel(ImGuiIO& io)
     static bool show_shader_dialog{ false };
     static bool selected[3] = { false, false, false };
     //static std::string selected2 = 0;
-    static std::string shaderSelection;
-    static std::string lastShaderSelection;
+    static Object<std::string> shaderSelection{ std::string() };
+    static Object<std::string> lastShaderSelection{std::string()};
     static char* fileText[1] = { nullptr };
 
 
@@ -144,8 +147,9 @@ void GUI::drawLeftPanel(ImGuiIO& io)
 
         if (ImGui::BeginTabBar("LeftPanelBar", tab_bar_flags)) {
             if (ImGui::BeginTabItem("Config")) {
-       
-                ImGui::SliderFloat("g const", &g, -0.99999f, 0.99999f, "ratio = %.3f");
+                if (ImGui::SliderFloat("g const", &g.data, -0.99999f, 0.99999f, "ratio = %.3f")) {
+                    g.notifyAll();
+                }
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Debug")) {
@@ -222,7 +226,7 @@ void GUI::drawLeftPanel(ImGuiIO& io)
                     std::vector<std::string> tree;
                     std::string extension = ".gltf";
 
-                    folderContent(path, tree, i, fileSelection, extension);
+                    folderContent(path, tree, i, selectedSceneFile, extension);
                     // }
                     ImGui::Separator();
                     ImGui::TreePop();
@@ -238,7 +242,7 @@ void GUI::drawLeftPanel(ImGuiIO& io)
                     ImGui::TreePop();
                 }
 
-                    show_shader_dialog = !shaderSelection.empty();
+                    show_shader_dialog = !shaderSelection.data.empty();
 
                 ImGui::EndTabItem();
             }
@@ -246,14 +250,21 @@ void GUI::drawLeftPanel(ImGuiIO& io)
               
                 for (int i = 0; i < getLightsSize(); i++) {
                     std::string text = "Light " + std::to_string(i);
-                    if(ImGui::Selectable(text.c_str(), i == lightId)) lightId = i;
+                    if (ImGui::Selectable(text.c_str(), i == lightId)) {
+                        lightId = i;
+                        lightId.notifyAll();
+                    }
                 }
                 ImGui::Separator();
-                if(ImGui::Button("Add Light")) lightsData->emplace_back(PointLight()); 
+                if (ImGui::Button("Add Light")) {
+                    lightsData.data->emplace_back(PointLight());
+                    lightsData.notifyAll();
+                }
                 ImGui::SameLine(300); 
                 if (ImGui::Button("Delete Light")) {
-                    if (lightsData->size() > 0) {
-                        lightsData->erase(lightsData->begin() + lightId);
+                    if (lightsData.data->size() > 0) {
+                        lightsData.data->erase(lightsData.data->begin() + lightId);
+                        lightsData.notifyAll();
                     }
                 }
                 ImGui::EndTabItem();
@@ -280,15 +291,30 @@ void GUI::drawLeftPanel(ImGuiIO& io)
 
 
 
-                ImGui::ColorEdit3("ambient light", lightAmbient);
-                ImGui::ColorEdit3("diffuse light", lightDiffuse);
-                ImGui::ColorEdit3("specular light", lightSpecular);
-                ImGui::SliderFloat("const", &c, 0.0f, 1.0f);
-                ImGui::SliderFloat("linear", &l, 0.0f, 1.0f);
-                ImGui::SliderFloat("quad", &q, 0.0f, 1.0f);
-                ImGui::SliderFloat("x", &position[0], -1.0f, 1.0f);
-                ImGui::SliderFloat("y", &position[1], -1.0f, 1.0f);
-                ImGui::SliderFloat("z", &position[2], -1.0f, 1.0f);
+                if (ImGui::ColorEdit3("ambient light", lightAmbient)) {
+                };
+                if (ImGui::ColorEdit3("diffuse light", lightDiffuse)) {
+                };
+                if (ImGui::ColorEdit3("specular light", lightSpecular)) {
+                };
+                if (ImGui::SliderFloat("const", &c.data, 0.0f, 1.0f)) {
+                    c.notifyAll();
+                };
+                if (ImGui::SliderFloat("linear", &l.data, 0.0f, 1.0f)) {
+                    l.notifyAll();
+                };
+                if (ImGui::SliderFloat("quad", &q.data, 0.0f, 1.0f)) {
+                    q.notifyAll();
+                };
+                if (ImGui::SliderFloat("x", &position[0], -1.0f, 1.0f)) {
+                    this->position[0].notifyAll();
+                };
+                if (ImGui::SliderFloat("y", &position[1], -1.0f, 1.0f)) {
+                    this->position[1].notifyAll();
+                };
+                if (ImGui::SliderFloat("z", &position[2], -1.0f, 1.0f)) {
+                    this->position[2].notifyAll();
+                };
 
             }
             ImGui::EndTabBar();
@@ -301,9 +327,9 @@ void GUI::drawLeftPanel(ImGuiIO& io)
 
         static char text[2*4096] = {'\0'};
         
-        if (shaderSelection != lastShaderSelection) {
+        if (shaderSelection.data != lastShaderSelection.data) {
             if (*fileText) free(*fileText);
-            *fileText = readFile(shaderSelection.c_str());
+            *fileText = readFile(shaderSelection.data.c_str());
             if (*fileText) strcpy(text, *fileText);
             lastShaderSelection = shaderSelection;
         }
@@ -326,7 +352,7 @@ void GUI::drawLeftPanel(ImGuiIO& io)
 
             if (ImGui::Button("OK", ImVec2(120, 0))) {
                 FILE* fs;
-                fopen_s(&fs, shaderSelection.c_str(), "wb");
+                fopen_s(&fs, shaderSelection.data.c_str(), "wb");
                 unsigned int bufferSize = strlen(text);
                 if (fs && bufferSize) {
                     fwrite(text, 1, bufferSize, fs);
@@ -346,7 +372,7 @@ void GUI::drawLeftPanel(ImGuiIO& io)
 
         ImGui::End();
         if (!show_shader_dialog) {
-            shaderSelection.clear();
+            shaderSelection.data.clear();
             if (*fileText) free(*fileText);
         }
     }
@@ -357,9 +383,18 @@ void GUI::drawRightPanel(ImGuiIO& io)
     if (ImGui::Begin("View")) {
         
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-        ImGui::Text("Far plane:"); ImGui::SliderFloat("Fp", &zFar, 0.1f, 200.0f);
-        ImGui::Text("Near plane:"); ImGui::SliderFloat("Np", &zNear, 0.0001f, 10.0f);
-        ImGui::Text("fov:"); ImGui::SliderInt("fov", &fov, 10, 120);
+        ImGui::Text("Far plane:"); 
+        if (ImGui::SliderFloat("Fp", &zFar.data, 0.1f, 200.0f)) {
+            zFar.notifyAll();
+        }
+        ImGui::Text("Near plane:"); 
+        if (ImGui::SliderFloat("Np", &zNear.data, 0.0001f, 10.0f)) {
+            zNear.notifyAll();
+        }
+        ImGui::Text("fov:"); 
+        if (ImGui::SliderInt("fov", &fov.data, 10, 120)) {
+            fov.notifyAll();
+        }
         ImGui::Separator();
 
         if(ImGui::SliderInt("Translation X", &xTranslate.data, -100, 100)) xTranslate.notifyAll();
@@ -379,7 +414,7 @@ void GUI::drawRightPanel(ImGuiIO& io)
 }
 
 
-GUI::GUI(std::string fileSelection) : fileSelection{ fileSelection } {
+GUI::GUI(std::string selectedSceneFile) : selectedSceneFile{ selectedSceneFile } {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
 };

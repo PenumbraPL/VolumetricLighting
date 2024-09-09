@@ -28,46 +28,20 @@ WindowInfo windowConfig = { 1900, 1000, "GLTF Viewer" };
 /* ============================================================================= */
 
 
-class Matrix : public Observer {
+
+
+class FileListener : public Observer{
 public:
-    Matrix() {}
-    Matrix(glm::mat4 localTransform) : localTransform{ localTransform } {}
-
-    void setProjection(int width, int height) {
-        //if(!camera)
-            Projection = myGui.getProjection(width, height);
-        //Projection = Proj;
+    bool fileChanged{ false };
+    virtual void notify() override {
+        fileChanged = true;
+        logger.info("fileChanged");
     }
 
-    void calculateMVP() {
-        glm::vec3 eye = myGui.getView();
-        glm::mat4 LookAt = myGui.getLookAt();
-        glm::vec3 translate = myGui.getTranslate();
-        glm::vec3 rotate = myGui.getRotate();
-
-        glm::mat4 View =
-            glm::rotate(
-                glm::rotate(
-                    glm::translate(localTransform,
-                        translate)
-                    , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
-                rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-
-        MV = LookAt * View;
-        MVP = Projection * MV;
+    void reset() {
+        fileChanged = false;
     }
-
-    virtual void notify() {
-        calculateMVP();
-    }
-
-    glm::mat4 localTransform = glm::mat4(1.);
-    glm::mat4 Projection = glm::mat4(1.);;
-    glm::mat4 MVP = glm::mat4(1.);;
-    glm::mat4 MV = glm::mat4(1.);;
 };
-
-
 
 
 /* ============================================================================= */
@@ -138,6 +112,7 @@ int main()
     GLFWwindow* window{ initContext() };
     myGui.chooseGlfwImpl(window);
 
+    Matrix transform;
     std::unique_ptr<Drawable> lightModel{ LightFactory().createDrawable() };
     std::unique_ptr<Drawable> skySphere{ EnvironmentFactory().createDrawable() };
     std::unique_ptr<Drawable> cloudCube{ CloudFactory().createDrawable() };
@@ -146,16 +121,22 @@ int main()
     myGui.lightsData = &scenes.sceneLights.lights;
     scenes.cameraEye.Projection = myGui.getProjection(windowConfig.width, windowConfig.height);
 
-    Matrix transform;
     transform.setProjection(windowConfig.width, windowConfig.height);
     myGui.subscribeToView(transform);
 
-    Matrix cloudTransform{ cloudCube->localTransform };
-    cloudTransform.setProjection(windowConfig.width, windowConfig.height);
-    myGui.subscribeToView(cloudTransform);
     myGui.subscribeToEye(scenes.cameraEye);
     
+    FileListener fileListener;
+    myGui.selectedSceneFile.subscribe(fileListener);
+    myGui.lightsData.subscribe(scenes.sceneLights);
+    myGui.g.subscribe(*((Cloud*) cloudCube.get()));
     
+    skySphere->Proj = scenes.cameraEye.Projection;
+    skySphere->transforms = &transform;
+
+    cloudCube->Proj = scenes.cameraEye.Projection;
+    cloudCube->transforms = &transform;
+
     /* ================================================ */
     do {
         scenes.loadScene(myGui.getModelPath(), myGui.getModelName());
@@ -170,16 +151,23 @@ int main()
                 {"MV", "PRJ"},
                 {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound"}
             } });
+            primitive.Proj = scenes.cameraEye.Projection;
+            primitive.transforms = &transform;
         }
-
+        for (auto& light : scenes.sceneLights.lights) {
+            glm::mat4 transforms = ((Light*)lightModel.get())->calcMV(light, scenes);
+            Matrix lightTransform;
+            lightTransform.MV = transforms;
+            lightModel->transforms = new Matrix(lightTransform);
+        }
         //glDepthRange(myGui.near_plane, myGui.far_plane);
         glDepthFunc(GL_LEQUAL);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        std::string fileSelected = myGui.fileSelection;
+        fileListener.reset();
 
         logger.info("===================== Main loop ==============================================");
-        while (!glfwWindowShouldClose(window)) {
+        while (!glfwWindowShouldClose(window) && !fileListener.fileChanged) {
             int width, height;
             glfwGetFramebufferSize(window, &width, &height);
             glEnable(GL_DEPTH_TEST);
@@ -187,27 +175,24 @@ int main()
             glViewport(0, 0, width, height);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glClearColor(0., 1., 1., 1.);
+           
+            skySphere->draw(scenes);
 
-            skySphere->draw(transform.MV, scenes);
             
             for (auto& primitive : primitives) {
-                primitive.draw(transform.MV, scenes);
+                primitive.draw(scenes);
             }
        
-            scenes.sceneLights.updateLights(myGui);
             for (auto& light : scenes.sceneLights.lights) {
-                glm::mat4 MV = ((Light*) lightModel.get())->calcMV(light, scenes);
-                lightModel->draw(MV, scenes);
+                lightModel->transforms->MV = ((Light*) lightModel.get())->calcMV(light, scenes);
+                lightModel->draw(scenes);
             }
 
-            ((Cloud*) cloudCube.get())->g = myGui.g;
-            cloudCube->draw(transform.MV, scenes);
+            cloudCube->draw(scenes);
 
             myGui.draw();
             glfwSwapBuffers(window);
             glfwPollEvents();
-
-            if (myGui.fileSelection != fileSelected) break;
         }
         logger.info("===================== End of loop ==============================================");
 
@@ -216,6 +201,7 @@ int main()
 
         for (auto& primitive : primitives) primitive.deleteTexturesAndSamplers();
         for (auto& primitive : primitives) primitive.deletePipeline();
+
 
         glDeleteBuffers((GLsizei) scenes.bufferViews.size(), scenes.docDataBuffer);
         if(scenes.docDataBuffer) free(scenes.docDataBuffer);

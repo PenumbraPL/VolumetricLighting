@@ -39,15 +39,15 @@ struct Object {
 
 class GUI {
 public:
-    std::string fileSelection;
-    unsigned int lightId = 0;
-    std::vector<PointLight>* lightsData = nullptr;
+    Object<std::string> selectedSceneFile;
+    Object<unsigned int> lightId = 0;
+    Object<std::vector<PointLight>*> lightsData{ nullptr };
     bool workSpaceFocused = false;
     std::vector<std::string> directory;
 
-    float zFar{ 500.f };
-    float zNear = .001f;
-    int fov = 50;
+    Object<float> zFar{ 500.f };
+    Object<float> zNear{ .001f };
+    Object<int> fov{ 50 };
     Object<int> xTranslate{ 0 };
     Object<int> yTranslate{ 0 };
     Object<int> zTranslate{ 0 };
@@ -59,11 +59,11 @@ public:
     float lightAmbient[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
     float lightDiffuse[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
     float lightSpecular[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
-    float position[3] = { 0.0f, 0.0f, 0.0f };
-    float c = 0.1f;
-    float l = 0.5f;
-    float q = 0.5f;
-    float g = 0.f;
+    Object<float> position[3] = { 0.0f, 0.0f, 0.0f };
+    Object<float> c{ 0.1f };
+    Object<float> l{ 0.5f };
+    Object<float> q{ 0.5f };
+    Object<float> g{ 0.f };
 
 
     void subscribeToView(Observer& observer) {
@@ -81,7 +81,7 @@ public:
         viewPhi.subscribe(observer);
         viewTheta.subscribe(observer);
     }
-    GUI(std::string fileSelection);
+    GUI(std::string selectedSceneFile);
     void deleteImGui();
     ImGuiIO& getIO();
     void draw();
