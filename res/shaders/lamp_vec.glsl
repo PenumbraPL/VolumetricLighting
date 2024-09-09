@@ -2,7 +2,8 @@
 
 in vec3 vPos;
 in vec3 vCol;
-uniform mat4 MVP;
+uniform mat4 MV;
+uniform mat4 PRJ;
 
 out vec3 _color;
 
@@ -15,7 +16,7 @@ out gl_PerVertex
 
 void main()
 {
-    gl_Position = MVP * vec4(vPos, 1.0);
+    gl_Position = PRJ * MV * vec4(vPos, 1.0);
     if(length(vCol) < 1e-5){
         _color = vPos;
     } else{

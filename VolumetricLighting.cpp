@@ -167,7 +167,7 @@ int main()
             defaultModel[FRAGMENT] = { "res/shaders/pbr_with_ext_light_frag.glsl" };
             primitive.createPipeline(defaultModel);
             primitive.getLocation({ {
-                {"MVP", "PRJ"},
+                {"MV", "PRJ"},
                 {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound"}
             } });
         }
@@ -188,7 +188,7 @@ int main()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glClearColor(0., 1., 1., 1.);
 
-            skySphere->draw(transform.MVP, scenes);
+            skySphere->draw(transform.MV, scenes);
             
             for (auto& primitive : primitives) {
                 primitive.draw(transform.MV, scenes);
@@ -196,8 +196,8 @@ int main()
        
             scenes.sceneLights.updateLights(myGui);
             for (auto& light : scenes.sceneLights.lights) {
-                glm::mat4 MVP = ((Light*) lightModel.get())->calcMVP(light, scenes);
-                lightModel->draw(MVP, scenes);
+                glm::mat4 MV = ((Light*) lightModel.get())->calcMV(light, scenes);
+                lightModel->draw(MV, scenes);
             }
 
             ((Cloud*) cloudCube.get())->g = myGui.g;
@@ -209,8 +209,8 @@ int main()
 
             if (myGui.fileSelection != fileSelected) break;
         }
+        logger.info("===================== End of loop ==============================================");
 
-        /* ======================================================== */
 
         glBindProgramPipeline(0);
 

@@ -149,7 +149,7 @@ struct Light : public Drawable {
 
     void loadMesh() override;
     virtual void draw(glm::mat4& MVP, Scene& scene) override;
-    glm::mat4 calcMVP(PointLight& light, Scene& scenes);
+    glm::mat4 calcMV(PointLight& light, Scene& scenes);
 };
 
 
@@ -230,7 +230,7 @@ struct LightFactory : public DrawableFactory {
         auto lightModel = std::make_unique<Light>();
         lightModel->loadMesh();
         lightModel->createPipeline({ "res/shaders/lamp_vec.glsl", "res/shaders/lamp_frag.glsl" });
-        lightModel->getLocation({ { {"MVP", "PRJ"}, {"G", "camera"} } });
+        lightModel->getLocation({ { {"MV", "PRJ"}, {"G", "camera"} } });
         return lightModel;
     }
 
@@ -244,7 +244,7 @@ struct EnvironmentFactory : public DrawableFactory {
         auto env = std::make_unique<Environment>();
         env->loadMesh();
         env->createPipeline({ "res/shaders/environment_vec.glsl", "res/shaders/environment_frag.glsl" });
-        env->getLocation({ {{"MVP"}} });
+        env->getLocation({ {{"MV", "PRJ"}} });
         return env;
     }
 
@@ -258,7 +258,7 @@ struct CloudFactory : public DrawableFactory {
         auto cld = std::make_unique<Cloud>();
         cld->loadMesh();
         cld->createPipeline({ "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" });
-        cld->getLocation({ { {"MVP", "PRJ"}, {"G", "camera"} } });
+        cld->getLocation({ { {"MV", "PRJ"}, {"G", "camera"} } });
         return cld;
     }
 

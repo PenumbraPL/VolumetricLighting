@@ -571,6 +571,8 @@ void Light::draw(glm::mat4& MVP,  Scene& scene)
     glBindProgramPipeline(pipeline);
 
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MVP));
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
+
  
     bindVertexBuffer(this->bufferViews, this->docDataBuffer);
     bindTextures();
@@ -647,6 +649,8 @@ void Environment::draw(glm::mat4& MVP, Scene& scene)
     glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
     glm::mat4 envMVP = MVP * Model * localTransform;
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(envMVP));
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
+
 
     bindVertexBuffer(this->bufferViews, this->docDataBuffer);
     bindTextures();
@@ -785,12 +789,11 @@ SceneLights::~SceneLights() {
 }
 
 
-glm::mat4 Light::calcMVP(PointLight& light, Scene& scenes) {
+glm::mat4 Light::calcMV(PointLight& light, Scene& scenes) {
     glm::mat4x4 View =
         glm::translate(localTransform, light.position);
     glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(.2f));
     glm::mat4 LookAt = myGui.getLookAt();
-    glm::mat4 Projection = scenes.cameraEye.Projection;
-    glm::mat4 MVP = Projection * LookAt * View * Model;
-    return MVP;
+    glm::mat4 MV = LookAt * View * Model;
+    return MV;
 }
