@@ -155,6 +155,10 @@ int main()
             glfwPollEvents();
         }
         logger.info("===================== End of loop ==============================================");
+        
+        for (auto& primitive : scenes.primitives) {
+            myGui.unsubscribeToView(primitive.transforms);
+        }
 
         glBindProgramPipeline(0);
         scenes.clear();

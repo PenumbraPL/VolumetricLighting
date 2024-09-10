@@ -14,6 +14,9 @@ struct Observer {
 template <typename T>
 struct Object {
     Object(T data): data{data} {}
+    ~Object() {
+        observers.clear();
+    }
     void subscribe(Observer& observer) {
         observers.push_back(&observer);
         observer.notify();
@@ -67,6 +70,7 @@ public:
 
 
     void subscribeToView(Observer& observer);
+    void unsubscribeToView(Observer& observer);
     void subscribeToEye(Observer& observer);
     GUI(std::string selectedSceneFile);
     void deleteImGui();

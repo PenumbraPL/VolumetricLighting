@@ -466,6 +466,19 @@ void GUI::subscribeToView(Observer& observer) {
     viewPhi.subscribe(observer);
     viewTheta.subscribe(observer);
 }
+
+void GUI::unsubscribeToView(Observer& observer)
+{
+    xTranslate.unsubscribe(observer);
+    yTranslate.unsubscribe(observer);
+    zTranslate.unsubscribe(observer);
+    xRotate.unsubscribe(observer);
+    yRotate.unsubscribe(observer);
+    viewDistance.unsubscribe(observer);
+    viewPhi.unsubscribe(observer);
+    viewTheta.unsubscribe(observer);
+}
+
 void GUI::subscribeToEye(Observer& observer) {
     viewDistance.subscribe(observer);
     viewPhi.subscribe(observer);
