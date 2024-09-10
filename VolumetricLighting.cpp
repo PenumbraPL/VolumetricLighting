@@ -28,8 +28,6 @@ WindowInfo windowConfig = { 1900, 1000, "GLTF Viewer" };
 /* ============================================================================= */
 
 
-
-
 class FileListener : public Observer{
 public:
     bool fileChanged{ false };
@@ -80,7 +78,6 @@ GLFWwindow* initContext()
     glfwSetWindowFocusCallback(window, control::focusCallback);
 
     initializeGLEW();
-   
 
     int flags;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
@@ -94,9 +91,7 @@ GLFWwindow* initContext()
         logger.warn("========== [GLFW]: Debug context initialize unsuccessful =====================");
     }
 
-
     ak_imageInitLoader(imageLoadFromFile, imageLoadFromMemory, imageFlipVerticallyOnLoad);
-
 
     return window;
 }
@@ -104,7 +99,7 @@ GLFWwindow* initContext()
 /* ============================================================================= */
 
 
-GUI myGui{ "./res/models/GLTFTest/gltfTest.gltf" };
+GUI myGui{ "./res/models/Latern/Lantern.gltf" };
 
 
 int main()
@@ -112,37 +107,16 @@ int main()
     GLFWwindow* window{ initContext() };
     myGui.chooseGlfwImpl(window);
 
-    Matrix transform;
-    std::unique_ptr<Drawable> lightModel{ LightFactory().createDrawable() };
-    std::unique_ptr<Drawable> skySphere{ EnvironmentFactory().createDrawable() };
-    std::unique_ptr<Drawable> cloudCube{ CloudFactory().createDrawable() };
+    Scene scenes{ myGui, windowConfig };
 
-    Scene scenes;
-    myGui.lightsData = &scenes.sceneLights.lights;
-    scenes.cameraEye.Projection = myGui.getProjection(windowConfig.width, windowConfig.height);
-
-    transform.setProjection(windowConfig.width, windowConfig.height);
-    myGui.subscribeToView(transform);
-
-    myGui.subscribeToEye(scenes.cameraEye);
-    
     FileListener fileListener;
     myGui.selectedSceneFile.subscribe(fileListener);
-    myGui.lightsData.subscribe(scenes.sceneLights);
-    myGui.g.subscribe(*((Cloud*) cloudCube.get()));
-    
-    skySphere->Proj = scenes.cameraEye.Projection;
-    skySphere->transforms = &transform;
-
-    cloudCube->Proj = scenes.cameraEye.Projection;
-    cloudCube->transforms = &transform;
 
     /* ================================================ */
     do {
         scenes.loadScene(myGui.getModelPath(), myGui.getModelName());
 
-        std::vector<Drawable>& primitives{ scenes.primitives };
-        for (auto& primitive : primitives) {
+        for (auto& primitive : scenes.primitives) {
             ShadersSources defaultModel;
             defaultModel[VERTEX] = { "res/shaders/standard_vec.glsl" };
             defaultModel[FRAGMENT] = { "res/shaders/pbr_with_ext_light_frag.glsl" };
@@ -151,14 +125,12 @@ int main()
                 {"MV", "PRJ"},
                 {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound"}
             } });
-            primitive.Proj = scenes.cameraEye.Projection;
-            primitive.transforms = &transform;
+            myGui.subscribeToView(primitive.transforms);
         }
         for (auto& light : scenes.sceneLights.lights) {
-            glm::mat4 transforms = ((Light*)lightModel.get())->calcMV(light, scenes);
             Matrix lightTransform;
-            lightTransform.MV = transforms;
-            lightModel->transforms = new Matrix(lightTransform);
+            lightTransform.MV = ((Light*)scenes.lightModel.get())->calcMV(light, scenes);
+            scenes.lightModel->transforms = Matrix(lightTransform);
         }
         //glDepthRange(myGui.near_plane, myGui.far_plane);
         glDepthFunc(GL_LEQUAL);
@@ -175,20 +147,8 @@ int main()
             glViewport(0, 0, width, height);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glClearColor(0., 1., 1., 1.);
-           
-            skySphere->draw(scenes);
 
-            
-            for (auto& primitive : primitives) {
-                primitive.draw(scenes);
-            }
-       
-            for (auto& light : scenes.sceneLights.lights) {
-                lightModel->transforms->MV = ((Light*) lightModel.get())->calcMV(light, scenes);
-                lightModel->draw(scenes);
-            }
-
-            cloudCube->draw(scenes);
+            scenes.draw();
 
             myGui.draw();
             glfwSwapBuffers(window);
@@ -196,27 +156,9 @@ int main()
         }
         logger.info("===================== End of loop ==============================================");
 
-
         glBindProgramPipeline(0);
-
-        for (auto& primitive : primitives) primitive.deleteTexturesAndSamplers();
-        for (auto& primitive : primitives) primitive.deletePipeline();
-
-
-        glDeleteBuffers((GLsizei) scenes.bufferViews.size(), scenes.docDataBuffer);
-        if(scenes.docDataBuffer) free(scenes.docDataBuffer);
-        
-        for (auto& primitive : primitives) {
-            for (int i = VERTEX; i <= GEOMETRY; i++) {
-                if(primitive.bindingLocationIndecies[i]) free(primitive.bindingLocationIndecies[i]);
-            }
-        }
-
+        scenes.clear();
     } while (!glfwWindowShouldClose(window));
-
-    skySphere->deletePipeline();
-    cloudCube->deletePipeline();
-    lightModel->deletePipeline();
 
     myGui.deleteImGui();
     glfwTerminate();

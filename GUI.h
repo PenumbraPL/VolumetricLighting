@@ -66,21 +66,8 @@ public:
     Object<float> g{ 0.f };
 
 
-    void subscribeToView(Observer& observer) {
-        xTranslate.subscribe(observer);
-        yTranslate.subscribe(observer);
-        zTranslate.subscribe(observer);
-        xRotate.subscribe(observer);
-        yRotate.subscribe(observer);
-        viewDistance.subscribe(observer);
-        viewPhi.subscribe(observer);
-        viewTheta.subscribe(observer);
-    }
-    void subscribeToEye(Observer& observer) {
-        viewDistance.subscribe(observer);
-        viewPhi.subscribe(observer);
-        viewTheta.subscribe(observer);
-    }
+    void subscribeToView(Observer& observer);
+    void subscribeToEye(Observer& observer);
     GUI(std::string selectedSceneFile);
     void deleteImGui();
     ImGuiIO& getIO();

@@ -455,3 +455,19 @@ void GUI::chooseGlfwImpl(GLFWwindow* window) {
     ImGui_ImplOpenGL3_Init(GLSLVersion);
 
 }
+
+void GUI::subscribeToView(Observer& observer) {
+    xTranslate.subscribe(observer);
+    yTranslate.subscribe(observer);
+    zTranslate.subscribe(observer);
+    xRotate.subscribe(observer);
+    yRotate.subscribe(observer);
+    viewDistance.subscribe(observer);
+    viewPhi.subscribe(observer);
+    viewTheta.subscribe(observer);
+}
+void GUI::subscribeToEye(Observer& observer) {
+    viewDistance.subscribe(observer);
+    viewPhi.subscribe(observer);
+    viewTheta.subscribe(observer);
+}

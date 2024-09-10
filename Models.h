@@ -3,6 +3,7 @@
 #include "GLFW/glfw3.h"
 #include "GUI.h"
 #include "pch.h"
+#include "IO.h"
 
 extern GUI myGui;
 
@@ -117,8 +118,8 @@ public:
 };
 
 struct Drawable {
-    Drawable() : transforms(nullptr) {}
-    Drawable(Matrix* transforms) : transforms(transforms) {}
+    Drawable(){}
+    Drawable(Matrix transforms) : transforms(transforms) {}
     ~Drawable(){}
 
     GLuint programs[5] = { 0xffffffff };
@@ -136,8 +137,7 @@ struct Drawable {
 
     glm::mat4 worldTransform;
     glm::mat4 localTransform;
-    Matrix* transforms;
-    glm::mat4 Proj;
+    Matrix transforms;
 
     GLuint vao;
 
@@ -253,11 +253,18 @@ struct Scene {
     GLuint* docDataBuffer;
     SceneLights sceneLights;
 
+    std::unique_ptr<Drawable> skySphere;
+    std::unique_ptr<Drawable> cloudCube;
+    std::unique_ptr<Drawable> lightModel;
+    
+    Scene(GUI& gui, WindowInfo& windowConfig);
     ~Scene();
     AkDoc* loadScene(std::string scenePath, std::string sceneName);
     void allocAll(AkDoc* doc);
     GLuint* parseBuffors();
     AkCamera* loadCamera(AkDoc* doc);
+    void draw();
+    void clear();
 };
 
 
