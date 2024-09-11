@@ -832,6 +832,7 @@ Scene::Scene(GUI& gui, WindowInfo& windowConfig)
     myGui.lightsData.subscribe(sceneLights);
     myGui.g.subscribe(*((Cloud*)cloudCube.get()));
     myGui.subscribeToEye(cameraEye);
+    myGui.subscribeToLight(sceneLights);
 }
 
 void Scene::clear()

@@ -10,12 +10,12 @@ extern std::shared_ptr<debug::BufferLogger> bufferLogger;
 
 PointLight* GUI::getLightsData() 
 {
-    return lightsData.data->data();
+    return lightsData.get()->data();
 }
 
 std::size_t GUI::getLightsSize()
 {
-    return lightsData.data->size();
+    return lightsData.get()->size();
 }
 
 
@@ -77,21 +77,21 @@ glm::mat4 GUI::getLookAt()
 
 glm::mat4 GUI::getProjection(int width, int height) 
 {
-    return glm::perspectiveFov((float)3.14 * fov.data / 180, (float)width, (float)height, zNear.data, (float) zFar.data);
+    return glm::perspectiveFov((float)3.14 * fov / 180, (float)width, (float)height, (float)zNear, (float) zFar);
 }
 
 
 std::string GUI::getModelPath() 
 {
     //std::cout << fileSelection.substr(0, fileSelection.find_last_of("/")+1).c_str() << std::endl;
-    return selectedSceneFile.data.substr(0, selectedSceneFile.data.find_last_of("/")+1);
+    return selectedSceneFile.get().substr(0, selectedSceneFile.get().find_last_of("/") + 1);
 }
 
 
 std::string GUI::getModelName() 
 {
     //std::cout << "model name: " << fileSelection.substr(fileSelection.find_last_of("/")+1).c_str() << std::endl;
-    return selectedSceneFile.data.substr(selectedSceneFile.data.find_last_of("/")+1);
+    return selectedSceneFile.get().substr(selectedSceneFile.get().find_last_of("/")+1);
 }
 
 
@@ -111,8 +111,8 @@ void folderContent(
                 std::string filePath = entry.path().generic_string();
                 content.push_back(filePath);
 
-                if (ImGui::Selectable(fileName.c_str(), content.at(content.size() - 1) == selected.data)) {
-                    selected.data = filePath;
+                if (ImGui::Selectable(fileName.c_str(), content.at(content.size() - 1) == selected.get())) {
+                    selected.get() = filePath;
                     selected.notifyAll();
                 }
                 ImGui::SameLine(200); ImGui::Text(filePath.c_str());
@@ -147,7 +147,7 @@ void GUI::drawLeftPanel(ImGuiIO& io)
 
         if (ImGui::BeginTabBar("LeftPanelBar", tab_bar_flags)) {
             if (ImGui::BeginTabItem("Config")) {
-                if (ImGui::SliderFloat("g const", &g.data, -0.99999f, 0.99999f, "ratio = %.3f")) {
+                if (ImGui::SliderFloat("g const", &g.get(), - 0.99999f, 0.99999f, "ratio = %.3f")) {
                     g.notifyAll();
                 }
                 ImGui::EndTabItem();
@@ -242,7 +242,7 @@ void GUI::drawLeftPanel(ImGuiIO& io)
                     ImGui::TreePop();
                 }
 
-                    show_shader_dialog = !shaderSelection.data.empty();
+                    show_shader_dialog = !shaderSelection.get().empty();
 
                 ImGui::EndTabItem();
             }
@@ -257,13 +257,13 @@ void GUI::drawLeftPanel(ImGuiIO& io)
                 }
                 ImGui::Separator();
                 if (ImGui::Button("Add Light")) {
-                    lightsData.data->emplace_back(PointLight());
+                    lightsData.get()->emplace_back(PointLight());
                     lightsData.notifyAll();
                 }
                 ImGui::SameLine(300); 
                 if (ImGui::Button("Delete Light")) {
-                    if (lightsData.data->size() > 0) {
-                        lightsData.data->erase(lightsData.data->begin() + lightId);
+                    if (lightsData.get()->size() > 0) {
+                        lightsData.get()->erase(lightsData.get()->begin() + lightId);
                         lightsData.notifyAll();
                     }
                 }
@@ -271,49 +271,44 @@ void GUI::drawLeftPanel(ImGuiIO& io)
                 ImGui::Separator();
 
                 auto& light = getLightsData()[lightId];
-                glm::vec3 ambient{ light.ambient };
-                glm::vec3 diffuse{ light.diffuse };
-                glm::vec3 specular{ light.specular };
-                glm::vec3 position{ light.position };
-                lightAmbient[0] = ambient.x;
-                lightAmbient[1] = ambient.y;
-                lightAmbient[2] = ambient.z;
-                lightDiffuse[0] = diffuse.x;
-                lightDiffuse[1] = diffuse.y;
-                lightDiffuse[2] = diffuse.z;
-                lightSpecular[0] = specular.x;
-                lightSpecular[1] = specular.y;
-                lightSpecular[2] = specular.z;
-                position[0] = position.x;
-                position[1] = position.y;
-                position[2] = position.z;
+                
+                float* ambient{ static_cast<float*>(glm::value_ptr(light.ambient)) };
+                float* diffuse{ static_cast<float*>(glm::value_ptr(light.diffuse)) };
+                float* specular{ static_cast<float*>(glm::value_ptr(light.specular)) };
+                float* position{ static_cast<float*>(glm::value_ptr(light.position)) };
+                for (int i = 0; i < 3; i++) {
+                    lightAmbient[i] = ambient[i];
+                    lightDiffuse[i] = diffuse[i];
+                    lightSpecular[i] = specular[i];
+                    this->position[i] = position[i];
+                }
 
-
-
-
-                if (ImGui::ColorEdit3("ambient light", lightAmbient)) {
+                if (ImGui::ColorEdit3("ambient light", &lightAmbient.get())) {
+                    lightAmbient.notifyAll();
                 };
-                if (ImGui::ColorEdit3("diffuse light", lightDiffuse)) {
+                if (ImGui::ColorEdit3("diffuse light", &lightDiffuse.get())) {
+                    lightDiffuse.notifyAll();
                 };
-                if (ImGui::ColorEdit3("specular light", lightSpecular)) {
+                if (ImGui::ColorEdit3("specular light", &lightSpecular.get())) {
+                    lightSpecular.notifyAll();
                 };
-                if (ImGui::SliderFloat("const", &c.data, 0.0f, 1.0f)) {
+                if (ImGui::SliderFloat("const", &c.get(), 0.0f, 1.0f)) {
                     c.notifyAll();
                 };
-                if (ImGui::SliderFloat("linear", &l.data, 0.0f, 1.0f)) {
+                if (ImGui::SliderFloat("linear", &l.get(), 0.0f, 1.0f)) {
                     l.notifyAll();
                 };
-                if (ImGui::SliderFloat("quad", &q.data, 0.0f, 1.0f)) {
+                if (ImGui::SliderFloat("quad", &q.get(), 0.0f, 1.0f)) {
                     q.notifyAll();
                 };
-                if (ImGui::SliderFloat("x", &position[0], -1.0f, 1.0f)) {
-                    this->position[0].notifyAll();
+                if (ImGui::SliderFloat("x", &this->position[0], -1.0f, 1.0f)) {
+                    this->position.notifyAll();
                 };
-                if (ImGui::SliderFloat("y", &position[1], -1.0f, 1.0f)) {
-                    this->position[1].notifyAll();
+                if (ImGui::SliderFloat("y", &this->position[1], -1.0f, 1.0f)) {
+                    this->position.notifyAll();
                 };
-                if (ImGui::SliderFloat("z", &position[2], -1.0f, 1.0f)) {
-                    this->position[2].notifyAll();
+                if (ImGui::SliderFloat("z", &this->position[2], -1.0f, 1.0f)) {
+                    this->position.notifyAll();
                 };
 
             }
@@ -327,9 +322,9 @@ void GUI::drawLeftPanel(ImGuiIO& io)
 
         static char text[2*4096] = {'\0'};
         
-        if (shaderSelection.data != lastShaderSelection.data) {
+        if (shaderSelection.get() != lastShaderSelection.get()) {
             if (*fileText) free(*fileText);
-            *fileText = readFile(shaderSelection.data.c_str());
+            *fileText = readFile(shaderSelection.get().c_str());
             if (*fileText) strcpy(text, *fileText);
             lastShaderSelection = shaderSelection;
         }
@@ -352,7 +347,7 @@ void GUI::drawLeftPanel(ImGuiIO& io)
 
             if (ImGui::Button("OK", ImVec2(120, 0))) {
                 FILE* fs;
-                fopen_s(&fs, shaderSelection.data.c_str(), "wb");
+                fopen_s(&fs, shaderSelection.get().c_str(), "wb");
                 unsigned int bufferSize = strlen(text);
                 if (fs && bufferSize) {
                     fwrite(text, 1, bufferSize, fs);
@@ -372,7 +367,7 @@ void GUI::drawLeftPanel(ImGuiIO& io)
 
         ImGui::End();
         if (!show_shader_dialog) {
-            shaderSelection.data.clear();
+            shaderSelection.get().clear();
             if (*fileText) free(*fileText);
         }
     }
@@ -384,27 +379,27 @@ void GUI::drawRightPanel(ImGuiIO& io)
         
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
         ImGui::Text("Far plane:"); 
-        if (ImGui::SliderFloat("Fp", &zFar.data, 0.1f, 200.0f)) {
+        if (ImGui::SliderFloat("Fp", &zFar.get(), 0.1f, 200.0f)) {
             zFar.notifyAll();
         }
         ImGui::Text("Near plane:"); 
-        if (ImGui::SliderFloat("Np", &zNear.data, 0.0001f, 10.0f)) {
+        if (ImGui::SliderFloat("Np", &zNear.get(), 0.0001f, 10.0f)) {
             zNear.notifyAll();
         }
         ImGui::Text("fov:"); 
-        if (ImGui::SliderInt("fov", &fov.data, 10, 120)) {
+        if (ImGui::SliderInt("fov", &fov.get(), 10, 120)) {
             fov.notifyAll();
         }
         ImGui::Separator();
 
-        if(ImGui::SliderInt("Translation X", &xTranslate.data, -100, 100)) xTranslate.notifyAll();
-        if(ImGui::SliderInt("Translation Y", &yTranslate.data, -100, 100)) yTranslate.notifyAll();
-        if (ImGui::SliderInt("Translation Z", &zTranslate.data, -100, 100)) zTranslate.notifyAll();
-        if (ImGui::SliderInt("Rotation X", &xRotate.data, 0, 360)) xRotate.notifyAll();
-        if (ImGui::SliderInt("Rotation Y", &yRotate.data, 0, 360)) yRotate.notifyAll();
-        if (ImGui::SliderFloat("Camera distance", &viewDistance.data, 0, 360)) viewDistance.notifyAll();
-        if (ImGui::SliderAngle("Camera phi", &viewPhi.data, 0, 360)) viewPhi.notifyAll();
-        if (ImGui::SliderAngle("Camera theta", &viewTheta.data, 0, 360)) viewTheta.notifyAll();
+        if(ImGui::SliderInt("Translation X", &xTranslate.get(), -100, 100)) xTranslate.notifyAll();
+        if(ImGui::SliderInt("Translation Y", &yTranslate.get(), -100, 100)) yTranslate.notifyAll();
+        if (ImGui::SliderInt("Translation Z", &zTranslate.get(), -100, 100)) zTranslate.notifyAll();
+        if (ImGui::SliderInt("Rotation X", &xRotate.get(), 0, 360)) xRotate.notifyAll();
+        if (ImGui::SliderInt("Rotation Y", &yRotate.get(), 0, 360)) yRotate.notifyAll();
+        if (ImGui::SliderFloat("Camera distance", &viewDistance.get(), 0, 360)) viewDistance.notifyAll();
+        if (ImGui::SliderAngle("Camera phi", &viewPhi.get(), 0, 360)) viewPhi.notifyAll();
+        if (ImGui::SliderAngle("Camera theta", &viewTheta.get(), 0, 360)) viewTheta.notifyAll();
         ImGui::Separator();
 
         ImGui::Button("Save Image");
@@ -483,4 +478,13 @@ void GUI::subscribeToEye(Observer& observer) {
     viewDistance.subscribe(observer);
     viewPhi.subscribe(observer);
     viewTheta.subscribe(observer);
+}
+
+void GUI::subscribeToLight(Observer& observer)
+{
+    position.subscribe(observer);
+    lightId.subscribe(observer);
+    lightAmbient.subscribe(observer);
+    lightDiffuse.subscribe(observer);
+    lightSpecular.subscribe(observer);
 }
