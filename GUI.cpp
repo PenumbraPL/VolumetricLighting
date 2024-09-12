@@ -478,6 +478,9 @@ void GUI::subscribeToEye(Observer& observer) {
     viewDistance.subscribe(observer);
     viewPhi.subscribe(observer);
     viewTheta.subscribe(observer);
+    zFar.subscribe(observer);
+    zNear.subscribe(observer);
+    fov.subscribe(observer);
 }
 
 void GUI::subscribeToLight(Observer& observer)

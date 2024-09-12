@@ -205,7 +205,7 @@ void Drawable::draw(Scene& scene)
     glm::vec3 camera_dir = glm::vec3(0.) - scene.cameraEye.eye;
 
     glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
-    glm::mat4 MV = transforms.MV * Model * localTransform; // check is it correct?
+    glm::mat4 MV = transforms->MV * Model * localTransform; // check is it correct?
 
 
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MV));
@@ -570,7 +570,7 @@ void Light::draw(Scene& scene)
     glBindVertexArray(vao);
     glBindProgramPipeline(pipeline);
 
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(transforms.MV));
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(transforms->MV));
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
 
  
@@ -647,7 +647,7 @@ void Environment::draw(Scene& scene)
 
 
     glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
-    glm::mat4 MV = transforms.MV * Model * localTransform;
+    glm::mat4 MV = transforms->MV * Model * localTransform;
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MV));
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
 
@@ -710,7 +710,7 @@ void Cloud::draw(Scene& scene)
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, scene.sceneLights.lightsBuffer);
 
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(transforms.MV));
+    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(transforms->MV));
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
 
     bindVertexBuffer(this->bufferViews, this->docDataBuffer);
@@ -811,7 +811,7 @@ void Scene::draw()
     }
 
     for (auto& light : sceneLights.lights) {
-        lightModel->transforms.MV = ((Light*)lightModel.get())->calcMV(light, *this);
+        lightModel->transforms->MV = ((Light*)lightModel.get())->calcMV(light, *this);
         lightModel->draw(*this);
     }
 
@@ -820,15 +820,15 @@ void Scene::draw()
 
 Scene::Scene(GUI& gui, WindowInfo& windowConfig)
 {
-    lightModel = LightFactory().createDrawable();
-    skySphere = EnvironmentFactory().createDrawable();
-    cloudCube = CloudFactory().createDrawable();
-    myGui.subscribeToView(cloudCube->transforms);
-    myGui.subscribeToView(skySphere->transforms);
+    lightModel = Light::createDrawable();
+    skySphere = Environment::createDrawable();
+    cloudCube = Cloud::createDrawable();
+    myGui.subscribeToView(*static_cast<GUIMatrix*>(cloudCube->transforms));
+    myGui.subscribeToEye(*static_cast<GUIMatrix*>(skySphere->transforms));
 
     myGui.lightsData = &sceneLights.lights;
     cameraEye.Projection = myGui.getProjection(windowConfig.width, windowConfig.height);
-
+    cameraEye.imageDimension = glm::vec2(windowConfig.width, windowConfig.height);
     myGui.lightsData.subscribe(sceneLights);
     myGui.g.subscribe(*((Cloud*)cloudCube.get()));
     myGui.subscribeToEye(cameraEye);
@@ -837,8 +837,14 @@ Scene::Scene(GUI& gui, WindowInfo& windowConfig)
 
 void Scene::clear()
 {
-    for (auto& primitive : primitives) primitive.deleteTexturesAndSamplers();
-    for (auto& primitive : primitives) primitive.deletePipeline();
+    for (auto& primitive : primitives) {
+        primitive.deleteTexturesAndSamplers();
+        primitive.deletePipeline();
+        //if (primitive.transforms) delete primitive.transforms;
+    }
+    //if(cloudCube->transforms) delete cloudCube->transforms;
+    //if(skySphere->transforms) delete skySphere->transforms;
+    //if (lightModel->transforms) delete lightModel->transforms;
     //TODO: dealloc of light matrix
 
     glDeleteBuffers((GLsizei) bufferViews.size(), docDataBuffer);

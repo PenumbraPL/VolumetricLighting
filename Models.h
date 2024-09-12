@@ -79,10 +79,22 @@ void imageFlipVerticallyOnLoad(bool flip);
 
 struct Scene;
 
-class Matrix : public Observer {
+
+class Matrix {
 public:
     Matrix() {}
     Matrix(glm::mat4 localTransform) : localTransform{ localTransform } {}
+
+    glm::mat4 localTransform = glm::mat4(1.);
+    glm::mat4 Projection = glm::mat4(1.);;
+    glm::mat4 MVP = glm::mat4(1.);;
+    glm::mat4 MV = glm::mat4(1.);;
+};
+
+class GUIMatrix : public Matrix, public Observer {
+public:
+    GUIMatrix() {}
+    GUIMatrix(glm::mat4 localTransform) : Matrix{ localTransform } {}
 
     void setProjection(int width, int height) {
         //if(!camera)
@@ -110,16 +122,11 @@ public:
     virtual void notify() {
         calculateMVP();
     }
-
-    glm::mat4 localTransform = glm::mat4(1.);
-    glm::mat4 Projection = glm::mat4(1.);;
-    glm::mat4 MVP = glm::mat4(1.);;
-    glm::mat4 MV = glm::mat4(1.);;
 };
 
 struct Drawable {
     Drawable(){}
-    Drawable(Matrix transforms) : transforms(transforms) {}
+    Drawable(Matrix* transforms) : transforms(transforms) {}
     ~Drawable(){}
 
     GLuint programs[5] = { 0xffffffff };
@@ -137,7 +144,7 @@ struct Drawable {
 
     glm::mat4 worldTransform;
     glm::mat4 localTransform;
-    Matrix transforms;
+    Matrix* transforms;
 
     GLuint vao;
 
@@ -188,6 +195,13 @@ struct Light : public Drawable {
     void loadMesh() override;
     virtual void draw(Scene& scene) override;
     glm::mat4 calcMV(PointLight& light, Scene& scenes);
+    static std::unique_ptr<Drawable> createDrawable() {
+        auto lightModel = std::make_unique<Light>();
+        lightModel->loadMesh();
+        lightModel->createPipeline({ "res/shaders/lamp_vec.glsl", "res/shaders/lamp_frag.glsl" });
+        lightModel->getLocation({ { {"MV", "PRJ"}, {"G", "camera"} } });
+        return lightModel;
+    }
 };
 
 
@@ -197,6 +211,14 @@ struct Environment : public Drawable {
     
     void loadMesh() override;
     virtual void draw(Scene& scene) override;
+    static std::unique_ptr<Drawable> createDrawable() {
+        auto env = std::make_unique<Environment>();
+        env->transforms = new GUIMatrix(); //TODO: dealloc needed
+        env->loadMesh();
+        env->createPipeline({ "res/shaders/environment_vec.glsl", "res/shaders/environment_frag.glsl" });
+        env->getLocation({ {{"MV", "PRJ"}} });
+        return env;
+    }
 };
 
 
@@ -207,6 +229,14 @@ struct Cloud : public Drawable, public Observer {
     virtual void draw(Scene& scene) override;
     virtual void notify() override {
         g = myGui.g;
+    }
+    static std::unique_ptr<Drawable> createDrawable() {
+        auto cld = std::make_unique<Cloud>();
+        cld->transforms = new GUIMatrix(); //TODO: dealloc needed
+        cld->loadMesh();
+        cld->createPipeline({ "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" });
+        cld->getLocation({ { {"MV", "PRJ"}, {"G", "camera"} } });
+        return cld;
     }
 };
 
@@ -221,9 +251,11 @@ struct Camera : Observer{
     int fov;
     glm::mat4 View;
     glm::mat4 Projection;
+    glm::vec2 imageDimension;
 
     virtual void notify() {
         eye = myGui.getView();
+        Projection = myGui.getProjection(imageDimension.x, imageDimension.y);
     }
 };
 
@@ -265,53 +297,4 @@ struct Scene {
     AkCamera* loadCamera(AkDoc* doc);
     void draw();
     void clear();
-};
-
-
-
-struct DrawableFactory {
-    virtual std::unique_ptr<Drawable> createDrawable() = 0;
-    virtual void deleteDrawable() = 0;
-};
-
-struct LightFactory : public DrawableFactory {
-    std::unique_ptr<Drawable> createDrawable() override {
-        auto lightModel = std::make_unique<Light>();
-        lightModel->loadMesh();
-        lightModel->createPipeline({ "res/shaders/lamp_vec.glsl", "res/shaders/lamp_frag.glsl" });
-        lightModel->getLocation({ { {"MV", "PRJ"}, {"G", "camera"} } });
-        return lightModel;
-    }
-
-    void deleteDrawable() override {
-
-    }
-};
-
-struct EnvironmentFactory : public DrawableFactory {
-    std::unique_ptr<Drawable> createDrawable() override {
-        auto env = std::make_unique<Environment>();
-        env->loadMesh();
-        env->createPipeline({ "res/shaders/environment_vec.glsl", "res/shaders/environment_frag.glsl" });
-        env->getLocation({ {{"MV", "PRJ"}} });
-        return env;
-    }
-
-    void deleteDrawable() override {
-
-    }
-};
-
-struct CloudFactory : public DrawableFactory {
-    std::unique_ptr<Drawable> createDrawable() override {
-        auto cld = std::make_unique<Cloud>();
-        cld->loadMesh();
-        cld->createPipeline({ "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" });
-        cld->getLocation({ { {"MV", "PRJ"}, {"G", "camera"} } });
-        return cld;
-    }
-
-    void deleteDrawable() override {
-
-    }
 };

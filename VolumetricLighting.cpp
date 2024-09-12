@@ -99,7 +99,7 @@ GLFWwindow* initContext()
 /* ============================================================================= */
 
 
-GUI myGui{ "./res/models/Latern/Lantern.gltf" };
+GUI myGui{ "./res/models/gltfTest/gltfTest.gltf" };
 
 
 int main()
@@ -125,12 +125,13 @@ int main()
                 {"MV", "PRJ"},
                 {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound"}
             } });
-            myGui.subscribeToView(primitive.transforms);
+            primitive.transforms = new GUIMatrix();   //TODO: dealloc needed
+            myGui.subscribeToView(*static_cast<GUIMatrix*>(primitive.transforms));
         }
         for (auto& light : scenes.sceneLights.lights) {
             Matrix lightTransform;
             lightTransform.MV = ((Light*)scenes.lightModel.get())->calcMV(light, scenes);
-            scenes.lightModel->transforms = Matrix(lightTransform);
+            scenes.lightModel->transforms = new Matrix(lightTransform);  //TODO: dealloc needed
         }
         //glDepthRange(myGui.near_plane, myGui.far_plane);
         glDepthFunc(GL_LEQUAL);
@@ -157,7 +158,7 @@ int main()
         logger.info("===================== End of loop ==============================================");
         
         for (auto& primitive : scenes.primitives) {
-            myGui.unsubscribeToView(primitive.transforms);
+            myGui.unsubscribeToView(*static_cast<GUIMatrix*>(primitive.transforms));
         }
 
         glBindProgramPipeline(0);
