@@ -8,6 +8,7 @@ uniform vec3 bb_min = vec3(-1., -1., -1.);
 uniform vec3 bb_max = vec3(1., 1., 1.);
 //uniform vec3 direction;
 float d = 2;//length(bb_max-bb_min);
+uniform mat4 inverseMV = mat4(1.);
 
 const float PI = 3.14159265359f;
 
@@ -109,7 +110,8 @@ vec4 CalcVolumeScatter(vec3 viewDir, PointLight light, float G, vec3 color, vec3
 
 vec4 CalcLight(PointLight light, vec3 N, vec3 fragPos, vec3 V_dir)
 {
-    vec3 L_dir = normalize(light.position - fragPos);
+    vec3 lightPosition = vec3(inverseMV * vec4(light.position, 1.));
+    vec3 L_dir = normalize(lightPosition - fragPos);
     vec3 R_dir = reflect(-L_dir, N);
 
     float d = max(dot(N, L_dir), 0.0);

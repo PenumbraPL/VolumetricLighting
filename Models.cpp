@@ -213,6 +213,7 @@ void Drawable::draw(Scene& scene)
     glProgramUniform3fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][0], 1, glm::value_ptr(camera_view));
 
     {
+        glm::mat4 inverseMV = glm::inverse(Model) * transforms->inverseMV * localTransform;
         glm::ivec4 isTex;
         isTex.r = textures[MET_ROUGH] ? 1 : 0;
         isTex.g = textures[MET_ROUGH] ? 1 : 0;
@@ -224,6 +225,7 @@ void Drawable::draw(Scene& scene)
         glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][1], colors[MET_ROUGH].g);
         //glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][4], colors[AO].x);
         glProgramUniform4fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][3], 1, glm::value_ptr(colors[ALBEDO]));
+        glProgramUniformMatrix4fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][6], 1, GL_FALSE, glm::value_ptr(inverseMV));
     }
 
     bindVertexBuffer(scene.bufferViews, scene.docDataBuffer);
@@ -408,7 +410,7 @@ void Drawable::deleteTexturesAndSamplers()
 
     AkDoc* Scene::loadScene(std::string scenePath, std::string sceneName)
     {
-        primitives.clear();
+        primitives.primitives.clear();
 
         scenePath += sceneName;
         AkDoc* doc;
@@ -436,7 +438,8 @@ void Drawable::deleteTexturesAndSamplers()
         }
 
         AkNode* node = ak_instanceObjectNode(scene->node);
-        proccessNode(node, primitives);
+        proccessNode(node, primitives.primitives);
+        primitives.initPrimitives();
         loadCamera(doc);
 
         allocAll(doc);
@@ -447,7 +450,7 @@ void Drawable::deleteTexturesAndSamplers()
     
     Scene::~Scene()
     {
-        for (auto& primitive : primitives) {
+        for (auto& primitive : primitives.primitives) {
             //primitive.deletePrograms();
             //primitive.deletePipeline();
             //primitive.deleteTexturesAndSamplers();
@@ -710,8 +713,10 @@ void Cloud::draw(Scene& scene)
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, scene.sceneLights.lightsBuffer);
 
+    glm::mat4 inverseMV = transforms->inverseMV * localTransform;
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(transforms->MV));
     glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
+    glProgramUniformMatrix4fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][2], 1, GL_FALSE, glm::value_ptr(inverseMV));
 
     bindVertexBuffer(this->bufferViews, this->docDataBuffer);
     bindTextures();
@@ -806,7 +811,7 @@ void Scene::draw()
 {
     skySphere->draw(*this);
 
-    for (auto& primitive : primitives) {
+    for (auto& primitive : primitives.primitives) {
         primitive.draw(*this);
     }
 
@@ -837,7 +842,7 @@ Scene::Scene(GUI& gui, WindowInfo& windowConfig)
 
 void Scene::clear()
 {
-    for (auto& primitive : primitives) {
+    for (auto& primitive : primitives.primitives) {
         primitive.deleteTexturesAndSamplers();
         primitive.deletePipeline();
         //if (primitive.transforms) delete primitive.transforms;
@@ -850,7 +855,7 @@ void Scene::clear()
     glDeleteBuffers((GLsizei) bufferViews.size(), docDataBuffer);
     if (docDataBuffer) free(docDataBuffer);
 
-    for (auto& primitive : primitives) {
+    for (auto& primitive : primitives.primitives) {
         for (int i = VERTEX; i <= GEOMETRY; i++) {
             if (primitive.bindingLocationIndecies[i]) free(primitive.bindingLocationIndecies[i]);
         }

@@ -92,7 +92,8 @@ public:
     void deleteImGui();
     ImGuiIO& getIO();
     void draw();
-    void chooseGlfwImpl(GLFWwindow* window);
+    void addToWindow(GLFWwindow* window);
+    void configureGUI();
     void drawLeftPanel(ImGuiIO& io);
     void drawRightPanel(ImGuiIO& io);
     ~GUI() {};

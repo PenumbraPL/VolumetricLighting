@@ -12,6 +12,15 @@ layout (binding = 7) uniform sampler2D sp_dif_tex;
 layout (binding = 8) uniform sampler2D tex_envmap;
 layout (binding = 9) uniform sampler2D ao_tex;
 
+uniform vec4 amb_col;
+uniform vec4 emi_col;
+uniform vec4 dif_col;
+uniform vec4 sp_col;
+uniform vec4 sp_gl_col;
+
+uniform mat4 inverseMV = mat4(1.);
+
+
 out vec4 color;
 
 const float PI = 3.14159265359;
@@ -112,9 +121,10 @@ void main()
     for(int i = 0; i < size; ++i) 
     {
         PointLight light = list[i];
-        vec3 L = normalize(light.position - fs_in._position);
+        vec3 lightPosition = vec3(inverseMV * vec4(light.position, 1.));
+        vec3 L = normalize(lightPosition - fs_in._position);
         vec3 H = normalize(V + L);
-        float distance    = length(light.position - fs_in._position);
+        float distance    = length(lightPosition - fs_in._position);
         float attenuation = 1.0 / (light.constant + light.linear * distance +  light.quadratic * (distance * distance));
         vec3 radiance     = light.diffuse * attenuation;        
         

@@ -16,7 +16,7 @@
 namespace fs = std::filesystem;
 
 
-auto bufferLogger{ std::make_shared <debug::BufferLogger>() };
+auto bufferLogger{ std::make_shared<debug::BufferLogger>() };
 auto fileLogger{ std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/basic-log.txt", true) };
 auto consoleLogger{ std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>() };
 auto logger{ spdlog::logger("multi_sink", {bufferLogger, fileLogger, consoleLogger}) };
@@ -104,9 +104,9 @@ GUI myGui{ "./res/models/gltfTest/gltfTest.gltf" };
 
 int main()
 {
-    GLFWwindow* window{ initContext() };
-    myGui.chooseGlfwImpl(window);
-
+    GLFWwindow* mainWindow{ initContext() };
+    myGui.configureGUI();
+    myGui.addToWindow(mainWindow);
     Scene scenes{ myGui, windowConfig };
 
     FileListener fileListener;
@@ -116,18 +116,6 @@ int main()
     do {
         scenes.loadScene(myGui.getModelPath(), myGui.getModelName());
 
-        for (auto& primitive : scenes.primitives) {
-            ShadersSources defaultModel;
-            defaultModel[VERTEX] = { "res/shaders/standard_vec.glsl" };
-            defaultModel[FRAGMENT] = { "res/shaders/pbr_with_ext_light_frag.glsl" };
-            primitive.createPipeline(defaultModel);
-            primitive.getLocation({ {
-                {"MV", "PRJ"},
-                {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound"}
-            } });
-            primitive.transforms = new GUIMatrix();   //TODO: dealloc needed
-            myGui.subscribeToView(*static_cast<GUIMatrix*>(primitive.transforms));
-        }
         for (auto& light : scenes.sceneLights.lights) {
             Matrix lightTransform;
             lightTransform.MV = ((Light*)scenes.lightModel.get())->calcMV(light, scenes);
@@ -140,9 +128,9 @@ int main()
         fileListener.reset();
 
         logger.info("===================== Main loop ==============================================");
-        while (!glfwWindowShouldClose(window) && !fileListener.fileChanged) {
+        while (!glfwWindowShouldClose(mainWindow) && !fileListener.fileChanged) {
             int width, height;
-            glfwGetFramebufferSize(window, &width, &height);
+            glfwGetFramebufferSize(mainWindow, &width, &height);
             glEnable(GL_DEPTH_TEST);
             //glEnable(GL_BLEND);
             glViewport(0, 0, width, height);
@@ -152,18 +140,18 @@ int main()
             scenes.draw();
 
             myGui.draw();
-            glfwSwapBuffers(window);
+            glfwSwapBuffers(mainWindow);
             glfwPollEvents();
         }
         logger.info("===================== End of loop ==============================================");
         
-        for (auto& primitive : scenes.primitives) {
+        for (auto& primitive : scenes.primitives.primitives) {
             myGui.unsubscribeToView(*static_cast<GUIMatrix*>(primitive.transforms));
         }
 
-        glBindProgramPipeline(0);
+        glBindProgramPipeline(0); // TO DO: delete
         scenes.clear();
-    } while (!glfwWindowShouldClose(window));
+    } while (!glfwWindowShouldClose(mainWindow));
 
     myGui.deleteImGui();
     glfwTerminate();

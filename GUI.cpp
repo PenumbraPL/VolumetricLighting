@@ -437,18 +437,19 @@ void GUI::draw() {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
-void GUI::chooseGlfwImpl(GLFWwindow* window) {
+
+void GUI::addToWindow(GLFWwindow* window){
+    const char* GLSLVersion{ "#version 450" };
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(GLSLVersion);
+}
+
+void GUI::configureGUI() {
     ImGuiIO& io = getIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.ConfigWindowsMoveFromTitleBarOnly = true;
-
     ImGui::StyleColorsDark();
-
-    const char* GLSLVersion{ "#version 450" };
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init(GLSLVersion);
-
 }
 
 void GUI::subscribeToView(Observer& observer) {

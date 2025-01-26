@@ -86,9 +86,10 @@ public:
     Matrix(glm::mat4 localTransform) : localTransform{ localTransform } {}
 
     glm::mat4 localTransform = glm::mat4(1.);
-    glm::mat4 Projection = glm::mat4(1.);;
-    glm::mat4 MVP = glm::mat4(1.);;
-    glm::mat4 MV = glm::mat4(1.);;
+    glm::mat4 Projection = glm::mat4(1.);
+    glm::mat4 MVP = glm::mat4(1.);
+    glm::mat4 MV = glm::mat4(1.);
+    glm::mat4 inverseMV = glm::mat4(1.);
 };
 
 class GUIMatrix : public Matrix, public Observer {
@@ -117,6 +118,13 @@ public:
 
         MV = LookAt * View;
         MVP = Projection * MV;
+        inverseMV = glm::inverse(LookAt) *
+            glm::rotate(
+                glm::rotate(
+                    glm::translate(localTransform,
+                        -translate)
+                    , -rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
+                -rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
     virtual void notify() {
@@ -180,10 +188,23 @@ protected:
 };
 
 
-struct Primitive : public Drawable {
-    void loadMesh() override {};
-    virtual void draw(Scene& scene) override;
-}; // without change (maybe declaration of paths?
+struct Primitives {
+    std::vector<Drawable> primitives;
+    void initPrimitives(){
+        for (auto& primitive : primitives) {
+            ShadersSources defaultModel;
+            defaultModel[VERTEX] = { "res/shaders/standard_vec.glsl" };
+            defaultModel[FRAGMENT] = { "res/shaders/pbr_with_ext_light_frag.glsl" };
+            primitive.createPipeline(defaultModel);
+            primitive.getLocation({ {
+                {"MV", "PRJ"},
+                {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound", "inverseMV"}
+            } });
+            primitive.transforms = new GUIMatrix();   //TODO: dealloc needed
+            myGui.subscribeToView(*static_cast<GUIMatrix*>(primitive.transforms));
+        }
+    }
+}; 
 
 
 struct Light : public Drawable {
@@ -235,7 +256,7 @@ struct Cloud : public Drawable, public Observer {
         cld->transforms = new GUIMatrix(); //TODO: dealloc needed
         cld->loadMesh();
         cld->createPipeline({ "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" });
-        cld->getLocation({ { {"MV", "PRJ"}, {"G", "camera"} } });
+        cld->getLocation({ { {"MV", "PRJ"}, {"G", "camera", "inverseMV"}}});
         return cld;
     }
 };
@@ -277,7 +298,7 @@ struct SceneLights : public Observer{
 
 
 struct Scene {
-    std::vector<Drawable> primitives;
+    Primitives primitives;
     Camera cameraEye;
     std::map <void*, unsigned int> bufferViews;
     std::map <void*, unsigned int> textureViews;
