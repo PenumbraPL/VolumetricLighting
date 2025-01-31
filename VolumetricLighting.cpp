@@ -15,14 +15,10 @@
 
 namespace fs = std::filesystem;
 
-
 auto bufferLogger{ std::make_shared<debug::BufferLogger>() };
 auto fileLogger{ std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/basic-log.txt", true) };
 auto consoleLogger{ std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>() };
 auto logger{ spdlog::logger("multi_sink", {bufferLogger, fileLogger, consoleLogger}) };
-
-
-WindowInfo windowConfig = { 1900, 1000, "GLTF Viewer" };
 
 
 /* ============================================================================= */
@@ -45,7 +41,7 @@ public:
 /* ============================================================================= */
 
 
-GLFWwindow* initContext()
+GLFWwindow* initContext(WindowInfo windowConfig)
 {
     logger.set_pattern("%^[%L][%s:%#]%$  %v ");
     logger.info("========== Initialization started ============================================");
@@ -98,14 +94,13 @@ GLFWwindow* initContext()
 
 /* ============================================================================= */
 
-
+WindowInfo windowConfig = { 1900, 1000, "GLTF Viewer" };
 GUI myGui{ "./res/models/gltfTest/gltfTest.gltf" };
 
 
 int main()
 {
-    GLFWwindow* mainWindow{ initContext() };
-    myGui.configureGUI();
+    GLFWwindow* mainWindow{ initContext(windowConfig) };
     myGui.addToWindow(mainWindow);
     Scene scenes{ myGui, windowConfig };
 
@@ -125,7 +120,7 @@ int main()
         glDepthFunc(GL_LEQUAL);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        fileListener.reset();
+        fileListener.reset(); 
 
         logger.info("===================== Main loop ==============================================");
         while (!glfwWindowShouldClose(mainWindow) && !fileListener.fileChanged) {

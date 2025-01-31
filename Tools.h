@@ -5,13 +5,13 @@
 
 void initializeGLEW(void);
 GLuint wrapMode(AkWrapMode& wrap);
+Material processMaterial(AkMaterial* mat);
 void setUpColor(
     AkColorDesc* colordesc,
-    AkMeshPrimitive* prim,
-    Drawable& primitive,
+    Material& primitive,
     enum TextureType type,
     GUI& panelConfig);
-void proccessNode(AkNode* node, std::vector<Drawable>& primitives);
+void proccessNode(AkNode* node, std::vector<Drawable>& primitives, Scene* scene);
 void formatAttribute(GLint attr_location, AkAccessor* acc);
 char* readFile(const char* file_name);
 std::string printCoordSystem(AkCoordSys* coord);

@@ -48,7 +48,6 @@ void initializeGLEW(void)
 }
 
 
-
 GLuint wrapMode(AkWrapMode& wrap) {
     GLuint wrap_m = GL_REPEAT;
     switch (wrap) {
@@ -64,15 +63,14 @@ GLuint wrapMode(AkWrapMode& wrap) {
 
 void setUpColor(
     AkColorDesc* colordesc,
-    AkMeshPrimitive* prim,
-    Drawable& primitive,
+    Material& material,
     enum TextureType type,
     GUI& panelConfig)
 {
-    GLuint* sampler = &primitive.samplers[type];
-    GLuint* texture = &primitive.textures[type];
-    GLuint* texturesType = &primitive.texturesType[type];
-    glm::vec4* colors = &primitive.colors[type];
+    GLuint* sampler = &material.samplers[type];
+    GLuint* texture = &material.textures[type];
+    GLuint* texturesType = &material.texturesType[type];
+    glm::vec4* colors = &material.colors[type];
 
     if (colordesc) {
         if (colordesc->texture) {
@@ -127,7 +125,7 @@ void setUpColor(
                 glSamplerParameteri(*sampler, GL_TEXTURE_MAG_FILTER, magfilter);
 
 
-                AkInput* tex_coord = ak_meshInputGet(prim, tex->coordInputName, tex->slot); //
+                //AkInput* tex_coord = ak_meshInputGet(prim, tex->coordInputName, tex->slot); //
                 auto components{ 0 };
                 auto width{ 0 };
                 auto height{ 0 };
@@ -169,8 +167,52 @@ void setUpColor(
 }
 
 
+Material processMaterial(AkMaterial* mat) {
+    Material material;
+    AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
+    AkTechniqueFxCommon* tch = ef->profile->technique->common;
+    if (tch) {
+        setUpColor(tch->ambient, material, AMBIENT, myGui);
+        setUpColor(tch->emission, material, EMISIVE, myGui);
+        setUpColor(tch->diffuse, material, DIFFUSE, myGui);
+        setUpColor(tch->specular, material, SPECULAR, myGui);
 
-void proccessNode(AkNode* node, std::vector<Drawable>& primitives)
+        switch (tch->type) {
+        case AK_MATERIAL_METALLIC_ROUGHNESS: {
+            AkMetallicRoughness* mr = (AkMetallicRoughness*)tch;
+            AkColorDesc alb_cd;
+            AkColorDesc mr_cd;
+            AkColor col;
+            mr_cd.color = &col;
+
+            alb_cd.color = &mr->albedo;
+            alb_cd.texture = mr->albedoTex;
+            mr_cd.color->rgba.R = mr->metallic;
+            mr_cd.color->rgba.G = mr->roughness;
+            mr_cd.texture = mr->metalRoughTex;
+            setUpColor(&alb_cd, material, ALBEDO, myGui);
+            setUpColor(&mr_cd, material, MET_ROUGH, myGui);
+            break;
+        }
+
+        case AK_MATERIAL_SPECULAR_GLOSSINES: {
+            AkSpecularGlossiness* sg = (AkSpecularGlossiness*)tch;
+            AkColorDesc sg_cd;
+            AkColorDesc dif_cd;
+            sg_cd.color = &sg->specular;
+            sg_cd.texture = sg->specGlossTex;
+            dif_cd.color = &sg->diffuse;
+            dif_cd.texture = sg->diffuseTex;
+            setUpColor(&sg_cd, material, SP_GLOSSINESS, myGui);
+            setUpColor(&dif_cd, material, SP_DIFFUSE, myGui);
+            break;
+        }
+        };
+    }
+    return material;
+}
+
+void proccessNode(AkNode* node, std::vector<Drawable>& primitives, Scene* scene)
 {
     if (node->geometry) {
         AkGeometry* geometry{ ak_instanceObjectGeom(node) };
@@ -179,7 +221,9 @@ void proccessNode(AkNode* node, std::vector<Drawable>& primitives)
             if (mesh) {
                 AkMeshPrimitive* ptr = mesh->primitive;
                 while (ptr) {
+                    // ptr.material
                     Drawable primitive;
+                    primitive.scene = scene;
                     primitive.loadMatrix(node);
                     primitive.processMesh(ptr);
                     primitives.push_back(primitive);
@@ -189,10 +233,10 @@ void proccessNode(AkNode* node, std::vector<Drawable>& primitives)
         }
     }
     if (node->chld) {
-        proccessNode(node->chld, primitives);
+        proccessNode(node->chld, primitives, scene);
     }
     if (node->next) {
-        proccessNode(node->next, primitives);
+        proccessNode(node->next, primitives, scene);
     }
 }
 

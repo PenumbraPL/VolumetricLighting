@@ -118,48 +118,10 @@ void Drawable::processMesh(AkMeshPrimitive* primitive)
     accessor[COLORS] = col ? col->accessor : nullptr;
     accessor[TANGENTS] = tan ? tan->accessor : nullptr;
 
-    if (primitive->material) {
-        AkMaterial* mat = primitive->material;
-        AkEffect* ef = (AkEffect*)ak_instanceObject(&mat->effect->base);
-        AkTechniqueFxCommon* tch = ef->profile->technique->common;
-        if (tch) {
-            setUpColor(tch->ambient, primitive, *this, AMBIENT, myGui);
-            setUpColor(tch->emission, primitive, *this, EMISIVE, myGui);
-            setUpColor(tch->diffuse, primitive, *this, DIFFUSE, myGui);
-            setUpColor(tch->specular, primitive, *this, SPECULAR, myGui);
-
-            switch (tch->type) {
-            case AK_MATERIAL_METALLIC_ROUGHNESS: {
-                AkMetallicRoughness* mr = (AkMetallicRoughness*)tch;
-                AkColorDesc alb_cd;
-                AkColorDesc mr_cd;
-                AkColor col;
-                mr_cd.color = &col;
-
-                alb_cd.color = &mr->albedo;
-                alb_cd.texture = mr->albedoTex;
-                mr_cd.color->rgba.R = mr->metallic;
-                mr_cd.color->rgba.G = mr->roughness;
-                mr_cd.texture = mr->metalRoughTex;
-                setUpColor(&alb_cd, primitive, *this, ALBEDO, myGui);
-                setUpColor(&mr_cd, primitive, *this, MET_ROUGH, myGui);
-                break;
-            }
-
-            case AK_MATERIAL_SPECULAR_GLOSSINES: {
-                AkSpecularGlossiness* sg = (AkSpecularGlossiness*)tch;
-                AkColorDesc sg_cd;
-                AkColorDesc dif_cd;
-                sg_cd.color = &sg->specular;
-                sg_cd.texture = sg->specGlossTex;
-                dif_cd.color = &sg->diffuse;
-                dif_cd.texture = sg->diffuseTex;
-                setUpColor(&sg_cd, primitive, *this, SP_GLOSSINESS, myGui);
-                setUpColor(&dif_cd, primitive, *this, SP_DIFFUSE, myGui);
-                break;
-            }
-            };
-        }
+    AkMaterial* mat = primitive->material;
+    while (mat) {
+        material = scene->materials[mat];
+        mat = (AkMaterial*)mat->base.next;
     }
 }
 
@@ -220,11 +182,12 @@ void Drawable::draw(Scene& scene)
         isTex.b = textures[ALBEDO] ? 1 : 0;
         isTex.a = 0;
 
+
         glProgramUniform4iv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][5], 1, glm::value_ptr(isTex));
-        glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][2], colors[MET_ROUGH].r);
-        glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][1], colors[MET_ROUGH].g);
+        glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][2], material.colors[MET_ROUGH].r);
+        glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][1], material.colors[MET_ROUGH].g);
         //glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][4], colors[AO].x);
-        glProgramUniform4fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][3], 1, glm::value_ptr(colors[ALBEDO]));
+        glProgramUniform4fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][3], 1, glm::value_ptr(material.colors[ALBEDO]));
         glProgramUniformMatrix4fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][6], 1, GL_FALSE, glm::value_ptr(inverseMV));
     }
 
@@ -383,145 +346,154 @@ void Drawable::deleteTexturesAndSamplers()
 
 
 
-    AkCamera* Scene::loadCamera(AkDoc* doc) 
-    {
-        AkVisualScene* scene;
-        AkCamera* cam = nullptr;
-        if (doc->scene.visualScene) {
-            scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
-
-            float cameraView[16];
-            float cameraProjection[16];
-            ak_firstCamera(doc, &cam, cameraView, cameraProjection);
-            if (cam) {
-                cameraEye.View = glm::make_mat4x4(cameraView);
-                cameraEye.Projection = glm::make_mat4x4(cameraProjection);
-            }
-            else if (scene->cameras) {
-                if (scene->cameras->first) {
-                    cam = (AkCamera*)ak_instanceObject(scene->cameras->first->instance);
-                }
-            }
-            if (cam) std::cout << "Camera name: " << cam->name << std::endl; // log
-        }
-        return cam;
-    }
-
-
-    AkDoc* Scene::loadScene(std::string scenePath, std::string sceneName)
-    {
-        primitives.primitives.clear();
-
-        scenePath += sceneName;
-        AkDoc* doc;
-        if (ak_load(&doc, scenePath.c_str(), NULL) != AK_OK) {
-            SPDLOG_LOGGER_ERROR(&logger, "Document couldn't be loaded");
-            exit(EXIT_FAILURE);
-        }
-        else {
-            logger.info(printCoordSystem(doc->coordSys));
-            logger.info(printDocInformation(doc->inf, doc->unit));
-            logger.info("==============================================================================");
-        }
-
-        AkVisualScene* scene;
+AkCamera* Scene::loadCamera(AkDoc* doc) 
+{
+    AkVisualScene* scene;
+    AkCamera* cam = nullptr;
+    if (doc->scene.visualScene) {
         scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
-        if (!doc->scene.visualScene) {
-            SPDLOG_LOGGER_ERROR(&logger, "================================== Scene couldnt be loaded! ===============");
-            exit(EXIT_FAILURE);
+
+        float cameraView[16];
+        float cameraProjection[16];
+        ak_firstCamera(doc, &cam, cameraView, cameraProjection);
+        if (cam) {
+            cameraEye.View = glm::make_mat4x4(cameraView);
+            cameraEye.Projection = glm::make_mat4x4(cameraProjection);
         }
-        else {
-            std::string sceneInfo = "======================== Scene name: ";
-            sceneInfo += scene->name ? scene->name : "";
-            sceneInfo += "========================";
-            SPDLOG_LOGGER_INFO(&logger, sceneInfo);
+        else if (scene->cameras) {
+            if (scene->cameras->first) {
+                cam = (AkCamera*)ak_instanceObject(scene->cameras->first->instance);
+            }
         }
-
-        AkNode* node = ak_instanceObjectNode(scene->node);
-        proccessNode(node, primitives.primitives);
-        primitives.initPrimitives();
-        loadCamera(doc);
-
-        allocAll(doc);
-        parseBuffors();
-
-        return doc;
+        if (cam) std::cout << "Camera name: " << cam->name << std::endl; // log
     }
+    return cam;
+}
+
+
+AkDoc* Scene::loadScene(std::string scenePath, std::string sceneName)
+{
+    primitives.primitives.clear();
+
+    scenePath += sceneName;
+    AkDoc* doc;
+    if (ak_load(&doc, scenePath.c_str(), NULL) != AK_OK) {
+        SPDLOG_LOGGER_ERROR(&logger, "Document couldn't be loaded");
+        exit(EXIT_FAILURE);
+    }
+    else {
+        logger.info(printCoordSystem(doc->coordSys));
+        logger.info(printDocInformation(doc->inf, doc->unit));
+        logger.info("==============================================================================");
+    }
+
+    AkVisualScene* scene;
+    scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
+    if (!doc->scene.visualScene) {
+        //SPDLOG_LOGGER_ERROR(&logger, "================================== Scene couldnt be loaded! ===============");
+        logger.error("================================== Scene couldnt be loaded! ===============");
+        exit(EXIT_FAILURE);
+    }
+    else {
+        std::string sceneInfo = "======================== Scene name: ";
+        sceneInfo += scene->name ? scene->name : "";
+        sceneInfo += "========================";
+        //SPDLOG_LOGGER_INFO(&logger, sceneInfo);
+        logger.info(sceneInfo);
+    }
+
+    AkOneWayIterBase* mat_ptr = doc->lib.materials ? doc->lib.materials->chld : nullptr;
+    const unsigned int mat_count = doc->lib.materials ? doc->lib.materials->count : 0;
+    for (int i = 0; i < mat_count; i++, mat_ptr = mat_ptr->next) {
+        Material material = processMaterial((AkMaterial*) mat_ptr);
+        this->materials.insert({mat_ptr, material});
+    }
+
+    AkNode* node = ak_instanceObjectNode(scene->node);
+    proccessNode(node, primitives.primitives, this);
+    primitives.initPrimitives();
+    loadCamera(doc);
+
+    allocAll(doc);
+    parseBuffors();
+
+    return doc;
+}
     
-    Scene::~Scene()
-    {
-        for (auto& primitive : primitives.primitives) {
-            //primitive.deletePrograms();
-            //primitive.deletePipeline();
-            //primitive.deleteTexturesAndSamplers();
+Scene::~Scene()
+{
+    for (auto& primitive : primitives.primitives) {
+        //primitive.deletePrograms();
+        //primitive.deletePipeline();
+        //primitive.deleteTexturesAndSamplers();
+    }
+    skySphere->deletePipeline();
+    cloudCube->deletePipeline();
+    lightModel->deletePipeline();
+}
+
+void Scene::allocAll(AkDoc* doc)
+{
+    bufferViews.clear();
+    textureViews.clear();
+    imageViews.clear();
+
+    // What with and libimages ??
+    int j = 0;
+    FListItem* i = doc->lib.images;
+    if (i) {
+        do {
+            AkImage* img = (AkImage*)i->data;
+            imageViews.insert({ {img, 0} });
+            i = i->next;
+        } while (i);
+        for (auto& u : imageViews) {
+            u.second = j++;
         }
-        skySphere->deletePipeline();
-        cloudCube->deletePipeline();
-        lightModel->deletePipeline();
     }
 
-    void Scene::allocAll(AkDoc* doc)
-    {
-        bufferViews.clear();
-        textureViews.clear();
-        imageViews.clear();
-
-        // What with and libimages ??
-        int j = 0;
-        FListItem* i = doc->lib.images;
-        if (i) {
-            do {
-                AkImage* img = (AkImage*)i->data;
-                imageViews.insert({ {img, 0} });
-                i = i->next;
-            } while (i);
-            for (auto& u : imageViews) {
-                u.second = j++;
-            }
-        }
-
-        j = 0;
-        FListItem* t = doc->lib.textures;
-        if (t) {
-            do {
-                AkTexture* tex = (AkTexture*)t->data;
-                textureViews.insert({ {tex, 0} });
-                t = t->next;
-            } while (t);
-            for (auto& u : textureViews) {
-                u.second = j++;
-            }
-        }
-
-        j = 0;
-        FListItem* b = (FListItem*)doc->lib.buffers;
-        if (b) {
-            do {
-                AkBuffer* buf = (AkBuffer*)b->data;
-                bufferViews.insert({ {buf, 0} });
-                b = b->next;
-            } while (b);
-            for (auto& u : bufferViews) {
-                u.second = j++;
-            }
+    j = 0;
+    FListItem* t = doc->lib.textures;
+    if (t) {
+        do {
+            AkTexture* tex = (AkTexture*)t->data;
+            textureViews.insert({ {tex, 0} });
+            t = t->next;
+        } while (t);
+        for (auto& u : textureViews) {
+            u.second = j++;
         }
     }
-    GLuint* Scene::parseBuffors()
-    {
-        //  glGenVertexArrays(1, &vao);
-         // glBindVertexArray(vao);
 
-        GLuint* docDataBuffer = (GLuint*)calloc(bufferViews.size(), sizeof(GLuint));
-        glCreateBuffers((GLsizei)bufferViews.size(), docDataBuffer);
-        for (auto& buffer : bufferViews) {
-            unsigned int i = bufferViews[buffer.first];
-            glNamedBufferData(docDataBuffer[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
+    j = 0;
+    FListItem* b = (FListItem*)doc->lib.buffers;
+    if (b) {
+        do {
+            AkBuffer* buf = (AkBuffer*)b->data;
+            bufferViews.insert({ {buf, 0} });
+            b = b->next;
+        } while (b);
+        for (auto& u : bufferViews) {
+            u.second = j++;
         }
-
-        this->docDataBuffer = docDataBuffer;
-
-        return docDataBuffer;
     }
+}
+GLuint* Scene::parseBuffors()
+{
+    //  glGenVertexArrays(1, &vao);
+        // glBindVertexArray(vao);
+
+    GLuint* docDataBuffer = (GLuint*)calloc(bufferViews.size(), sizeof(GLuint));
+    glCreateBuffers((GLsizei)bufferViews.size(), docDataBuffer);
+    for (auto& buffer : bufferViews) {
+        unsigned int i = bufferViews[buffer.first];
+        glNamedBufferData(docDataBuffer[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
+    }
+
+    this->docDataBuffer = docDataBuffer;
+
+    return docDataBuffer;
+}
 
 
 /* ====================================== */
@@ -535,11 +507,13 @@ void Light::loadMesh()
     std::string scene_path = "res/models/";
     scene_path += "lamp.gltf";
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
-        SPDLOG_LOGGER_ERROR(&logger, "Light mesh couldn't be loaded\n");
+        //SPDLOG_LOGGER_ERROR(&logger, "Light mesh couldn't be loaded\n");
+        logger.error("Light mesh couldn't be loaded\n");
         return;
     }
     if (!doc->scene.visualScene) {
-        SPDLOG_LOGGER_ERROR(&logger, "Light mesh couldn't be loaded\n");
+        //SPDLOG_LOGGER_ERROR(&logger, "Light mesh couldn't be loaded\n");
+        logger.error("Light mesh couldn't be loaded\n");
         return;
     }
 
@@ -825,9 +799,10 @@ void Scene::draw()
 
 Scene::Scene(GUI& gui, WindowInfo& windowConfig)
 {
-    lightModel = Light::createDrawable();
-    skySphere = Environment::createDrawable();
-    cloudCube = Cloud::createDrawable();
+    lightModel = Light::createDrawable(this);
+    skySphere = Environment::createDrawable(this);
+    cloudCube = Cloud::createDrawable(this);
+
     myGui.subscribeToView(*static_cast<GUIMatrix*>(cloudCube->transforms));
     myGui.subscribeToEye(*static_cast<GUIMatrix*>(skySphere->transforms));
 

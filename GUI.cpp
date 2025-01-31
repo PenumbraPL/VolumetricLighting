@@ -412,6 +412,7 @@ void GUI::drawRightPanel(ImGuiIO& io)
 GUI::GUI(std::string selectedSceneFile) : selectedSceneFile{ selectedSceneFile } {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    configureGUI();
 };
 
 void GUI::deleteImGui() {

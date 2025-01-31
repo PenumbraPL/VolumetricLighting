@@ -132,6 +132,23 @@ public:
     }
 };
 
+struct Material {
+    AkAccessor* accessor[7];
+
+    GLuint textures[8] = { 0 };
+    GLuint texturesType[8] = { 0 };
+    GLuint samplers[8] = { 0 }; // alloc ?
+
+    glm::vec4 colors[8] = { glm::vec4(0) };
+
+    DrawShader ds[5] = { DRAW_VERTEX, DRAW_FRAGMENT, DRAW_TESS_CTR, DRAW_TESS_EV, DRAW_GEOMETRY };
+    DrawShaderBit dsb[5] = { DRAW_VERTEX_BIT, DRAW_FRAGMENT_BIT, DRAW_TESS_CTR_BIT, DRAW_TESS_EV_BIT , DRAW_GEOMETRY_BIT };
+
+    GLuint vertexPosBindingLocation;
+    GLuint normalsBindingLocation;
+    GLuint textureBindingLocation;
+};
+
 struct Drawable {
     Drawable(){}
     Drawable(Matrix* transforms) : transforms(transforms) {}
@@ -140,6 +157,7 @@ struct Drawable {
     GLuint programs[5] = { 0xffffffff };
     GLuint pipeline;
     AkAccessor* accessor[7];
+    Scene* scene;
 
     uint32_t* verticleIndecies = nullptr;
     unsigned int verticleIndeciesSize;
@@ -149,6 +167,7 @@ struct Drawable {
     GLuint samplers[8] = { 0 }; // alloc ?
 
     glm::vec4 colors[8] = { glm::vec4(0) };
+    Material material;
 
     glm::mat4 worldTransform;
     glm::mat4 localTransform;
@@ -216,8 +235,9 @@ struct Light : public Drawable {
     void loadMesh() override;
     virtual void draw(Scene& scene) override;
     glm::mat4 calcMV(PointLight& light, Scene& scenes);
-    static std::unique_ptr<Drawable> createDrawable() {
+    static std::unique_ptr<Drawable> createDrawable(Scene* scene) {
         auto lightModel = std::make_unique<Light>();
+        lightModel->scene = scene;
         lightModel->loadMesh();
         lightModel->createPipeline({ "res/shaders/lamp_vec.glsl", "res/shaders/lamp_frag.glsl" });
         lightModel->getLocation({ { {"MV", "PRJ"}, {"G", "camera"} } });
@@ -232,8 +252,9 @@ struct Environment : public Drawable {
     
     void loadMesh() override;
     virtual void draw(Scene& scene) override;
-    static std::unique_ptr<Drawable> createDrawable() {
+    static std::unique_ptr<Drawable> createDrawable(Scene* scene) {
         auto env = std::make_unique<Environment>();
+        env->scene = scene;
         env->transforms = new GUIMatrix(); //TODO: dealloc needed
         env->loadMesh();
         env->createPipeline({ "res/shaders/environment_vec.glsl", "res/shaders/environment_frag.glsl" });
@@ -251,8 +272,9 @@ struct Cloud : public Drawable, public Observer {
     virtual void notify() override {
         g = myGui.g;
     }
-    static std::unique_ptr<Drawable> createDrawable() {
+    static std::unique_ptr<Drawable> createDrawable(Scene* scene) {
         auto cld = std::make_unique<Cloud>();
+        cld->scene = scene;
         cld->transforms = new GUIMatrix(); //TODO: dealloc needed
         cld->loadMesh();
         cld->createPipeline({ "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" });
@@ -303,13 +325,14 @@ struct Scene {
     std::map <void*, unsigned int> bufferViews;
     std::map <void*, unsigned int> textureViews;
     std::map <void*, unsigned int> imageViews;
+    std::map <void*, Material> materials;
     GLuint* docDataBuffer;
     SceneLights sceneLights;
 
     std::unique_ptr<Drawable> skySphere;
     std::unique_ptr<Drawable> cloudCube;
     std::unique_ptr<Drawable> lightModel;
-    
+    void populateScene(GUI& gui, WindowInfo& windowConfig);
     Scene(GUI& gui, WindowInfo& windowConfig);
     ~Scene();
     AkDoc* loadScene(std::string scenePath, std::string sceneName);
