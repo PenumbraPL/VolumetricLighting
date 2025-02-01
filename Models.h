@@ -133,20 +133,39 @@ public:
 };
 
 struct Material {
-    AkAccessor* accessor[7];
+    //AkAccessor* accessor[7]; // it is nessessery here?
 
     GLuint textures[8] = { 0 };
     GLuint texturesType[8] = { 0 };
     GLuint samplers[8] = { 0 }; // alloc ?
-
     glm::vec4 colors[8] = { glm::vec4(0) };
 
-    DrawShader ds[5] = { DRAW_VERTEX, DRAW_FRAGMENT, DRAW_TESS_CTR, DRAW_TESS_EV, DRAW_GEOMETRY };
-    DrawShaderBit dsb[5] = { DRAW_VERTEX_BIT, DRAW_FRAGMENT_BIT, DRAW_TESS_CTR_BIT, DRAW_TESS_EV_BIT , DRAW_GEOMETRY_BIT };
+    void bindTextures();
+    void bindVertexBuffer(std::map <void*, unsigned int>& bufferViews, GLuint* docDataBuffer);
+    void deleteTexturesAndSamplers(); // how many to delete?
+};
+
+struct ShadersPipeline {
+    GLuint programs[5] = { 0xffffffff };
+    GLuint pipeline;
+    GLuint vao;
+
+    AkAccessor* accessor[7];
 
     GLuint vertexPosBindingLocation;
     GLuint normalsBindingLocation;
     GLuint textureBindingLocation;
+    GLuint* bindingLocationIndecies[5] = { nullptr };
+
+    DrawShader ds[5] = { DRAW_VERTEX, DRAW_FRAGMENT, DRAW_TESS_CTR, DRAW_TESS_EV, DRAW_GEOMETRY };
+    DrawShaderBit dsb[5] = { DRAW_VERTEX_BIT, DRAW_FRAGMENT_BIT, DRAW_TESS_CTR_BIT, DRAW_TESS_EV_BIT , DRAW_GEOMETRY_BIT };
+
+    void createPipeline(ShadersSources shaderPath);
+    void deletePipeline();
+    void bindVertexArray();
+    void getLocation(BindingPointCollection uniformNames);
+    void processMesh(AkMeshPrimitive* primitive);
+    void bindVertexBuffer(std::map <void*, unsigned int>& bufferViews, GLuint* docDataBuffer);
 };
 
 struct Drawable {
@@ -154,34 +173,17 @@ struct Drawable {
     Drawable(Matrix* transforms) : transforms(transforms) {}
     ~Drawable(){}
 
-    GLuint programs[5] = { 0xffffffff };
-    GLuint pipeline;
-    AkAccessor* accessor[7];
-    Scene* scene;
-
     uint32_t* verticleIndecies = nullptr;
     unsigned int verticleIndeciesSize;
     GLuint primitiveDataBuffer[7] = { 0xffffffff };
-    GLuint textures[8] = { 0 };
-    GLuint texturesType[8] = { 0 };
-    GLuint samplers[8] = { 0 }; // alloc ?
 
-    glm::vec4 colors[8] = { glm::vec4(0) };
     Material material;
+    ShadersPipeline shaders;
+    Scene* scene;
 
     glm::mat4 worldTransform;
     glm::mat4 localTransform;
     Matrix* transforms;
-
-    GLuint vao;
-
-    DrawShader ds[5] = { DRAW_VERTEX, DRAW_FRAGMENT, DRAW_TESS_CTR, DRAW_TESS_EV, DRAW_GEOMETRY };
-    DrawShaderBit dsb[5] = { DRAW_VERTEX_BIT, DRAW_FRAGMENT_BIT, DRAW_TESS_CTR_BIT, DRAW_TESS_EV_BIT , DRAW_GEOMETRY_BIT };
-
-    GLuint vertexPosBindingLocation;
-    GLuint normalsBindingLocation;
-    GLuint textureBindingLocation;
-    GLuint* bindingLocationIndecies[5] = { nullptr };
 
 
     std::map <void*, unsigned int> bufferViews;
@@ -189,18 +191,12 @@ struct Drawable {
     std::map <void*, unsigned int> imageViews;
     GLuint* docDataBuffer;
 
-    void createPipeline(ShadersSources shadersPaths);
-    void deletePipeline();
     void loadMatrix(AkNode* node);
     virtual void processMesh(AkMeshPrimitive* primitive);
     virtual void draw(Scene& scene);
-    void bindVertexArray();
     void bindVertexBuffer(std::map <void*, unsigned int>& bufferViews, GLuint* docDataBuffer);
-    void bindTextures();
     GLuint* parseBuffors();
     void allocAll(AkDoc* doc);
-    virtual void getLocation(BindingPointCollection uniformNames);
-    virtual void deleteTexturesAndSamplers(); // how many to delete?
     virtual void loadMesh() {};
 protected:
     void allocUnique();
@@ -214,8 +210,8 @@ struct Primitives {
             ShadersSources defaultModel;
             defaultModel[VERTEX] = { "res/shaders/standard_vec.glsl" };
             defaultModel[FRAGMENT] = { "res/shaders/pbr_with_ext_light_frag.glsl" };
-            primitive.createPipeline(defaultModel);
-            primitive.getLocation({ {
+            primitive.shaders.createPipeline(defaultModel);
+            primitive.shaders.getLocation({ {
                 {"MV", "PRJ"},
                 {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound", "inverseMV"}
             } });
@@ -239,8 +235,8 @@ struct Light : public Drawable {
         auto lightModel = std::make_unique<Light>();
         lightModel->scene = scene;
         lightModel->loadMesh();
-        lightModel->createPipeline({ "res/shaders/lamp_vec.glsl", "res/shaders/lamp_frag.glsl" });
-        lightModel->getLocation({ { {"MV", "PRJ"}, {"G", "camera"} } });
+        lightModel->shaders.createPipeline({ "res/shaders/lamp_vec.glsl", "res/shaders/lamp_frag.glsl" });
+        lightModel->shaders.getLocation({ { {"MV", "PRJ"}, {"G", "camera"} } });
         return lightModel;
     }
 };
@@ -257,8 +253,8 @@ struct Environment : public Drawable {
         env->scene = scene;
         env->transforms = new GUIMatrix(); //TODO: dealloc needed
         env->loadMesh();
-        env->createPipeline({ "res/shaders/environment_vec.glsl", "res/shaders/environment_frag.glsl" });
-        env->getLocation({ {{"MV", "PRJ"}} });
+        env->shaders.createPipeline({ "res/shaders/environment_vec.glsl", "res/shaders/environment_frag.glsl" });
+        env->shaders.getLocation({ {{"MV", "PRJ"}} });
         return env;
     }
 };
@@ -277,8 +273,8 @@ struct Cloud : public Drawable, public Observer {
         cld->scene = scene;
         cld->transforms = new GUIMatrix(); //TODO: dealloc needed
         cld->loadMesh();
-        cld->createPipeline({ "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" });
-        cld->getLocation({ { {"MV", "PRJ"}, {"G", "camera", "inverseMV"}}});
+        cld->shaders.createPipeline({ "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" });
+        cld->shaders.getLocation({ { {"MV", "PRJ"}, {"G", "camera", "inverseMV"}}});
         return cld;
     }
 };
@@ -319,6 +315,18 @@ struct SceneLights : public Observer{
 };
 
 
+/* ============================================================================= */
+
+class FileListener : public Observer {
+public:
+    bool fileChanged{ false };
+    virtual void notify() override;
+    void reset();
+};
+
+/* ============================================================================= */
+
+
 struct Scene {
     Primitives primitives;
     Camera cameraEye;
@@ -329,6 +337,7 @@ struct Scene {
     GLuint* docDataBuffer;
     SceneLights sceneLights;
 
+    FileListener fileListener;
     std::unique_ptr<Drawable> skySphere;
     std::unique_ptr<Drawable> cloudCube;
     std::unique_ptr<Drawable> lightModel;
@@ -341,4 +350,5 @@ struct Scene {
     AkCamera* loadCamera(AkDoc* doc);
     void draw();
     void clear();
+    bool fileChanged();
 };

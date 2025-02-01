@@ -34,7 +34,9 @@ void imageFlipVerticallyOnLoad(bool flip)
 }
 
 
-void Drawable::createPipeline(ShadersSources shaderPath)
+
+
+void ShadersPipeline::createPipeline(ShadersSources shaderPath)
 {
     char* shader[5];
     glGenProgramPipelines(1, &pipeline);
@@ -46,7 +48,7 @@ void Drawable::createPipeline(ShadersSources shaderPath)
         if (!shaderPath[i].empty()) {
             shader[i] = readFile(shaderPath[i].c_str());
             if (!shader[i]) {
-                SPDLOG_LOGGER_ERROR(&logger, "=================== Coulnt find " + shaderPath[i] + " ==============================");
+                logger.error("=================== Coulnt find " + shaderPath[i] + " ==============================");
             }
             programs[i] = glCreateShaderProgramv(ds[i], 1, &shader[i]);
             free(shader[i]);
@@ -55,14 +57,14 @@ void Drawable::createPipeline(ShadersSources shaderPath)
             if (!linkageStatus) {
                 GLchar info[1024];
                 glGetProgramInfoLog(programs[i], 1024, NULL, info);
-                SPDLOG_LOGGER_ERROR(&logger, info);
+                logger.info(info);
             }
             glUseProgramStages(pipeline, dsb[i], programs[i]);
         }
     }
 }
 
-void Drawable::deletePipeline()
+void ShadersPipeline::deletePipeline()
 {
     glBindProgramPipeline(0);
 
@@ -74,7 +76,95 @@ void Drawable::deletePipeline()
     glDeleteVertexArrays(1, &vao);
 }
 
-    
+
+void ShadersPipeline::bindVertexArray()
+{
+    glBindVertexArray(vao);
+    if (vertexPosBindingLocation != 0xFFFFFFFF) {
+        formatAttribute(vertexPosBindingLocation, accessor[POSITION]);
+        glEnableVertexArrayAttrib(vao, vertexPosBindingLocation);
+    }
+    if (normalsBindingLocation != 0xFFFFFFFF) {
+        formatAttribute(normalsBindingLocation, accessor[NORMALS]);
+        glEnableVertexArrayAttrib(vao, normalsBindingLocation);
+    }
+    if (textureBindingLocation != 0xFFFFFFFF) {
+        formatAttribute(textureBindingLocation, accessor[TEXTURES]);
+        glEnableVertexArrayAttrib(vao, textureBindingLocation);
+    }
+}
+
+void ShadersPipeline::getLocation(BindingPointCollection uniformNames)
+{
+    for (int i = VERTEX; i <= GEOMETRY; i++) {
+        if (uniformNames[i].size()) {
+            bindingLocationIndecies[i] = (GLuint*)calloc(uniformNames[i].size(), sizeof(GLuint));
+            for (int j = 0; j < uniformNames[i].size(); j++) {
+                bindingLocationIndecies[i][j] = glGetUniformLocation(programs[i], uniformNames[i].data()[j].c_str());
+            }
+            //glGetUniformIndices(programs[i], uniformNames[i].size(), uniformNames[i].data(), bindingLocationIndecies[i]);
+        }
+    }
+
+    vertexPosBindingLocation = glGetAttribLocation(programs[VERTEX], "vPos");
+    normalsBindingLocation = glGetAttribLocation(programs[VERTEX], "vNor");
+    textureBindingLocation = glGetAttribLocation(programs[VERTEX], "vTex");
+
+    //glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
+}
+
+
+void ShadersPipeline::processMesh(AkMeshPrimitive* primitive)
+{
+    int set = primitive->input->set;
+    AkInput* wgs = ak_meshInputGet(primitive, "WEIGHTS", set);
+    AkInput* jts = ak_meshInputGet(primitive, "JOINTS", set);
+    AkInput* pos = ak_meshInputGet(primitive, "POSITION", set);
+    AkInput* tex = ak_meshInputGet(primitive, "TEXCOORD", set); // if indexed then multiple parts to proccess
+    AkInput* nor = ak_meshInputGet(primitive, "NORMAL", set);
+
+    AkInput* col = ak_meshInputGet(primitive, "COLOR", set);
+    AkInput* tan = ak_meshInputGet(primitive, "TANGENT", set);
+
+    //std::cout << ak_meshInputCount(mesh) << std::endl;
+
+    accessor[POSITION] = pos ? pos->accessor : nullptr;
+    accessor[TEXTURES] = tex ? tex->accessor : nullptr;
+    accessor[NORMALS] = nor ? nor->accessor : nullptr;
+    accessor[WEIGTHS] = wgs ? wgs->accessor : nullptr;
+    accessor[JOINTS] = jts ? jts->accessor : nullptr;
+    accessor[COLORS] = col ? col->accessor : nullptr;
+    accessor[TANGENTS] = tan ? tan->accessor : nullptr;
+}
+
+
+void ShadersPipeline::bindVertexBuffer(std::map <void*, unsigned int>& bufferViews, GLuint* docDataBuffer)
+{
+    int j;
+    int binding_point;
+
+    if (vertexPosBindingLocation != 0xFFFFFFFF) {
+        j = bufferViews[accessor[POSITION]->buffer];
+        binding_point = 0;
+        glVertexAttribBinding(vertexPosBindingLocation, binding_point);
+        glBindVertexBuffer(binding_point, docDataBuffer[j], accessor[POSITION]->byteOffset, accessor[POSITION]->componentBytes);
+    }
+    if (normalsBindingLocation != 0xFFFFFFFF) {
+        j = bufferViews[accessor[NORMALS]->buffer];
+        binding_point = 1;
+        glVertexAttribBinding(normalsBindingLocation, binding_point);
+        glBindVertexBuffer(binding_point, docDataBuffer[j], accessor[NORMALS]->byteOffset, accessor[NORMALS]->componentBytes);
+    }
+
+    if (textureBindingLocation != 0xFFFFFFFF) {
+        j = bufferViews[accessor[TEXTURES]->buffer];
+        binding_point = 2;
+        glVertexAttribBinding(textureBindingLocation, binding_point);
+        glBindVertexBuffer(binding_point, docDataBuffer[j], accessor[TEXTURES]->byteOffset, accessor[TEXTURES]->componentBytes);
+    }
+}
+
+
 void Drawable::loadMatrix(AkNode* node)
 {
     float t1[16], t2[16];
@@ -98,68 +188,32 @@ void Drawable::processMesh(AkMeshPrimitive* primitive)
         verticleIndeciesSize = (unsigned int)primitive->indices->count;
     }
 
-    int set = primitive->input->set;
-    AkInput* wgs = ak_meshInputGet(primitive, "WEIGHTS", set);
-    AkInput* jts = ak_meshInputGet(primitive, "JOINTS", set);
-    AkInput* pos = ak_meshInputGet(primitive, "POSITION", set);
-    AkInput* tex = ak_meshInputGet(primitive, "TEXCOORD", set); // if indexed then multiple parts to proccess
-    AkInput* nor = ak_meshInputGet(primitive, "NORMAL", set);
-
-    AkInput* col = ak_meshInputGet(primitive, "COLOR", set);
-    AkInput* tan = ak_meshInputGet(primitive, "TANGENT", set);
-
-    //std::cout << ak_meshInputCount(mesh) << std::endl;
-
-    accessor[POSITION] = pos ? pos->accessor : nullptr;
-    accessor[TEXTURES] = tex ? tex->accessor : nullptr;
-    accessor[NORMALS] = nor ? nor->accessor : nullptr;
-    accessor[WEIGTHS] = wgs ? wgs->accessor : nullptr;
-    accessor[JOINTS] = jts ? jts->accessor : nullptr;
-    accessor[COLORS] = col ? col->accessor : nullptr;
-    accessor[TANGENTS] = tan ? tan->accessor : nullptr;
+    shaders.processMesh(primitive);
 
     AkMaterial* mat = primitive->material;
-    while (mat) {
+    //while (mat) {
         material = scene->materials[mat];
-        mat = (AkMaterial*)mat->base.next;
-    }
+    //    mat = (AkMaterial*)mat->base.next;
+    //}
 }
 
-
-// unused
+// hide in some way shaders
 void Drawable::allocUnique()
 {
     for (int i = 0; i < 7; i++) {
-        if (accessor[i]) {
+        if (shaders.accessor[i]) {
             glCreateBuffers(1, &primitiveDataBuffer[i]);
-            glNamedBufferData(primitiveDataBuffer[i], accessor[i]->buffer->length, accessor[i]->buffer->data, GL_STATIC_DRAW);
+            glNamedBufferData(primitiveDataBuffer[i], shaders.accessor[i]->buffer->length, shaders.accessor[i]->buffer->data, GL_STATIC_DRAW);
         }
-    }
-}
-
-void Drawable::bindVertexArray()
-{
-    glBindVertexArray(vao);
-    if (vertexPosBindingLocation != 0xFFFFFFFF) {
-        formatAttribute(vertexPosBindingLocation, accessor[POSITION]);
-        glEnableVertexArrayAttrib(vao, vertexPosBindingLocation);
-    }
-    if (normalsBindingLocation != 0xFFFFFFFF) {
-        formatAttribute(normalsBindingLocation, accessor[NORMALS]);
-        glEnableVertexArrayAttrib(vao, normalsBindingLocation);
-    }
-    if (textureBindingLocation != 0xFFFFFFFF) {
-        formatAttribute(textureBindingLocation, accessor[TEXTURES]);
-        glEnableVertexArrayAttrib(vao, textureBindingLocation);
     }
 }
 
 void Drawable::draw(Scene& scene)
 {
-    bindVertexArray();
+    shaders.bindVertexArray();
 
-    glBindVertexArray(vao);
-    glBindProgramPipeline(pipeline);
+    glBindVertexArray(shaders.vao);
+    glBindProgramPipeline(shaders.pipeline);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, scene.sceneLights.lightsBuffer);
 
@@ -170,53 +224,35 @@ void Drawable::draw(Scene& scene)
     glm::mat4 MV = transforms->MV * Model * localTransform; // check is it correct?
 
 
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MV));
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
-    glProgramUniform3fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][0], 1, glm::value_ptr(camera_view));
+    glProgramUniformMatrix4fv(shaders.programs[VERTEX], shaders.bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MV));
+    glProgramUniformMatrix4fv(shaders.programs[VERTEX], shaders.bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
+    glProgramUniform3fv(shaders.programs[FRAGMENT], shaders.bindingLocationIndecies[FRAGMENT][0], 1, glm::value_ptr(camera_view));
 
     {
         glm::mat4 inverseMV = glm::inverse(Model) * transforms->inverseMV * localTransform;
         glm::ivec4 isTex;
-        isTex.r = textures[MET_ROUGH] ? 1 : 0;
-        isTex.g = textures[MET_ROUGH] ? 1 : 0;
-        isTex.b = textures[ALBEDO] ? 1 : 0;
+        isTex.r = material.textures[MET_ROUGH] ? 1 : 0;
+        isTex.g = material.textures[MET_ROUGH] ? 1 : 0;
+        isTex.b = material.textures[ALBEDO] ? 1 : 0;
         isTex.a = 0;
 
 
-        glProgramUniform4iv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][5], 1, glm::value_ptr(isTex));
-        glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][2], material.colors[MET_ROUGH].r);
-        glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][1], material.colors[MET_ROUGH].g);
-        //glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][4], colors[AO].x);
-        glProgramUniform4fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][3], 1, glm::value_ptr(material.colors[ALBEDO]));
-        glProgramUniformMatrix4fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][6], 1, GL_FALSE, glm::value_ptr(inverseMV));
+        glProgramUniform4iv(shaders.programs[FRAGMENT], shaders.bindingLocationIndecies[FRAGMENT][5], 1, glm::value_ptr(isTex));
+        glProgramUniform1f(shaders.programs[FRAGMENT], shaders.bindingLocationIndecies[FRAGMENT][2], material.colors[MET_ROUGH].r);
+        glProgramUniform1f(shaders.programs[FRAGMENT], shaders.bindingLocationIndecies[FRAGMENT][1], material.colors[MET_ROUGH].g);
+        //glProgramUniform1f(shaders.programs[FRAGMENT], shaders.bindingLocationIndecies[FRAGMENT][4], colors[AO].x);
+        glProgramUniform4fv(shaders.programs[FRAGMENT], shaders.bindingLocationIndecies[FRAGMENT][3], 1, glm::value_ptr(material.colors[ALBEDO]));
+        glProgramUniformMatrix4fv(shaders.programs[FRAGMENT], shaders.bindingLocationIndecies[FRAGMENT][6], 1, GL_FALSE, glm::value_ptr(inverseMV));
     }
 
-    bindVertexBuffer(scene.bufferViews, scene.docDataBuffer);
-    bindTextures();
+    shaders.bindVertexBuffer(scene.bufferViews, scene.docDataBuffer);
+    //bindTextures();
+    material.bindTextures();
 
     glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
 }
 
 
-
-void Drawable::getLocation(BindingPointCollection uniformNames)
-{
-    for (int i = VERTEX; i <= GEOMETRY; i++) {
-        if (uniformNames[i].size()) {
-            bindingLocationIndecies[i] = (GLuint*)calloc(uniformNames[i].size(), sizeof(GLuint));
-            for (int j = 0; j < uniformNames[i].size(); j++) {
-                bindingLocationIndecies[i][j] = glGetUniformLocation(programs[i], uniformNames[i].data()[j].c_str());
-            }
-            //glGetUniformIndices(programs[i], uniformNames[i].size(), uniformNames[i].data(), bindingLocationIndecies[i]);
-        }
-    }
-
-    vertexPosBindingLocation = glGetAttribLocation(programs[VERTEX], "vPos");
-    normalsBindingLocation = glGetAttribLocation(programs[VERTEX], "vNor");
-    textureBindingLocation = glGetAttribLocation(programs[VERTEX], "vTex");
-
-    //glObjectLabel(GL_BUFFER, buffers[binding_point], -1, "Vertex Buffer");
-}
 
 
 
@@ -283,35 +319,7 @@ GLuint* Drawable::parseBuffors()
 
 
 
-
-void Drawable::bindVertexBuffer(std::map <void*, unsigned int>& bufferViews, GLuint* docDataBuffer)
-{
-    int j;
-    int binding_point;
-
-    if (vertexPosBindingLocation != 0xFFFFFFFF) {
-        j = bufferViews[accessor[POSITION]->buffer];
-        binding_point = 0;
-        glVertexAttribBinding(vertexPosBindingLocation, binding_point);
-        glBindVertexBuffer(binding_point, docDataBuffer[j], accessor[POSITION]->byteOffset, accessor[POSITION]->componentBytes);
-    }
-    if (normalsBindingLocation != 0xFFFFFFFF) {
-        j = bufferViews[accessor[NORMALS]->buffer];
-        binding_point = 1;
-        glVertexAttribBinding(normalsBindingLocation, binding_point);
-        glBindVertexBuffer(binding_point, docDataBuffer[j], accessor[NORMALS]->byteOffset, accessor[NORMALS]->componentBytes);
-    }
-
-    if (textureBindingLocation != 0xFFFFFFFF) {
-        j = bufferViews[accessor[TEXTURES]->buffer];
-        binding_point = 2;
-        glVertexAttribBinding(textureBindingLocation, binding_point);
-        glBindVertexBuffer(binding_point, docDataBuffer[j], accessor[TEXTURES]->byteOffset, accessor[TEXTURES]->componentBytes);
-    }
-}
-
-
-void Drawable::bindTextures()
+void Material::bindTextures()
 {
     for (unsigned int type = AMBIENT; type < TT_SIZE; type++) {
         GLuint sampler = samplers[(TextureType)type];
@@ -328,8 +336,7 @@ void Drawable::bindTextures()
     }
 }
 
-
-void Drawable::deleteTexturesAndSamplers()
+void Material::deleteTexturesAndSamplers()
 {
     for (unsigned int type = AMBIENT; type < TT_SIZE; type++) {
         if (textures[type]) {
@@ -390,7 +397,6 @@ AkDoc* Scene::loadScene(std::string scenePath, std::string sceneName)
     AkVisualScene* scene;
     scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
     if (!doc->scene.visualScene) {
-        //SPDLOG_LOGGER_ERROR(&logger, "================================== Scene couldnt be loaded! ===============");
         logger.error("================================== Scene couldnt be loaded! ===============");
         exit(EXIT_FAILURE);
     }
@@ -398,7 +404,6 @@ AkDoc* Scene::loadScene(std::string scenePath, std::string sceneName)
         std::string sceneInfo = "======================== Scene name: ";
         sceneInfo += scene->name ? scene->name : "";
         sceneInfo += "========================";
-        //SPDLOG_LOGGER_INFO(&logger, sceneInfo);
         logger.info(sceneInfo);
     }
 
@@ -416,20 +421,49 @@ AkDoc* Scene::loadScene(std::string scenePath, std::string sceneName)
 
     allocAll(doc);
     parseBuffors();
+    fileListener.reset();
+
+    for (auto& light : sceneLights.lights) {
+        Matrix lightTransform;
+        lightTransform.MV = ((Light*) lightModel.get())->calcMV(light, *this);
+        lightModel->transforms = new Matrix(lightTransform);  //TODO: dealloc needed
+    }
+
 
     return doc;
+}
+
+
+void FileListener::notify() {
+    fileChanged = true;
+    logger.info("fileChanged");
+}
+
+void FileListener::reset() {
+    fileChanged = false;
+}
+
+
+bool Scene::fileChanged()
+{
+    return fileListener.fileChanged;
 }
     
 Scene::~Scene()
 {
     for (auto& primitive : primitives.primitives) {
+        myGui.unsubscribeToView(*static_cast<GUIMatrix*>(primitive.transforms));
+    }
+
+    clear();
+    for (auto& primitive : primitives.primitives) {
         //primitive.deletePrograms();
         //primitive.deletePipeline();
         //primitive.deleteTexturesAndSamplers();
     }
-    skySphere->deletePipeline();
-    cloudCube->deletePipeline();
-    lightModel->deletePipeline();
+    skySphere->shaders.deletePipeline();
+    cloudCube->shaders.deletePipeline();
+    lightModel->shaders.deletePipeline();
 }
 
 void Scene::allocAll(AkDoc* doc)
@@ -507,12 +541,10 @@ void Light::loadMesh()
     std::string scene_path = "res/models/";
     scene_path += "lamp.gltf";
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
-        //SPDLOG_LOGGER_ERROR(&logger, "Light mesh couldn't be loaded\n");
         logger.error("Light mesh couldn't be loaded\n");
         return;
     }
     if (!doc->scene.visualScene) {
-        //SPDLOG_LOGGER_ERROR(&logger, "Light mesh couldn't be loaded\n");
         logger.error("Light mesh couldn't be loaded\n");
         return;
     }
@@ -537,22 +569,22 @@ void Light::loadMesh()
 
 void Light::draw(Scene& scene)
 {
-    bindVertexArray();
-    GLuint vcolLocation = glGetAttribLocation(programs[VERTEX], "vCol");
+    shaders.bindVertexArray();
+    GLuint vcolLocation = glGetAttribLocation(shaders.programs[VERTEX], "vCol");
     if (vcolLocation != 0xFFFFFFFF) {
-        glEnableVertexArrayAttrib(vao, vcolLocation);
+        glEnableVertexArrayAttrib(shaders.vao, vcolLocation);
     }
-    if (normalsBindingLocation != 0xFFFFFFFF) glDisableVertexArrayAttrib(vao, normalsBindingLocation);
-    if (textureBindingLocation != 0xFFFFFFFF) glDisableVertexArrayAttrib(vao, textureBindingLocation);
-    glBindVertexArray(vao);
-    glBindProgramPipeline(pipeline);
+    if (shaders.normalsBindingLocation != 0xFFFFFFFF) glDisableVertexArrayAttrib(shaders.vao, shaders.normalsBindingLocation);
+    if (shaders.textureBindingLocation != 0xFFFFFFFF) glDisableVertexArrayAttrib(shaders.vao, shaders.textureBindingLocation);
+    glBindVertexArray(shaders.vao);
+    glBindProgramPipeline(shaders.pipeline);
 
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(transforms->MV));
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
+    glProgramUniformMatrix4fv(shaders.programs[VERTEX], shaders.bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(transforms->MV));
+    glProgramUniformMatrix4fv(shaders.programs[VERTEX], shaders.bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
 
  
-    bindVertexBuffer(this->bufferViews, this->docDataBuffer);
-    bindTextures();
+    shaders.bindVertexBuffer(this->bufferViews, this->docDataBuffer);
+    material.bindTextures();
 
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -617,20 +649,20 @@ void Environment::loadMesh()
 
 void Environment::draw(Scene& scene)
 {
-    bindVertexArray();
-    if(normalsBindingLocation != 0xFFFFFFFF) glDisableVertexArrayAttrib(vao, normalsBindingLocation);
-    glBindVertexArray(vao);
-    glBindProgramPipeline(pipeline);
+    shaders.bindVertexArray();
+    if(shaders.normalsBindingLocation != 0xFFFFFFFF) glDisableVertexArrayAttrib(shaders.vao, shaders.normalsBindingLocation);
+    glBindVertexArray(shaders.vao);
+    glBindProgramPipeline(shaders.pipeline);
 
 
     glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
     glm::mat4 MV = transforms->MV * Model * localTransform;
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MV));
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
+    glProgramUniformMatrix4fv(shaders.programs[VERTEX], shaders.bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MV));
+    glProgramUniformMatrix4fv(shaders.programs[VERTEX], shaders.bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
 
 
-    bindVertexBuffer(this->bufferViews, this->docDataBuffer);
-    bindTextures();
+    shaders.bindVertexBuffer(this->bufferViews, this->docDataBuffer);
+    material.bindTextures();
 
     glBindSampler(0, env_sampler);
     glActiveTexture(GL_TEXTURE0);
@@ -678,22 +710,22 @@ void Cloud::loadMesh()
 
 void Cloud::draw(Scene& scene)
 {
-    bindVertexArray();
-    glBindVertexArray(vao);
-    glBindProgramPipeline(pipeline);
+    shaders.bindVertexArray();
+    glBindVertexArray(shaders.vao);
+    glBindProgramPipeline(shaders.pipeline);
 
-    glProgramUniform1f(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][0], g);
-    glProgramUniform3fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][1], 1, glm::value_ptr(scene.cameraEye.eye));
+    glProgramUniform1f(shaders.programs[FRAGMENT], shaders.bindingLocationIndecies[FRAGMENT][0], g);
+    glProgramUniform3fv(shaders.programs[FRAGMENT], shaders.bindingLocationIndecies[FRAGMENT][1], 1, glm::value_ptr(scene.cameraEye.eye));
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, scene.sceneLights.lightsBuffer);
 
     glm::mat4 inverseMV = transforms->inverseMV * localTransform;
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(transforms->MV));
-    glProgramUniformMatrix4fv(programs[VERTEX], bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
-    glProgramUniformMatrix4fv(programs[FRAGMENT], bindingLocationIndecies[FRAGMENT][2], 1, GL_FALSE, glm::value_ptr(inverseMV));
+    glProgramUniformMatrix4fv(shaders.programs[VERTEX], shaders.bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(transforms->MV));
+    glProgramUniformMatrix4fv(shaders.programs[VERTEX], shaders.bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
+    glProgramUniformMatrix4fv(shaders.programs[FRAGMENT], shaders.bindingLocationIndecies[FRAGMENT][2], 1, GL_FALSE, glm::value_ptr(inverseMV));
 
-    bindVertexBuffer(this->bufferViews, this->docDataBuffer);
-    bindTextures();
+    shaders.bindVertexBuffer(this->bufferViews, this->docDataBuffer);
+    material.bindTextures();
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
@@ -813,13 +845,16 @@ Scene::Scene(GUI& gui, WindowInfo& windowConfig)
     myGui.g.subscribe(*((Cloud*)cloudCube.get()));
     myGui.subscribeToEye(cameraEye);
     myGui.subscribeToLight(sceneLights);
+    myGui.selectedSceneFile.subscribe(fileListener);
 }
 
 void Scene::clear()
 {
+    glBindProgramPipeline(0); // TO DO: delete
+
     for (auto& primitive : primitives.primitives) {
-        primitive.deleteTexturesAndSamplers();
-        primitive.deletePipeline();
+        primitive.material.deleteTexturesAndSamplers();
+        primitive.shaders.deletePipeline();
         //if (primitive.transforms) delete primitive.transforms;
     }
     //if(cloudCube->transforms) delete cloudCube->transforms;
@@ -832,9 +867,7 @@ void Scene::clear()
 
     for (auto& primitive : primitives.primitives) {
         for (int i = VERTEX; i <= GEOMETRY; i++) {
-            if (primitive.bindingLocationIndecies[i]) free(primitive.bindingLocationIndecies[i]);
-        }
+            if (primitive.shaders.bindingLocationIndecies[i]) free(primitive.shaders.bindingLocationIndecies[i]);
+        } // shaders - delete that
     }
-
-
 }

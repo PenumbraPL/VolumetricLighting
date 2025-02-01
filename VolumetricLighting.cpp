@@ -21,25 +21,6 @@ auto consoleLogger{ std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>() }
 auto logger{ spdlog::logger("multi_sink", {bufferLogger, fileLogger, consoleLogger}) };
 
 
-/* ============================================================================= */
-
-
-class FileListener : public Observer{
-public:
-    bool fileChanged{ false };
-    virtual void notify() override {
-        fileChanged = true;
-        logger.info("fileChanged");
-    }
-
-    void reset() {
-        fileChanged = false;
-    }
-};
-
-
-/* ============================================================================= */
-
 
 GLFWwindow* initContext(WindowInfo windowConfig)
 {
@@ -102,28 +83,17 @@ int main()
 {
     GLFWwindow* mainWindow{ initContext(windowConfig) };
     myGui.addToWindow(mainWindow);
-    Scene scenes{ myGui, windowConfig };
 
-    FileListener fileListener;
-    myGui.selectedSceneFile.subscribe(fileListener);
-
-    /* ================================================ */
     do {
+        Scene scenes{ myGui, windowConfig };
         scenes.loadScene(myGui.getModelPath(), myGui.getModelName());
 
-        for (auto& light : scenes.sceneLights.lights) {
-            Matrix lightTransform;
-            lightTransform.MV = ((Light*)scenes.lightModel.get())->calcMV(light, scenes);
-            scenes.lightModel->transforms = new Matrix(lightTransform);  //TODO: dealloc needed
-        }
         //glDepthRange(myGui.near_plane, myGui.far_plane);
         glDepthFunc(GL_LEQUAL);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        fileListener.reset(); 
-
         logger.info("===================== Main loop ==============================================");
-        while (!glfwWindowShouldClose(mainWindow) && !fileListener.fileChanged) {
+        while (!glfwWindowShouldClose(mainWindow) && !scenes.fileChanged()) {
             int width, height;
             glfwGetFramebufferSize(mainWindow, &width, &height);
             glEnable(GL_DEPTH_TEST);
@@ -139,13 +109,7 @@ int main()
             glfwPollEvents();
         }
         logger.info("===================== End of loop ==============================================");
-        
-        for (auto& primitive : scenes.primitives.primitives) {
-            myGui.unsubscribeToView(*static_cast<GUIMatrix*>(primitive.transforms));
-        }
-
-        glBindProgramPipeline(0); // TO DO: delete
-        scenes.clear();
+    
     } while (!glfwWindowShouldClose(mainWindow));
 
     myGui.deleteImGui();
