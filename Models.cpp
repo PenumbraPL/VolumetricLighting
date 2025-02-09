@@ -635,9 +635,7 @@ void Light::draw(Scene& scene)
     //glBindVertexArray(shaders.vao);
     glBindProgramPipeline(shaders.pipeline);
 
-    glProgramUniformMatrix4fv(shaders.programs[VERTEX], shaders.bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(transforms->MV));
-    glProgramUniformMatrix4fv(shaders.programs[VERTEX], shaders.bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
-
+    shaders.bindUniform({ {{&transforms->MV, &scene.cameraEye.Projection}} });
  
     shaders.bindVertexBuffer(this->bufferViews, this->docDataBuffer);
     material.bindTextures();
@@ -713,9 +711,7 @@ void Environment::draw(Scene& scene)
 
     glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
     glm::mat4 MV = transforms->MV * Model * localTransform;
-    glProgramUniformMatrix4fv(shaders.programs[VERTEX], shaders.bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(MV));
-    glProgramUniformMatrix4fv(shaders.programs[VERTEX], shaders.bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
-
+    shaders.bindUniform({ {{&MV, &scene.cameraEye.Projection}} });
 
     shaders.bindVertexBuffer(this->bufferViews, this->docDataBuffer);
     material.bindTextures();
@@ -770,15 +766,14 @@ void Cloud::draw(Scene& scene)
     //glBindVertexArray(shaders.vao);
     glBindProgramPipeline(shaders.pipeline);
 
-    glProgramUniform1f(shaders.programs[FRAGMENT], shaders.bindingLocationIndecies[FRAGMENT][0], g);
-    glProgramUniform3fv(shaders.programs[FRAGMENT], shaders.bindingLocationIndecies[FRAGMENT][1], 1, glm::value_ptr(scene.cameraEye.eye));
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, scene.sceneLights.lightsBuffer);
 
     glm::mat4 inverseMV = transforms->inverseMV * localTransform;
-    glProgramUniformMatrix4fv(shaders.programs[VERTEX], shaders.bindingLocationIndecies[VERTEX][0], 1, GL_FALSE, glm::value_ptr(transforms->MV));
-    glProgramUniformMatrix4fv(shaders.programs[VERTEX], shaders.bindingLocationIndecies[VERTEX][1], 1, GL_FALSE, glm::value_ptr(scene.cameraEye.Projection));
-    glProgramUniformMatrix4fv(shaders.programs[FRAGMENT], shaders.bindingLocationIndecies[FRAGMENT][2], 1, GL_FALSE, glm::value_ptr(inverseMV));
+    shaders.bindUniform({ {
+        {&transforms->MV, &scene.cameraEye.Projection},
+        {&g, &scene.cameraEye.eye, &inverseMV}
+    } });
 
     shaders.bindVertexBuffer(this->bufferViews, this->docDataBuffer);
     material.bindTextures();
