@@ -156,6 +156,8 @@ struct ShadersPipeline {
     GLuint normalsBindingLocation;
     GLuint textureBindingLocation;
     GLuint* bindingLocationIndecies[5] = { nullptr };
+    BindingPointCollection bindingNames;
+    GLenum* bindingTypes[5] = { nullptr };
 
     DrawShader ds[5] = { DRAW_VERTEX, DRAW_FRAGMENT, DRAW_TESS_CTR, DRAW_TESS_EV, DRAW_GEOMETRY };
     DrawShaderBit dsb[5] = { DRAW_VERTEX_BIT, DRAW_FRAGMENT_BIT, DRAW_TESS_CTR_BIT, DRAW_TESS_EV_BIT , DRAW_GEOMETRY_BIT };
@@ -166,6 +168,7 @@ struct ShadersPipeline {
     void getLocation(BindingPointCollection uniformNames);
     void processMesh(AkMeshPrimitive* primitive);
     void bindVertexBuffer(std::map <void*, unsigned int>& bufferViews, GLuint* docDataBuffer);
+    void bindUniform(std::array<std::vector<void*>, 5> values);
 };
 
 struct Drawable {
@@ -213,7 +216,7 @@ struct Primitives {
             primitive.shaders.createPipeline(defaultModel);
             primitive.shaders.getLocation({ {
                 {"MV", "PRJ"},
-                {"camera", "_metalic", "_roughness", "_albedo_color", "ao_color", "_is_tex_bound", "inverseMV"}
+                {"camera", "_metalic", "_roughness", "_albedo_color", /*"ao_color",*/ "_is_tex_bound", "inverseMV"}
             } });
             primitive.transforms = new GUIMatrix();   //TODO: dealloc needed
             myGui.subscribeToView(*static_cast<GUIMatrix*>(primitive.transforms));
