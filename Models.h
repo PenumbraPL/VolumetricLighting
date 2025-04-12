@@ -83,9 +83,10 @@ struct Scene;
 class Matrix {
 public:
     Matrix() {}
-    Matrix(glm::mat4 localTransform) : localTransform{ localTransform } {}
+    Matrix(float scale, glm::mat4 localTransform) : scale{ scale }, localTransform { localTransform } {}
 
-    glm::mat4 localTransform = glm::mat4(1.);
+    float scale = 1.f;
+    glm::mat4 localTransform;
     glm::mat4 Projection = glm::mat4(1.);
     glm::mat4 MVP = glm::mat4(1.);
     glm::mat4 MV = glm::mat4(1.);
@@ -95,7 +96,7 @@ public:
 class GUIMatrix : public Matrix, public Observer {
 public:
     GUIMatrix() {}
-    GUIMatrix(glm::mat4 localTransform) : Matrix{ localTransform } {}
+    GUIMatrix(float scale, glm::mat4 localTransform) : Matrix{ scale, localTransform } {}
 
     void setProjection(int width, int height) {
         //if(!camera)
@@ -111,7 +112,7 @@ public:
         glm::mat4 View =
             glm::rotate(
                 glm::rotate(
-                    glm::translate(localTransform,
+                    glm::translate(glm::mat4(1.),
                         translate)
                     , rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
                 rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -121,10 +122,16 @@ public:
         inverseMV = glm::inverse(LookAt) *
             glm::rotate(
                 glm::rotate(
-                    glm::translate(localTransform,
+                    glm::translate(glm::mat4(1.),
                         -translate)
                     , -rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f)),
                 -rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+
+
+        // Propebly to relocate in the future
+        glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(scale));
+        MV = MV * Model * localTransform; // check is it correct?
+        inverseMV = glm::inverse(Model) * inverseMV * localTransform;
     }
 
     virtual void notify() {
@@ -172,7 +179,9 @@ struct ShadersPipeline {
 };
 
 struct Drawable {
-    Drawable(){}
+    Drawable(){
+        transforms = new Matrix{}; // TODO: dealloc 
+    }
     Drawable(Matrix* transforms) : transforms(transforms) {}
     ~Drawable(){}
 
@@ -184,8 +193,6 @@ struct Drawable {
     ShadersPipeline shaders;
     Scene* scene;
 
-    glm::mat4 worldTransform;
-    glm::mat4 localTransform;
     Matrix* transforms;
 
 
@@ -218,7 +225,7 @@ struct Primitives {
                 {"MV", "PRJ"},
                 {"camera", "_metalic", "_roughness", "_albedo_color", /*"ao_color",*/ "_is_tex_bound", "inverseMV"}
             } });
-            primitive.transforms = new GUIMatrix();   //TODO: dealloc needed
+            primitive.transforms = new GUIMatrix(1.0, primitive.transforms->localTransform);   //TODO: dealloc needed
             myGui.subscribeToView(*static_cast<GUIMatrix*>(primitive.transforms));
         }
     }
@@ -254,7 +261,7 @@ struct Environment : public Drawable {
     static std::unique_ptr<Drawable> createDrawable(Scene* scene) {
         auto env = std::make_unique<Environment>();
         env->scene = scene;
-        env->transforms = new GUIMatrix(); //TODO: dealloc needed
+        env->transforms = new GUIMatrix(2., env->transforms->localTransform); //TODO: dealloc needed
         env->loadMesh();
         env->shaders.createPipeline({ "res/shaders/environment_vec.glsl", "res/shaders/environment_frag.glsl" });
         env->shaders.getLocation({ {{"MV", "PRJ"}} });
@@ -274,7 +281,7 @@ struct Cloud : public Drawable, public Observer {
     static std::unique_ptr<Drawable> createDrawable(Scene* scene) {
         auto cld = std::make_unique<Cloud>();
         cld->scene = scene;
-        cld->transforms = new GUIMatrix(); //TODO: dealloc needed
+        cld->transforms = new GUIMatrix(2., cld->transforms->localTransform); //TODO: dealloc needed
         cld->loadMesh();
         cld->shaders.createPipeline({ "res/shaders/depth_ver.glsl", "res/shaders/depth_frag.glsl" });
         cld->shaders.getLocation({ { {"MV", "PRJ"}, {"G", "camera", "inverseMV"}}});
@@ -284,8 +291,8 @@ struct Cloud : public Drawable, public Observer {
 
 
 struct Camera : Observer{
-    glm::mat4x4 localTransform;
-    glm::mat4x4 worldTransform;
+    //glm::mat4x4 localTransform;
+    //glm::mat4x4 worldTransform;
     glm::vec4 viewDirection;
     glm::vec3 eye;
     float zNear;

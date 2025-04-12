@@ -235,10 +235,10 @@ void ShadersPipeline::bindVertexBuffer(std::map <void*, unsigned int>& bufferVie
 void Drawable::loadMatrix(AkNode* node)
 {
     float t1[16], t2[16];
-    ak_transformCombineWorld(node, t1);
+    //ak_transformCombineWorld(node, t1);
     ak_transformCombine(node, t2);
-    worldTransform = glm::make_mat4x4(t1);
-    localTransform = glm::make_mat4x4(t2);
+    //worldTransform = glm::make_mat4x4(t1);
+    transforms->localTransform = glm::make_mat4x4(t2);
 }
 /*
 cloud
@@ -279,9 +279,7 @@ void Drawable::draw(Scene& scene)
 {
     glm::vec3 camera_view = scene.cameraEye.eye;
     glm::vec3 camera_dir = glm::vec3(0.) - scene.cameraEye.eye;
-    glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
-    glm::mat4 MV = transforms->MV * Model * localTransform; // check is it correct?
-    glm::mat4 inverseMV = glm::inverse(Model) * transforms->inverseMV * localTransform;
+
     glm::ivec4 isTex;
     isTex.r = material.textures[MET_ROUGH] ? 1 : 0;
     isTex.g = material.textures[MET_ROUGH] ? 1 : 0;
@@ -296,9 +294,9 @@ void Drawable::draw(Scene& scene)
 
     // same arguments and same order as createpipeline
     shaders.bindUniform({ { 
-        {&MV, &scene.cameraEye.Projection},
+        {&transforms->MV, &scene.cameraEye.Projection},
         {&camera_view, &material.colors[MET_ROUGH].g, &material.colors[MET_ROUGH].r, 
-        &material.colors[ALBEDO], &isTex, &inverseMV} 
+        &material.colors[ALBEDO], &isTex, &transforms->inverseMV} 
     } });
 
     shaders.bindVertexBuffer(scene.bufferViews, scene.docDataBuffer); // vbo
@@ -708,10 +706,7 @@ void Environment::draw(Scene& scene)
     //glBindVertexArray(shaders.vao);
     glBindProgramPipeline(shaders.pipeline);
 
-
-    glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(2.f));
-    glm::mat4 MV = transforms->MV * Model * localTransform;
-    shaders.bindUniform({ {{&MV, &scene.cameraEye.Projection}} });
+    shaders.bindUniform({ {{&transforms->MV, &scene.cameraEye.Projection}} });
 
     shaders.bindVertexBuffer(this->bufferViews, this->docDataBuffer);
     material.bindTextures();
@@ -769,10 +764,9 @@ void Cloud::draw(Scene& scene)
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, scene.sceneLights.lightsBuffer);
 
-    glm::mat4 inverseMV = transforms->inverseMV * localTransform;
     shaders.bindUniform({ {
         {&transforms->MV, &scene.cameraEye.Projection},
-        {&g, &scene.cameraEye.eye, &inverseMV}
+        {&g, &scene.cameraEye.eye, &transforms->inverseMV}
     } });
 
     shaders.bindVertexBuffer(this->bufferViews, this->docDataBuffer);
@@ -853,7 +847,7 @@ SceneLights::~SceneLights() {
 
 glm::mat4 Light::calcMV(PointLight& light, Scene& scenes) {
     glm::mat4x4 View =
-        glm::translate(localTransform, light.position);
+        glm::translate(transforms->localTransform, light.position);
     glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(.2f));
     glm::mat4 LookAt = myGui.getLookAt();
     glm::mat4 transforms = LookAt * View * Model;
