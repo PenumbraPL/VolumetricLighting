@@ -273,8 +273,8 @@ cloud
 void Drawable::processMesh(AkMeshPrimitive* primitive)
 {
     if (primitive->indices) {
-        verticleIndecies = (uint32_t*)primitive->indices->items;
-        verticleIndeciesSize = (unsigned int)primitive->indices->count;
+        allAssets.verticleIndecies = (uint32_t*)primitive->indices->items;
+        allAssets.verticleIndeciesSize = (unsigned int)primitive->indices->count;
     }
 
     shaders.processMesh(primitive);
@@ -314,16 +314,16 @@ void Drawable::draw(Scene& scene)
     shaders.bindVertexBuffer(scene.bufferViews, scene.docDataBuffer); // vbo
     material.bindTextures(); // bind textures
 
-    glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
+    glDrawElements(GL_TRIANGLES, allAssets.verticleIndeciesSize, GL_UNSIGNED_INT, allAssets.verticleIndecies);
 }
 
 
 
 void Drawable::allocAll(AkDoc* doc)
 {
-    alloc<AkImage>(doc, this->imageViews);
-    alloc<AkBuffer>(doc, this->bufferViews);
-    alloc<AkTexture>(doc, this->textureViews);
+    alloc<AkImage>(doc, this->allAssets.imageViews);
+    alloc<AkBuffer>(doc, this->allAssets.bufferViews);
+    alloc<AkTexture>(doc, this->allAssets.textureViews);
 }
 
 
@@ -332,10 +332,10 @@ GLuint* Drawable::parseBuffors()
     //  glGenVertexArrays(1, &vao);
         // glBindVertexArray(vao);
 
-    GLuint* docDataBuffer = (GLuint*)calloc(bufferViews.size(), sizeof(GLuint));
-    glCreateBuffers((GLsizei)bufferViews.size(), docDataBuffer);
-    for (auto& buffer : bufferViews) {
-        unsigned int i = bufferViews[buffer.first];
+    GLuint* docDataBuffer = (GLuint*)calloc(allAssets.bufferViews.size(), sizeof(GLuint));
+    glCreateBuffers((GLsizei) allAssets.bufferViews.size(), docDataBuffer);
+    for (auto& buffer : allAssets.bufferViews) {
+        unsigned int i = allAssets.bufferViews[buffer.first];
         glNamedBufferData(docDataBuffer[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
     }
     return docDataBuffer;
@@ -568,12 +568,12 @@ void Light::draw(Scene& scene)
 
     shaders.bindUniform({ {{&transforms->MV, &scene.cameraEye.Projection}} });
  
-    shaders.bindVertexBuffer(this->bufferViews, this->docDataBuffer);
+    shaders.bindVertexBuffer(this->allAssets.bufferViews, this->docDataBuffer);
     material.bindTextures();
 
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
+    glDrawElements(GL_TRIANGLES, allAssets.verticleIndeciesSize, GL_UNSIGNED_INT, allAssets.verticleIndecies);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
@@ -640,14 +640,14 @@ void Environment::draw(Scene& scene)
 
     shaders.bindUniform({ {{&transforms->MV, &scene.cameraEye.Projection}} });
 
-    shaders.bindVertexBuffer(this->bufferViews, this->docDataBuffer);
+    shaders.bindVertexBuffer(this->allAssets.bufferViews, this->docDataBuffer);
     material.bindTextures();
 
     glBindSampler(0, env_sampler);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, skybox);
 
-    glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
+    glDrawElements(GL_TRIANGLES, allAssets.verticleIndeciesSize, GL_UNSIGNED_INT, allAssets.verticleIndecies);
 }
 
 
@@ -700,12 +700,12 @@ void Cloud::draw(Scene& scene)
         {&g, &scene.cameraEye.eye, &transforms->inverseMV}
     } });
 
-    shaders.bindVertexBuffer(this->bufferViews, this->docDataBuffer);
+    shaders.bindVertexBuffer(this->allAssets.bufferViews, this->docDataBuffer);
     material.bindTextures();
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
-    glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
+    glDrawElements(GL_TRIANGLES, allAssets.verticleIndeciesSize, GL_UNSIGNED_INT, allAssets.verticleIndecies);
     glDisable(GL_BLEND);
     glDisable(GL_CULL_FACE);
 }

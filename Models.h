@@ -179,6 +179,17 @@ struct ShadersPipeline {
     void bindUniform(std::array<std::vector<void*>, 5> values);
 };
 
+
+struct PrintableResources {
+    uint32_t* verticleIndecies = nullptr;
+    unsigned int verticleIndeciesSize;
+    OrderedAssets bufferViews;
+    OrderedAssets textureViews;
+    OrderedAssets imageViews;
+};
+
+
+
 struct Drawable {
     Drawable(){
         transforms = new Matrix{}; // TODO: dealloc 
@@ -186,18 +197,11 @@ struct Drawable {
     Drawable(Matrix* transforms) : transforms(transforms) {}
     ~Drawable(){}
 
-    uint32_t* verticleIndecies = nullptr;
-    unsigned int verticleIndeciesSize;
-
     Material material;
     ShadersPipeline shaders;
     Scene* scene;
     Matrix* transforms;
-
-    OrderedAssets bufferViews;
-    OrderedAssets textureViews;
-    OrderedAssets imageViews;
-
+    PrintableResources allAssets;
 
     void loadMatrix(AkNode* node);
     virtual void processMesh(AkMeshPrimitive* primitive);
