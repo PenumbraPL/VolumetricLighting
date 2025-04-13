@@ -258,11 +258,9 @@ void ShadersPipeline::bindVertexBuffer(OrderedAssets& bufferViews, GLuint* docDa
 
 void Drawable::loadMatrix(AkNode* node)
 {
-    float t1[16], t2[16];
-    //ak_transformCombineWorld(node, t1);
-    ak_transformCombine(node, t2);
-    //worldTransform = glm::make_mat4x4(t1);
-    transforms->localTransform = glm::make_mat4x4(t2);
+    float rawTransform[16];
+    ak_transformCombine(node, rawTransform);
+    transforms->localTransform = glm::make_mat4x4(rawTransform);
 }
 /*
 cloud
