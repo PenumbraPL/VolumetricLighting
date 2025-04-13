@@ -224,7 +224,7 @@ struct Primitives {
     //OrderedAssets imageViews; // currently not used
 
     GLuint* parseBuffors();
-    void allocAll(AkDoc* doc);
+    void sendAssets(AkDoc* doc);
 
     void initPrimitives(){
         for (auto& primitive : primitives) {
@@ -235,7 +235,7 @@ struct Primitives {
             primitive.shaders.getLocation({ {
                 {"MV", "PRJ"},
                 {"camera", "_metalic", "_roughness", "_albedo_color", /*"ao_color",*/ "_is_tex_bound", "inverseMV"}
-            } });
+            } }); // unnessesery allocation for all primitives TODO : just one allocation here and drawable assigned with pointer to bindinglocation and etc.
             primitive.transforms = new GUIMatrix(1.0, primitive.transforms->localTransform);   //TODO: dealloc needed
             myGui.subscribeToView(*static_cast<GUIMatrix*>(primitive.transforms));
         }
@@ -352,23 +352,20 @@ public:
 
 
 struct Scene {
-    Camera cameraEye;
-    std::map <void*, Material> materials;
-    SceneLights sceneLights;
-
     FileListener fileListener;
+    std::map <void*, Material> materials;
+
+    Camera cameraEye;
+    SceneLights sceneLights;
 
     Primitives primitives; // unique ptr?
     std::unique_ptr<Drawable> skySphere; // generic list of ... ?
     std::unique_ptr<Drawable> cloudCube; // generic list of ... ?
     std::unique_ptr<Drawable> lightModel; // generic list of ... ?
 
-    void populateScene(GUI& gui, WindowInfo& windowConfig);
     Scene(GUI& gui, WindowInfo& windowConfig);
     ~Scene();
     AkDoc* loadScene(std::string scenePath, std::string sceneName);
-    //void allocAll(AkDoc* doc);
-    //GLuint* parseBuffors();
     AkCamera* loadCamera(AkDoc* doc);
     void draw();
     void clear();

@@ -311,8 +311,7 @@ void Drawable::draw(Scene& scene)
         &material.colors[ALBEDO], &isTex, &transforms->inverseMV} 
     } });
 
-    //shaders.bindVertexBuffer(scene.primitives.bufferViews, scene.primitives.docDataBuffer); // vbo
-    shaders.bindVertexBuffer(*allAssets.bufferViews, scene.primitives.docDataBuffer); // TODO: change scene.primitive to allAssets
+    shaders.bindVertexBuffer(*allAssets.bufferViews, allAssets.docDataBuffer);  // vbo
     material.bindTextures(); // bind textures
 
     glDrawElements(GL_TRIANGLES, allAssets.verticleIndeciesSize, GL_UNSIGNED_INT, allAssets.verticleIndecies);
@@ -449,8 +448,7 @@ AkDoc* Scene::loadScene(std::string scenePath, std::string sceneName)
     
     loadCamera(doc);
 
-    primitives.allocAll(doc); // dealloc? 
-    primitives.docDataBuffer = primitives.parseBuffors(); // TODO: Bind this two lines
+    primitives.sendAssets(doc); // dealloc? 
     AkNode* rootNode = ak_instanceObjectNode(scene->node);
     proccessNode(rootNode, primitives.primitives, this);
     primitives.initPrimitives();
@@ -502,11 +500,13 @@ Scene::~Scene()
 
 
 
-void Primitives::allocAll(AkDoc* doc)
+void Primitives::sendAssets(AkDoc* doc)
 {
     //alloc<AkImage>(doc, this->primitives.imageViews);
     alloc<AkBuffer>(doc, bufferViews);
     //alloc<AkTexture>(doc, this->primitives.textureViews);
+
+    docDataBuffer = parseBuffors();
 }
 
 GLuint* Primitives::parseBuffors()
