@@ -288,16 +288,6 @@ void Drawable::processMesh(AkMeshPrimitive* primitive)
     //}
 }
 
-// hide in some way shaders
-//void Drawable::allocUnique()
-//{
-//    for (int i = 0; i < 7; i++) {
-//        if (shaders.accessor[i]) {
-//            glCreateBuffers(1, &primitiveDataBuffer[i]);
-//            glNamedBufferData(primitiveDataBuffer[i], shaders.accessor[i]->buffer->length, shaders.accessor[i]->buffer->data, GL_STATIC_DRAW);
-//        }
-//    }
-//}
 
 void Drawable::draw(Scene& scene)
 {
@@ -618,7 +608,6 @@ void Environment::loadMesh()
         if ((AkGeometryType)geometry->gdata->type) {
             if (mesh) {
                 processMesh(mesh->primitive);
-               // allocUnique();
             }
         }
     }
@@ -691,7 +680,6 @@ void Cloud::loadMesh()
         if ((AkGeometryType)geometry->gdata->type) {
             if (mesh) {
                 processMesh(mesh->primitive);
-                //allocUnique();
             };
         }
     }

@@ -207,8 +207,6 @@ struct Drawable {
     GLuint* parseBuffors();
     void allocAll(AkDoc* doc);
     virtual void loadMesh() {};
-protected:
-    //void allocUnique();
 };
 
 
