@@ -34,6 +34,30 @@ void imageFlipVerticallyOnLoad(bool flip)
 }
 
 
+// Possible assettypes:
+// - AkImage
+// - AkBuffer
+// - AkTexture
+// - propably others ...
+template <typename AssetType>
+void alloc(AkDoc* doc, OrderedAssets& dataViews)
+{
+    dataViews.clear();
+    // What with and libimages ??
+    int j = 0;
+    FListItem* i = (typeid(AkBuffer) == typeid(AssetType)) ? (FListItem*)doc->lib.buffers : doc->lib.images;
+    if (i) {
+        do {
+            AssetType* img = (AssetType*)i->data;
+            dataViews.insert({ {img, 0} });
+            i = i->next;
+        } while (i);
+        for (auto& u : dataViews) {
+            u.second = j++;
+        }
+    }
+}
+
 
 
 void ShadersPipeline::createPipeline(ShadersSources shaderPath)
@@ -205,7 +229,7 @@ void ShadersPipeline::processMesh(AkMeshPrimitive* primitive)
 }
 
 
-void ShadersPipeline::bindVertexBuffer(std::map <void*, unsigned int>& bufferViews, GLuint* docDataBuffer)
+void ShadersPipeline::bindVertexBuffer(OrderedAssets& bufferViews, GLuint* docDataBuffer)
 {
     int j;
     int binding_point;
@@ -265,15 +289,15 @@ void Drawable::processMesh(AkMeshPrimitive* primitive)
 }
 
 // hide in some way shaders
-void Drawable::allocUnique()
-{
-    for (int i = 0; i < 7; i++) {
-        if (shaders.accessor[i]) {
-            glCreateBuffers(1, &primitiveDataBuffer[i]);
-            glNamedBufferData(primitiveDataBuffer[i], shaders.accessor[i]->buffer->length, shaders.accessor[i]->buffer->data, GL_STATIC_DRAW);
-        }
-    }
-}
+//void Drawable::allocUnique()
+//{
+//    for (int i = 0; i < 7; i++) {
+//        if (shaders.accessor[i]) {
+//            glCreateBuffers(1, &primitiveDataBuffer[i]);
+//            glNamedBufferData(primitiveDataBuffer[i], shaders.accessor[i]->buffer->length, shaders.accessor[i]->buffer->data, GL_STATIC_DRAW);
+//        }
+//    }
+//}
 
 void Drawable::draw(Scene& scene)
 {
@@ -300,7 +324,6 @@ void Drawable::draw(Scene& scene)
     } });
 
     shaders.bindVertexBuffer(scene.bufferViews, scene.docDataBuffer); // vbo
-    //bindTextures();        // delete ? - replacement belowe
     material.bindTextures(); // bind textures
 
     glDrawElements(GL_TRIANGLES, verticleIndeciesSize, GL_UNSIGNED_INT, verticleIndecies);
@@ -308,54 +331,13 @@ void Drawable::draw(Scene& scene)
 
 
 
-
-
 void Drawable::allocAll(AkDoc* doc)
 {
-    bufferViews.clear();
-    textureViews.clear();
-    imageViews.clear();
-
-    // What with and libimages ??
-    int j = 0;
-    FListItem* i = doc->lib.images;
-    if (i) {
-        do {
-            AkImage* img = (AkImage*)i->data;
-            imageViews.insert({ {img, 0} });
-            i = i->next;
-        } while (i);
-        for (auto& u : imageViews) {
-            u.second = j++;
-        }
-    }
-
-    j = 0;
-    FListItem* t = doc->lib.textures;
-    if (t) {
-        do {
-            AkTexture* tex = (AkTexture*)t->data;
-            textureViews.insert({ {tex, 0} });
-            t = t->next;
-        } while (t);
-        for (auto& u : textureViews) {
-            u.second = j++;
-        }
-    }
-
-    j = 0;
-    FListItem* b = (FListItem*)doc->lib.buffers;
-    if (b) {
-        do {
-            AkBuffer* buf = (AkBuffer*)b->data;
-            bufferViews.insert({ {buf, 0} });
-            b = b->next;
-        } while (b);
-        for (auto& u : bufferViews) {
-            u.second = j++;
-        }
-    }
+    alloc<AkImage>(doc, this->imageViews);
+    alloc<AkBuffer>(doc, this->bufferViews);
+    alloc<AkTexture>(doc, this->textureViews);
 }
+
 
 GLuint* Drawable::parseBuffors()
 {
@@ -520,52 +502,15 @@ Scene::~Scene()
     lightModel->shaders.deletePipeline();
 }
 
+
+
 void Scene::allocAll(AkDoc* doc)
 {
-    bufferViews.clear();
-    textureViews.clear();
-    imageViews.clear();
-
-    // What with and libimages ??
-    int j = 0;
-    FListItem* i = doc->lib.images;
-    if (i) {
-        do {
-            AkImage* img = (AkImage*)i->data;
-            imageViews.insert({ {img, 0} });
-            i = i->next;
-        } while (i);
-        for (auto& u : imageViews) {
-            u.second = j++;
-        }
-    }
-
-    j = 0;
-    FListItem* t = doc->lib.textures;
-    if (t) {
-        do {
-            AkTexture* tex = (AkTexture*)t->data;
-            textureViews.insert({ {tex, 0} });
-            t = t->next;
-        } while (t);
-        for (auto& u : textureViews) {
-            u.second = j++;
-        }
-    }
-
-    j = 0;
-    FListItem* b = (FListItem*)doc->lib.buffers;
-    if (b) {
-        do {
-            AkBuffer* buf = (AkBuffer*)b->data;
-            bufferViews.insert({ {buf, 0} });
-            b = b->next;
-        } while (b);
-        for (auto& u : bufferViews) {
-            u.second = j++;
-        }
-    }
+    alloc<AkImage>(doc, this->imageViews);
+    alloc<AkBuffer>(doc, this->bufferViews);
+    alloc<AkTexture>(doc, this->textureViews);
 }
+
 GLuint* Scene::parseBuffors()
 {
     //  glGenVertexArrays(1, &vao);
@@ -673,7 +618,7 @@ void Environment::loadMesh()
         if ((AkGeometryType)geometry->gdata->type) {
             if (mesh) {
                 processMesh(mesh->primitive);
-                allocUnique();
+               // allocUnique();
             }
         }
     }

@@ -11,6 +11,7 @@ extern GUI myGui;
 typedef std::vector<std::string> BindingPointList;
 typedef std::array<BindingPointList, 5> BindingPointCollection;
 typedef std::array<std::string, 5> ShadersSources;
+typedef std::map <void*, unsigned int> OrderedAssets;
 
 enum TextureType {
     AMBIENT,
@@ -148,7 +149,7 @@ struct Material {
     glm::vec4 colors[8] = { glm::vec4(0) };
 
     void bindTextures();
-    void bindVertexBuffer(std::map <void*, unsigned int>& bufferViews, GLuint* docDataBuffer);
+    void bindVertexBuffer(OrderedAssets& bufferViews, GLuint* docDataBuffer);
     void deleteTexturesAndSamplers(); // how many to delete?
 };
 
@@ -174,7 +175,7 @@ struct ShadersPipeline {
     void bindVertexArray();
     void getLocation(BindingPointCollection uniformNames);
     void processMesh(AkMeshPrimitive* primitive);
-    void bindVertexBuffer(std::map <void*, unsigned int>& bufferViews, GLuint* docDataBuffer);
+    void bindVertexBuffer(OrderedAssets& bufferViews, GLuint* docDataBuffer);
     void bindUniform(std::array<std::vector<void*>, 5> values);
 };
 
@@ -187,29 +188,27 @@ struct Drawable {
 
     uint32_t* verticleIndecies = nullptr;
     unsigned int verticleIndeciesSize;
-    GLuint primitiveDataBuffer[7] = { 0xffffffff };
+   // GLuint primitiveDataBuffer[7] = { 0xffffffff };
 
     Material material;
     ShadersPipeline shaders;
     Scene* scene;
-
     Matrix* transforms;
 
+    OrderedAssets bufferViews;
+    OrderedAssets textureViews;
+    OrderedAssets imageViews;
 
-    std::map <void*, unsigned int> bufferViews;
-    std::map <void*, unsigned int> textureViews;
-    std::map <void*, unsigned int> imageViews;
-    GLuint* docDataBuffer;
 
     void loadMatrix(AkNode* node);
     virtual void processMesh(AkMeshPrimitive* primitive);
     virtual void draw(Scene& scene);
-    void bindVertexBuffer(std::map <void*, unsigned int>& bufferViews, GLuint* docDataBuffer);
+    void bindVertexBuffer(OrderedAssets& bufferViews, GLuint* docDataBuffer);
     GLuint* parseBuffors();
     void allocAll(AkDoc* doc);
     virtual void loadMesh() {};
 protected:
-    void allocUnique();
+    //void allocUnique();
 };
 
 
@@ -237,6 +236,7 @@ struct Light : public Drawable {
     glm::vec4 direction = glm::vec4(0, 0, 0, 0);
     glm::vec3 color = glm::vec3(1.0, 1.0, 1.0);
     float intensity = 1.0;
+    GLuint* docDataBuffer;
 
     void loadMesh() override;
     virtual void draw(Scene& scene) override;
@@ -255,7 +255,8 @@ struct Light : public Drawable {
 struct Environment : public Drawable {
     GLuint skybox;
     GLuint env_sampler;
-    
+    GLuint* docDataBuffer;
+
     void loadMesh() override;
     virtual void draw(Scene& scene) override;
     static std::unique_ptr<Drawable> createDrawable(Scene* scene) {
@@ -272,7 +273,8 @@ struct Environment : public Drawable {
 
 struct Cloud : public Drawable, public Observer {
     float g = 0.;
-    
+    GLuint* docDataBuffer;
+
     void loadMesh() override;
     virtual void draw(Scene& scene) override;
     virtual void notify() override {
@@ -340,9 +342,9 @@ public:
 struct Scene {
     Primitives primitives;
     Camera cameraEye;
-    std::map <void*, unsigned int> bufferViews;
-    std::map <void*, unsigned int> textureViews;
-    std::map <void*, unsigned int> imageViews;
+    OrderedAssets bufferViews;
+    OrderedAssets textureViews;
+    OrderedAssets imageViews;
     std::map <void*, Material> materials;
     GLuint* docDataBuffer;
     SceneLights sceneLights;
@@ -351,6 +353,7 @@ struct Scene {
     std::unique_ptr<Drawable> skySphere;
     std::unique_ptr<Drawable> cloudCube;
     std::unique_ptr<Drawable> lightModel;
+
     void populateScene(GUI& gui, WindowInfo& windowConfig);
     Scene(GUI& gui, WindowInfo& windowConfig);
     ~Scene();
