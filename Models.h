@@ -223,6 +223,8 @@ struct Primitives {
     //OrderedAssets textureViews; // currently not used
     //OrderedAssets imageViews; // currently not used
 
+    GLuint* parseBuffors();
+    void allocAll(AkDoc* doc);
 
     void initPrimitives(){
         for (auto& primitive : primitives) {
@@ -365,8 +367,8 @@ struct Scene {
     Scene(GUI& gui, WindowInfo& windowConfig);
     ~Scene();
     AkDoc* loadScene(std::string scenePath, std::string sceneName);
-    void allocAll(AkDoc* doc);
-    GLuint* parseBuffors();
+    //void allocAll(AkDoc* doc);
+    //GLuint* parseBuffors();
     AkCamera* loadCamera(AkDoc* doc);
     void draw();
     void clear();

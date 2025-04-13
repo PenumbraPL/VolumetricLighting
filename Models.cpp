@@ -124,8 +124,8 @@ void ShadersPipeline::getLocation(BindingPointCollection uniformNames)
     bindingNames = uniformNames;
     for (int i = VERTEX; i <= GEOMETRY; i++) {
         if (uniformNames[i].size()) {
-            bindingLocationIndecies[i] = (GLuint*)calloc(uniformNames[i].size(), sizeof(GLuint));
-            bindingTypes[i] = (GLenum*)calloc(uniformNames[i].size(), sizeof(GLenum));
+            bindingLocationIndecies[i] = new GLuint[ uniformNames[i].size() ];
+            bindingTypes[i] = new GLenum[ uniformNames[i].size() ];
             for (int j = 0; j < uniformNames[i].size(); j++) {
                 bindingLocationIndecies[i][j] = glGetUniformLocation(programs[i], uniformNames[i].data()[j].c_str());
                 if (bindingLocationIndecies[i][j] != 0xFFFFFFFF) {
@@ -311,7 +311,8 @@ void Drawable::draw(Scene& scene)
         &material.colors[ALBEDO], &isTex, &transforms->inverseMV} 
     } });
 
-    shaders.bindVertexBuffer(scene.primitives.bufferViews, scene.primitives.docDataBuffer); // vbo
+    //shaders.bindVertexBuffer(scene.primitives.bufferViews, scene.primitives.docDataBuffer); // vbo
+    shaders.bindVertexBuffer(*allAssets.bufferViews, scene.primitives.docDataBuffer); // TODO: change scene.primitive to allAssets
     material.bindTextures(); // bind textures
 
     glDrawElements(GL_TRIANGLES, allAssets.verticleIndeciesSize, GL_UNSIGNED_INT, allAssets.verticleIndecies);
@@ -445,14 +446,15 @@ AkDoc* Scene::loadScene(std::string scenePath, std::string sceneName)
             { rawMaterialPtr, processMaterial((AkMaterial*) rawMaterialPtr) }
         );
     }
+    
+    loadCamera(doc);
 
+    primitives.allocAll(doc); // dealloc? 
+    primitives.docDataBuffer = primitives.parseBuffors(); // TODO: Bind this two lines
     AkNode* rootNode = ak_instanceObjectNode(scene->node);
     proccessNode(rootNode, primitives.primitives, this);
     primitives.initPrimitives();
-    loadCamera(doc);
 
-    allocAll(doc);
-    primitives.docDataBuffer = parseBuffors();
     fileListener.reset();
 
     for (auto& light : sceneLights.lights) {
@@ -500,20 +502,20 @@ Scene::~Scene()
 
 
 
-void Scene::allocAll(AkDoc* doc)
+void Primitives::allocAll(AkDoc* doc)
 {
     //alloc<AkImage>(doc, this->primitives.imageViews);
-    alloc<AkBuffer>(doc, this->primitives.bufferViews);
+    alloc<AkBuffer>(doc, bufferViews);
     //alloc<AkTexture>(doc, this->primitives.textureViews);
 }
 
-GLuint* Scene::parseBuffors()
+GLuint* Primitives::parseBuffors()
 {
     // no cast, no sizeof, checkif if memory was references is not required
-    GLuint* parsedBufferRef = new GLuint[ primitives.bufferViews.size() ];
-    glCreateBuffers((GLsizei) primitives.bufferViews.size(), parsedBufferRef);
-    for (auto& buffer : primitives.bufferViews) {
-        unsigned int i = primitives.bufferViews[buffer.first];
+    GLuint* parsedBufferRef = new GLuint[ bufferViews.size() ];
+    glCreateBuffers((GLsizei) bufferViews.size(), parsedBufferRef);
+    for (auto& buffer : bufferViews) {
+        unsigned int i = bufferViews[buffer.first];
         glNamedBufferData(parsedBufferRef[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
     }
 
@@ -836,15 +838,6 @@ void Scene::clear()
         primitive.material.deleteTexturesAndSamplers();
         primitive.shaders.deletePipeline();
         //if (primitive.transforms) delete primitive.transforms;
-        if (primitive.allAssets.imageViews) {
-            delete primitive.allAssets.imageViews;
-        }
-        if (primitive.allAssets.bufferViews) {
-            delete primitive.allAssets.bufferViews;
-        }
-        if (primitive.allAssets.textureViews) {
-            delete primitive.allAssets.textureViews;
-        }
     }
     //if(cloudCube->transforms) delete cloudCube->transforms;
     //if(skySphere->transforms) delete skySphere->transforms;
@@ -856,8 +849,8 @@ void Scene::clear()
 
     for (auto& primitive : primitives.primitives) {
         for (int i = VERTEX; i <= GEOMETRY; i++) {
-            if (primitive.shaders.bindingLocationIndecies[i]) free(primitive.shaders.bindingLocationIndecies[i]);
-            if (primitive.shaders.bindingTypes[i]) free(primitive.shaders.bindingTypes[i]);
+            if (primitive.shaders.bindingLocationIndecies[i]) delete[] primitive.shaders.bindingLocationIndecies[i];
+            if (primitive.shaders.bindingTypes[i]) delete[] primitive.shaders.bindingTypes[i];
         } // shaders - delete that
     }
 }

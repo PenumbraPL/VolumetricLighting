@@ -226,6 +226,8 @@ void proccessNode(AkNode* node, std::vector<Drawable>& primitives, Scene* scene)
                     primitive.scene = scene;
                     primitive.loadMatrix(node);
                     primitive.processMesh(ptr);
+                    primitive.allAssets.bufferViews = &scene->primitives.bufferViews;
+                    primitive.allAssets.docDataBuffer = scene->primitives.docDataBuffer;
                     primitives.push_back(primitive);
                     ptr = ptr->next;
                 }
