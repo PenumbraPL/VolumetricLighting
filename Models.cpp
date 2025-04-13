@@ -311,7 +311,7 @@ void Drawable::draw(Scene& scene)
         &material.colors[ALBEDO], &isTex, &transforms->inverseMV} 
     } });
 
-    shaders.bindVertexBuffer(scene.bufferViews, scene.docDataBuffer); // vbo
+    shaders.bindVertexBuffer(scene.primitives.bufferViews, scene.primitives.docDataBuffer); // vbo
     material.bindTextures(); // bind textures
 
     glDrawElements(GL_TRIANGLES, allAssets.verticleIndeciesSize, GL_UNSIGNED_INT, allAssets.verticleIndecies);
@@ -329,15 +329,13 @@ void Drawable::allocAll(AkDoc* doc)
 
 GLuint* Drawable::parseBuffors()
 {
-    //  glGenVertexArrays(1, &vao);
-        // glBindVertexArray(vao);
-
-    GLuint* docDataBuffer = (GLuint*)calloc(allAssets.bufferViews.size(), sizeof(GLuint));
+    GLuint* docDataBuffer = new GLuint[ allAssets.bufferViews.size() ];
     glCreateBuffers((GLsizei) allAssets.bufferViews.size(), docDataBuffer);
     for (auto& buffer : allAssets.bufferViews) {
         unsigned int i = allAssets.bufferViews[buffer.first];
         glNamedBufferData(docDataBuffer[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
     }
+
     return docDataBuffer;
 }
 
@@ -404,12 +402,12 @@ AkCamera* Scene::loadCamera(AkDoc* doc)
 
 AkDoc* Scene::loadScene(std::string scenePath, std::string sceneName)
 {
-    primitives.primitives.clear();
+    primitives.clear();
 
     scenePath += sceneName;
     AkDoc* doc;
     if (ak_load(&doc, scenePath.c_str(), NULL) != AK_OK) {
-        SPDLOG_LOGGER_ERROR(&logger, "Document couldn't be loaded");
+        logger.error("Document couldn't be loaded");
         exit(EXIT_FAILURE);
     }
     else {
@@ -419,7 +417,7 @@ AkDoc* Scene::loadScene(std::string scenePath, std::string sceneName)
     }
 
     AkVisualScene* scene;
-    scene = (AkVisualScene*)ak_instanceObject(doc->scene.visualScene);
+    scene = (AkVisualScene*) ak_instanceObject(doc->scene.visualScene);
     if (!doc->scene.visualScene) {
         logger.error("================================== Scene couldnt be loaded! ===============");
         exit(EXIT_FAILURE);
@@ -431,20 +429,21 @@ AkDoc* Scene::loadScene(std::string scenePath, std::string sceneName)
         logger.info(sceneInfo);
     }
 
-    AkOneWayIterBase* mat_ptr = doc->lib.materials ? doc->lib.materials->chld : nullptr;
-    const unsigned int mat_count = doc->lib.materials ? doc->lib.materials->count : 0;
-    for (int i = 0; i < mat_count; i++, mat_ptr = mat_ptr->next) {
-        Material material = processMaterial((AkMaterial*) mat_ptr);
-        this->materials.insert({mat_ptr, material});
+    AkOneWayIterBase* rawMaterialPtr = doc->lib.materials ? doc->lib.materials->chld : nullptr;
+    std::size_t materialCount = doc->lib.materials ? doc->lib.materials->count : 0;
+    for (auto i = 0; i < materialCount; i++, rawMaterialPtr = rawMaterialPtr->next) {
+        materials.insert(
+            { rawMaterialPtr, processMaterial((AkMaterial*) rawMaterialPtr) }
+        );
     }
 
-    AkNode* node = ak_instanceObjectNode(scene->node);
-    proccessNode(node, primitives.primitives, this);
+    AkNode* rootNode = ak_instanceObjectNode(scene->node);
+    proccessNode(rootNode, primitives.primitives, this);
     primitives.initPrimitives();
     loadCamera(doc);
 
     allocAll(doc);
-    parseBuffors();
+    primitives.docDataBuffer = parseBuffors();
     fileListener.reset();
 
     for (auto& light : sceneLights.lights) {
@@ -494,26 +493,22 @@ Scene::~Scene()
 
 void Scene::allocAll(AkDoc* doc)
 {
-    alloc<AkImage>(doc, this->imageViews);
-    alloc<AkBuffer>(doc, this->bufferViews);
-    alloc<AkTexture>(doc, this->textureViews);
+    alloc<AkImage>(doc, this->primitives.imageViews);
+    alloc<AkBuffer>(doc, this->primitives.bufferViews);
+    alloc<AkTexture>(doc, this->primitives.textureViews);
 }
 
 GLuint* Scene::parseBuffors()
 {
-    //  glGenVertexArrays(1, &vao);
-        // glBindVertexArray(vao);
-
-    GLuint* docDataBuffer = (GLuint*)calloc(bufferViews.size(), sizeof(GLuint));
-    glCreateBuffers((GLsizei)bufferViews.size(), docDataBuffer);
-    for (auto& buffer : bufferViews) {
-        unsigned int i = bufferViews[buffer.first];
-        glNamedBufferData(docDataBuffer[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
+    // no cast, no sizeof, checkif if memory was references is not required
+    GLuint* parsedBufferRef = new GLuint[ primitives.bufferViews.size() ];
+    glCreateBuffers((GLsizei) primitives.bufferViews.size(), parsedBufferRef);
+    for (auto& buffer : primitives.bufferViews) {
+        unsigned int i = primitives.bufferViews[buffer.first];
+        glNamedBufferData(parsedBufferRef[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
     }
 
-    this->docDataBuffer = docDataBuffer;
-
-    return docDataBuffer;
+    return parsedBufferRef;
 }
 
 
@@ -588,11 +583,11 @@ void Environment::loadMesh()
     scene_path += "env_sphere.gltf";
 
     if (ak_load(&doc, scene_path.c_str(), NULL) != AK_OK) {
-        SPDLOG_LOGGER_ERROR(&logger, "Environment mesh couldn't be loaded\n");
+        logger.error("Environment mesh couldn't be loaded\n");
         return;
     }
     if (!doc->scene.visualScene) {
-        SPDLOG_LOGGER_ERROR(&logger, "Environment mesh couldn't be loaded\n");
+        logger.error("Environment mesh couldn't be loaded\n");
         return;
     }
 
@@ -838,8 +833,8 @@ void Scene::clear()
     //if (lightModel->transforms) delete lightModel->transforms;
     //TODO: dealloc of light matrix
 
-    glDeleteBuffers((GLsizei) bufferViews.size(), docDataBuffer);
-    if (docDataBuffer) free(docDataBuffer);
+    glDeleteBuffers((GLsizei) primitives.bufferViews.size(), primitives.docDataBuffer);
+    if (primitives.docDataBuffer) delete[] primitives.docDataBuffer;
 
     for (auto& primitive : primitives.primitives) {
         for (int i = VERTEX; i <= GEOMETRY; i++) {

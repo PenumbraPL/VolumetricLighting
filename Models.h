@@ -217,6 +217,13 @@ struct Drawable {
 
 struct Primitives {
     std::vector<Drawable> primitives;
+
+    OrderedAssets bufferViews; // why?
+    OrderedAssets textureViews; // why?
+    OrderedAssets imageViews; // why?
+    GLuint* docDataBuffer; // why?
+
+
     void initPrimitives(){
         for (auto& primitive : primitives) {
             ShadersSources defaultModel;
@@ -230,6 +237,9 @@ struct Primitives {
             primitive.transforms = new GUIMatrix(1.0, primitive.transforms->localTransform);   //TODO: dealloc needed
             myGui.subscribeToView(*static_cast<GUIMatrix*>(primitive.transforms));
         }
+    }
+    void clear() {
+        primitives.clear();
     }
 }; 
 
@@ -340,19 +350,19 @@ public:
 
 
 struct Scene {
-    Primitives primitives;
+    Primitives primitives; // unique ptr?
     Camera cameraEye;
-    OrderedAssets bufferViews;
-    OrderedAssets textureViews;
-    OrderedAssets imageViews;
+    //OrderedAssets bufferViews; // why?
+    //OrderedAssets textureViews; // why?
+    //OrderedAssets imageViews; // why?
     std::map <void*, Material> materials;
-    GLuint* docDataBuffer;
+    //GLuint* docDataBuffer; // why?
     SceneLights sceneLights;
 
     FileListener fileListener;
-    std::unique_ptr<Drawable> skySphere;
-    std::unique_ptr<Drawable> cloudCube;
-    std::unique_ptr<Drawable> lightModel;
+    std::unique_ptr<Drawable> skySphere; // generic list of ... ?
+    std::unique_ptr<Drawable> cloudCube; // generic list of ... ?
+    std::unique_ptr<Drawable> lightModel; // generic list of ... ?
 
     void populateScene(GUI& gui, WindowInfo& windowConfig);
     Scene(GUI& gui, WindowInfo& windowConfig);
