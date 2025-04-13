@@ -188,7 +188,6 @@ struct Drawable {
 
     uint32_t* verticleIndecies = nullptr;
     unsigned int verticleIndeciesSize;
-   // GLuint primitiveDataBuffer[7] = { 0xffffffff };
 
     Material material;
     ShadersPipeline shaders;
