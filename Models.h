@@ -183,9 +183,9 @@ struct ShadersPipeline {
 struct PrintableResources {
     uint32_t* verticleIndecies = nullptr;
     unsigned int verticleIndeciesSize;
-    OrderedAssets bufferViews;
-    OrderedAssets textureViews;
-    OrderedAssets imageViews;
+    OrderedAssets* bufferViews = nullptr;
+    OrderedAssets* textureViews = nullptr;
+    OrderedAssets* imageViews = nullptr;
 
     GLuint* docDataBuffer; //bufferView pointer after allocation on GPU
 };
@@ -218,10 +218,10 @@ struct Drawable {
 struct Primitives {
     std::vector<Drawable> primitives;
 
-    OrderedAssets bufferViews; // why?
-    OrderedAssets textureViews; // why?
-    OrderedAssets imageViews; // why?
-    GLuint* docDataBuffer; // why?
+    OrderedAssets bufferViews;
+    GLuint* docDataBuffer;
+    //OrderedAssets textureViews; // currently not used
+    //OrderedAssets imageViews; // currently not used
 
 
     void initPrimitives(){
@@ -350,16 +350,13 @@ public:
 
 
 struct Scene {
-    Primitives primitives; // unique ptr?
     Camera cameraEye;
-    //OrderedAssets bufferViews; // why?
-    //OrderedAssets textureViews; // why?
-    //OrderedAssets imageViews; // why?
     std::map <void*, Material> materials;
-    //GLuint* docDataBuffer; // why?
     SceneLights sceneLights;
 
     FileListener fileListener;
+
+    Primitives primitives; // unique ptr?
     std::unique_ptr<Drawable> skySphere; // generic list of ... ?
     std::unique_ptr<Drawable> cloudCube; // generic list of ... ?
     std::unique_ptr<Drawable> lightModel; // generic list of ... ?

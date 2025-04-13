@@ -321,18 +321,27 @@ void Drawable::draw(Scene& scene)
 
 void Drawable::allocAll(AkDoc* doc)
 {
-    alloc<AkImage>(doc, this->allAssets.imageViews);
-    alloc<AkBuffer>(doc, this->allAssets.bufferViews);
-    alloc<AkTexture>(doc, this->allAssets.textureViews);
+    if (!this->allAssets.imageViews) {
+        this->allAssets.imageViews = new OrderedAssets{};
+    }
+    if (!this->allAssets.bufferViews) {
+        this->allAssets.bufferViews = new OrderedAssets{};
+    }
+    if (!this->allAssets.textureViews) {
+        this->allAssets.textureViews = new OrderedAssets{};
+    }
+    alloc<AkImage>(doc, *this->allAssets.imageViews);
+    alloc<AkBuffer>(doc, *this->allAssets.bufferViews);
+    alloc<AkTexture>(doc, *this->allAssets.textureViews);
 }
 
 
 GLuint* Drawable::parseBuffors()
 {
-    GLuint* docDataBuffer = new GLuint[ allAssets.bufferViews.size() ];
-    glCreateBuffers((GLsizei) allAssets.bufferViews.size(), docDataBuffer);
-    for (auto& buffer : allAssets.bufferViews) {
-        unsigned int i = allAssets.bufferViews[buffer.first];
+    GLuint* docDataBuffer = new GLuint[ allAssets.bufferViews->size() ];
+    glCreateBuffers((GLsizei) allAssets.bufferViews->size(), docDataBuffer);
+    for (auto& buffer : *allAssets.bufferViews) {
+        unsigned int i = (*allAssets.bufferViews)[buffer.first];
         glNamedBufferData(docDataBuffer[i], ((AkBuffer*)buffer.first)->length, ((AkBuffer*)buffer.first)->data, GL_STATIC_DRAW);
     }
 
@@ -493,9 +502,9 @@ Scene::~Scene()
 
 void Scene::allocAll(AkDoc* doc)
 {
-    alloc<AkImage>(doc, this->primitives.imageViews);
+    //alloc<AkImage>(doc, this->primitives.imageViews);
     alloc<AkBuffer>(doc, this->primitives.bufferViews);
-    alloc<AkTexture>(doc, this->primitives.textureViews);
+    //alloc<AkTexture>(doc, this->primitives.textureViews);
 }
 
 GLuint* Scene::parseBuffors()
@@ -563,7 +572,7 @@ void Light::draw(Scene& scene)
 
     shaders.bindUniform({ {{&transforms->MV, &scene.cameraEye.Projection}} });
  
-    shaders.bindVertexBuffer(this->allAssets.bufferViews, this->allAssets.docDataBuffer);
+    shaders.bindVertexBuffer(*this->allAssets.bufferViews, this->allAssets.docDataBuffer);
     material.bindTextures();
 
 
@@ -635,7 +644,7 @@ void Environment::draw(Scene& scene)
 
     shaders.bindUniform({ {{&transforms->MV, &scene.cameraEye.Projection}} });
 
-    shaders.bindVertexBuffer(this->allAssets.bufferViews, this->allAssets.docDataBuffer);
+    shaders.bindVertexBuffer(*this->allAssets.bufferViews, this->allAssets.docDataBuffer);
     material.bindTextures();
 
     glBindSampler(0, env_sampler);
@@ -695,7 +704,7 @@ void Cloud::draw(Scene& scene)
         {&g, &scene.cameraEye.eye, &transforms->inverseMV}
     } });
 
-    shaders.bindVertexBuffer(this->allAssets.bufferViews, this->allAssets.docDataBuffer);
+    shaders.bindVertexBuffer(*this->allAssets.bufferViews, this->allAssets.docDataBuffer);
     material.bindTextures();
 
     glEnable(GL_CULL_FACE);
@@ -827,6 +836,15 @@ void Scene::clear()
         primitive.material.deleteTexturesAndSamplers();
         primitive.shaders.deletePipeline();
         //if (primitive.transforms) delete primitive.transforms;
+        if (primitive.allAssets.imageViews) {
+            delete primitive.allAssets.imageViews;
+        }
+        if (primitive.allAssets.bufferViews) {
+            delete primitive.allAssets.bufferViews;
+        }
+        if (primitive.allAssets.textureViews) {
+            delete primitive.allAssets.textureViews;
+        }
     }
     //if(cloudCube->transforms) delete cloudCube->transforms;
     //if(skySphere->transforms) delete skySphere->transforms;
