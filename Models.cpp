@@ -550,7 +550,7 @@ void Light::loadMesh()
         }
     }
     allocAll(doc);
-    docDataBuffer = parseBuffors();
+    allAssets.docDataBuffer = parseBuffors();
 }
 
 
@@ -568,7 +568,7 @@ void Light::draw(Scene& scene)
 
     shaders.bindUniform({ {{&transforms->MV, &scene.cameraEye.Projection}} });
  
-    shaders.bindVertexBuffer(this->allAssets.bufferViews, this->docDataBuffer);
+    shaders.bindVertexBuffer(this->allAssets.bufferViews, this->allAssets.docDataBuffer);
     material.bindTextures();
 
 
@@ -610,7 +610,7 @@ void Environment::loadMesh()
         }
     }
     allocAll(doc);
-    docDataBuffer = parseBuffors();
+    allAssets.docDataBuffer = parseBuffors();
 
     glCreateTextures(GL_TEXTURE_2D, 1, &skybox);
     int width, height, comp;
@@ -640,7 +640,7 @@ void Environment::draw(Scene& scene)
 
     shaders.bindUniform({ {{&transforms->MV, &scene.cameraEye.Projection}} });
 
-    shaders.bindVertexBuffer(this->allAssets.bufferViews, this->docDataBuffer);
+    shaders.bindVertexBuffer(this->allAssets.bufferViews, this->allAssets.docDataBuffer);
     material.bindTextures();
 
     glBindSampler(0, env_sampler);
@@ -682,7 +682,7 @@ void Cloud::loadMesh()
         }
     }
     allocAll(doc);
-    docDataBuffer = parseBuffors();
+    allAssets.docDataBuffer = parseBuffors();
 }
 
 
@@ -700,7 +700,7 @@ void Cloud::draw(Scene& scene)
         {&g, &scene.cameraEye.eye, &transforms->inverseMV}
     } });
 
-    shaders.bindVertexBuffer(this->allAssets.bufferViews, this->docDataBuffer);
+    shaders.bindVertexBuffer(this->allAssets.bufferViews, this->allAssets.docDataBuffer);
     material.bindTextures();
 
     glEnable(GL_CULL_FACE);

@@ -186,6 +186,8 @@ struct PrintableResources {
     OrderedAssets bufferViews;
     OrderedAssets textureViews;
     OrderedAssets imageViews;
+
+    GLuint* docDataBuffer; //bufferView pointer after allocation on GPU
 };
 
 
@@ -237,7 +239,6 @@ struct Light : public Drawable {
     glm::vec4 direction = glm::vec4(0, 0, 0, 0);
     glm::vec3 color = glm::vec3(1.0, 1.0, 1.0);
     float intensity = 1.0;
-    GLuint* docDataBuffer;
 
     void loadMesh() override;
     virtual void draw(Scene& scene) override;
@@ -256,7 +257,6 @@ struct Light : public Drawable {
 struct Environment : public Drawable {
     GLuint skybox;
     GLuint env_sampler;
-    GLuint* docDataBuffer;
 
     void loadMesh() override;
     virtual void draw(Scene& scene) override;
@@ -274,7 +274,6 @@ struct Environment : public Drawable {
 
 struct Cloud : public Drawable, public Observer {
     float g = 0.;
-    GLuint* docDataBuffer;
 
     void loadMesh() override;
     virtual void draw(Scene& scene) override;
